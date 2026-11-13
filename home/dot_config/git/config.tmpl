@@ -1,0 +1,33 @@
+[user]
+	name = {{ .name }}
+	email = {{ .email }}
+[init]
+	defaultBranch = main
+[core]
+	editor = nvim
+[push]
+	autoSetupRemote = true
+[fetch]
+	prune = true
+[pull]
+	ff = only
+[diff]
+	colorMoved = default
+
+# Per-host HTTPS credentials from each forge's CLI (no plaintext ~/.git-credentials)
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gitlab.com"]
+	helper =
+	helper = !glab auth git-credential
+[credential "https://git.chenantunez.com"]
+	helper =
+	helper = !tea login helper
+
+# Unmanaged per-machine overrides (e.g. includeIf for a work identity)
+[include]
+	path = config.local

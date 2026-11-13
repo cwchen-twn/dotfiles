@@ -1,0 +1,43 @@
+{{- /* Paths are targets relative to $HOME. Templated per machine. */ -}}
+
+{{ if ne .chezmoi.os "linux" }}
+.config/picom
+.config/libinput-gestures.conf
+{{ end }}
+{{ if not (has "picom" .desktop) }}
+.config/picom
+{{ end }}
+{{ if not (has "libinput-gestures" .desktop) }}
+.config/libinput-gestures.conf
+{{ end }}
+{{ if not (has "alacritty" .desktop) }}
+.config/alacritty
+{{ end }}
+{{ if not (has "claude-code" .extras) }}
+.claude
+{{ end }}
+
+# Claude Code runtime state: never managed
+.claude/.credentials.json
+.claude/history.jsonl
+.claude/projects
+.claude/sessions
+.claude/session-env
+.claude/shell-snapshots
+.claude/file-history
+.claude/plugins
+.claude/skills/synced
+.claude/backups
+.claude/paste-cache
+.claude/cache
+.claude/debug
+.claude/plans
+.claude/todos
+.claude/settings.local.json
+.claude/*.json
+!.claude/settings.json
+.claude.json
+
+{{ if ne .chezmoi.os "linux" }}
+.config/systemd
+{{ end }}

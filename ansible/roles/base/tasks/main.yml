@@ -1,0 +1,64 @@
+---
+- name: Debian/Ubuntu base
+  when: is_debian
+  block:
+    - name: Keyring dir
+      ansible.builtin.file: { path: "{{ keyrings }}", state: directory, mode: "0755" }
+
+    - name: GitHub CLI repo
+      ansible.builtin.deb822_repository:
+        name: github-cli
+        types: deb
+        uris: https://cli.github.com/packages
+        suites: stable
+        components: main
+        architectures: "{{ arch_deb }}"
+        signed_by: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+
+    - name: fish PPA (Ubuntu only; Debian uses the distro package)
+      ansible.builtin.apt_repository:
+        repo: ppa:fish-shell/release-4
+        codename: "{{ ansible_distribution_release }}"
+      when: ansible_distribution == 'Ubuntu'
+
+    - name: Core packages
+      ansible.builtin.apt:
+        update_cache: true
+        name:
+          - git
+          - gh
+          - fish
+          - tmux
+          - vim
+          - ripgrep
+          - fd-find
+          - jq
+          - htop
+          - tree
+          - curl
+          - wget
+          - unzip
+          - build-essential
+          - cmake
+          - p7zip-full
+          - zstd
+          - shellcheck
+          - fontconfig
+
+- name: macOS base
+  when: is_mac
+  community.general.homebrew:
+    name: [git, gh, fish, tmux, vim, ripgrep, fd, jq, htop, tree, wget, p7zip, zstd, shellcheck, mise]
+
+- name: Register fish as a login shell
+  ansible.builtin.lineinfile:
+    path: /etc/shells
+    line: "{{ '/opt/homebrew/bin/fish' if is_mac else '/usr/bin/fish' }}"
+  become: true
+
+- name: Default shell is fish
+  ansible.builtin.user:
+    name: "{{ user }}"
+    shell: "{{ '/opt/homebrew/bin/fish' if is_mac else '/usr/bin/fish' }}"
+  become: true
+  when: is_debian

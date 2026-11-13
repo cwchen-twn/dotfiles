@@ -1,0 +1,39 @@
+---
+# kubectl/helm/kubectx/terraform come from mise. Here: things needing system integration.
+- name: Docker (Debian/Ubuntu)
+  when: is_debian and 'docker' in devops
+  block:
+    - name: Docker repo
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: deb
+        uris: "https://download.docker.com/linux/{{ ansible_distribution | lower }}"
+        suites: "{{ ansible_distribution_release }}"
+        components: stable
+        architectures: "{{ arch_deb }}"
+        signed_by: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+    - name: Docker packages
+      ansible.builtin.apt:
+        update_cache: true
+        name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+    - name: User in docker group
+      ansible.builtin.user: { name: "{{ user }}", groups: docker, append: true }
+
+- name: Tailscale (Debian/Ubuntu)
+  when: is_debian and 'tailscale' in devops
+  block:
+    - name: Tailscale repo
+      ansible.builtin.deb822_repository:
+        name: tailscale
+        types: deb
+        uris: "https://pkgs.tailscale.com/stable/{{ ansible_distribution | lower }}"
+        suites: "{{ ansible_distribution_release }}"
+        components: main
+        signed_by: "https://pkgs.tailscale.com/stable/{{ ansible_distribution | lower }}/{{ ansible_distribution_release }}.noarmor.gpg"
+    - name: Tailscale package
+      ansible.builtin.apt: { name: tailscale, update_cache: true }
+
+- name: macOS casks
+  when: is_mac
+  community.general.homebrew_cask:
+    name: "{{ (['docker'] if 'docker' in devops else []) + (['tailscale'] if 'tailscale' in devops else []) }}"

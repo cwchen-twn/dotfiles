@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Fetch the chezmoi age identity from the personal Vaultwarden (once per machine).
+set -euo pipefail
+KEY="{{ .chezmoi.homeDir }}/.config/chezmoi/key.txt"
+[ -s "$KEY" ] && exit 0
+export BITWARDENCLI_APPDATA_DIR="{{ .chezmoi.homeDir }}/.config/bw-personal"
+MISE="$(command -v mise || echo "$HOME/.local/bin/mise")"
+bw() { "$MISE" exec bitwarden@latest -- bw "$@"; }
+bw config server https://vw.chenantunez.com >/dev/null
+bw login --check >/dev/null 2>&1 || bw login
+BW_SESSION="$(bw unlock --raw)"; export BW_SESSION
+bw sync >/dev/null
+mkdir -p "$(dirname "$KEY")"
+( umask 077; bw get notes chezmoi-age-key > "$KEY" )
+bw lock >/dev/null
+echo "age key written to $KEY"

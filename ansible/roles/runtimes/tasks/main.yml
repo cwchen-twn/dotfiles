@@ -1,0 +1,18 @@
+---
+# node/go/java come from mise. These have their own self-updating installers (user-level).
+- name: User-level runtime installers
+  become: false
+  block:
+    - name: rustup
+      ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+      args: { creates: "{{ home }}/.cargo/bin/rustup" }
+      when: "'rust' in runtimes"
+    - name: bun
+      ansible.builtin.shell: curl -fsSL https://bun.sh/install | bash
+      args: { creates: "{{ home }}/.bun/bin/bun" }
+      environment: { SHELL: /bin/bash }
+      when: "'bun' in runtimes"
+    - name: uv
+      ansible.builtin.shell: curl -LsSf https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh
+      args: { creates: "{{ home }}/.local/bin/uv" }
+      when: "'python' in runtimes"

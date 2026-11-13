@@ -1,0 +1,15 @@
+{{ if has "claude-code" .extras -}}
+#!/usr/bin/env bash
+# claude data hash: {{ .claude | toJson | sha256sum }}
+set -euo pipefail
+command -v claude >/dev/null 2>&1 || { echo "claude not installed, skipping plugin/MCP setup"; exit 0; }
+{{ range .claude.marketplaces -}}
+claude plugin marketplace add {{ . | quote }} >/dev/null 2>&1 || true
+{{ end -}}
+{{ range .claude.plugins -}}
+claude plugin install {{ . | quote }} --scope user >/dev/null 2>&1 || echo "plugin {{ . }} not installed (already present or failed)"
+{{ end -}}
+{{ range $name, $cmd := .claude.mcpServers -}}
+claude mcp get {{ $name | quote }} >/dev/null 2>&1 || claude mcp add --scope user {{ $name | quote }} -- {{ range $cmd }}{{ . | quote }} {{ end }}
+{{ end -}}
+{{ end -}}

@@ -1,0 +1,12 @@
+claude:
+  marketplaces:
+    - anthropics/claude-plugins-official
+    - anthropics/skills
+    - cloudflare/skills
+  plugins:
+    - gopls-lsp@claude-plugins-official
+    - document-skills@anthropic-agent-skills
+    - example-skills@anthropic-agent-skills
+    - cloudflare@cloudflare
+  mcpServers:
+    codebase-memory-mcp: ["codebase-memory-mcp"]

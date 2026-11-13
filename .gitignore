@@ -2,3 +2,6 @@
 *.swo
 *.*.swp
 *.*.swo
+# never commit decrypted secrets or keys
+key.txt
+*.key

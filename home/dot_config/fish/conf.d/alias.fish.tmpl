@@ -1,0 +1,13 @@
+{{- if eq .chezmoi.os "linux" }}
+command -q fdfind; and not command -q fd; and alias fd fdfind
+alias batinfo "upower -i (upower -e | grep BAT)"
+{{- end }}
+{{- if has "nvidia-cuda" .extras }}
+alias gputop "watch -n 0.5 nvidia-smi"
+{{- end }}
+alias speedtest "curl -s https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py | python3 -"
+
+# personal Vaultwarden, kept separate from any work `bw` session
+function bwp --wraps bw --description "bw against vw.chenantunez.com"
+    BITWARDENCLI_APPDATA_DIR=$HOME/.config/bw-personal bw $argv
+end

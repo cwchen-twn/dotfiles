@@ -1,0 +1,14 @@
+# Managed by chezmoi. Machine/work hosts live in ~/.ssh/config.d/
+Include config.d/*
+
+Host github.com gitlab.com git.chenantunez.com
+    User git
+    IdentityFile ~/.ssh/{{ .sshKey }}
+
+Host *
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    ServerAliveInterval 60
+{{- if eq .chezmoi.os "darwin" }}
+    UseKeychain yes
+{{- end }}

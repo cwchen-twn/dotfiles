@@ -1,0 +1,122 @@
+---
+- name: Desktop apps (Debian/Ubuntu)
+  when: is_debian
+  block:
+    - name: Brave repo
+      ansible.builtin.deb822_repository:
+        name: brave-browser-release
+        types: deb
+        uris: https://brave-browser-apt-release.s3.brave.com/
+        suites: stable
+        components: main
+        architectures: "{{ arch_deb }}"
+        signed_by: https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+      when: "'brave' in desktop"
+
+    - name: VS Code repo
+      ansible.builtin.deb822_repository:
+        name: vscode
+        types: deb
+        uris: https://packages.microsoft.com/repos/code
+        suites: stable
+        components: main
+        architectures: "{{ arch_deb }}"
+        signed_by: https://packages.microsoft.com/keys/microsoft.asc
+      when: "'vscode' in desktop"
+
+    - name: Shutter PPA (Ubuntu)
+      ansible.builtin.apt_repository: { repo: ppa:shutter/ppa, codename: "{{ ansible_distribution_release }}" }
+      when: "'shutter' in desktop and ansible_distribution == 'Ubuntu'"
+
+    - name: Apt desktop packages
+      ansible.builtin.apt:
+        update_cache: true
+        name: "{{ query('ansible.builtin.dict', apt_map) | selectattr('key', 'in', desktop) | map(attribute='value') | flatten }}"
+      vars:
+        apt_map:
+          brave: [brave-browser]
+          vscode: [code]
+          alacritty: "{{ ['alacritty'] if ansible_distribution_release not in ['jammy', 'bookworm'] else [] }}"
+          picom: [picom]
+          libinput-gestures: [wmctrl, xdotool, libinput-tools]
+          shutter: [shutter]
+          libreoffice: [libreoffice]
+          calibre: [calibre]
+          fcitx5: [fcitx5, fcitx5-chewing, fcitx5-chinese-addons]
+
+    - name: alacritty via cargo on older releases (jammy/bookworm lack it)
+      become: false
+      ansible.builtin.command: "{{ home }}/.cargo/bin/cargo install alacritty"
+      args: { creates: "{{ home }}/.cargo/bin/alacritty" }
+      when: "'alacritty' in desktop and ansible_distribution_release in ['jammy', 'bookworm']"
+
+    - name: libinput-gestures (from source)
+      when: "'libinput-gestures' in desktop"
+      block:
+        - name: Clone libinput-gestures
+          ansible.builtin.git:
+            repo: https://github.com/bulletmark/libinput-gestures.git
+            dest: /usr/local/src/libinput-gestures
+            version: master
+        - name: Install libinput-gestures
+          ansible.builtin.command: make install
+          args:
+            chdir: /usr/local/src/libinput-gestures
+            creates: /usr/bin/libinput-gestures
+        - name: User in input group
+          ansible.builtin.user: { name: "{{ user }}", groups: input, append: true }
+
+    - name: DBeaver CE
+      ansible.builtin.apt: { deb: "https://dbeaver.io/files/dbeaver-ce_latest_amd64.deb" }
+      when: "'dbeaver' in desktop and arch_deb == 'amd64'"
+
+    - name: balenaEtcher
+      when: "'balena-etcher' in desktop and arch_deb == 'amd64'"
+      block:
+        - name: Latest balenaEtcher release
+          ansible.builtin.uri:
+            url: https://api.github.com/repos/balena-io/etcher/releases/latest
+            return_content: true
+          register: etcher_rel
+          become: false
+        - name: Install balenaEtcher .deb
+          ansible.builtin.apt:
+            deb: "{{ etcher_rel.json.assets | selectattr('name', 'search', 'amd64\\.deb$') | map(attribute='browser_download_url') | first }}"
+
+    - name: Obsidian AppImage
+      when: "'obsidian' in desktop"
+      become: false
+      block:
+        - name: Latest Obsidian release
+          ansible.builtin.uri:
+            url: https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest
+            return_content: true
+          register: obsidian_rel
+        - name: Applications dir
+          ansible.builtin.file: { path: "{{ home }}/Applications", state: directory, mode: "0755" }
+        - name: Download AppImage
+          ansible.builtin.get_url:
+            url: "{{ obsidian_rel.json.assets | selectattr('name', 'match', '^Obsidian-[0-9.]+\\.AppImage$') | map(attribute='browser_download_url') | first }}"
+            dest: "{{ home }}/Applications/Obsidian.AppImage"
+            mode: "0755"
+        - name: Link into ~/.local/bin
+          ansible.builtin.file:
+            src: "{{ home }}/Applications/Obsidian.AppImage"
+            dest: "{{ home }}/.local/bin/obsidian"
+            state: link
+            force: true
+
+- name: Desktop apps (macOS)
+  when: is_mac
+  community.general.homebrew_cask:
+    name: "{{ query('ansible.builtin.dict', cask_map) | selectattr('key', 'in', desktop) | map(attribute='value') | list }}"
+  vars:
+    cask_map:
+      brave: brave-browser
+      vscode: visual-studio-code
+      alacritty: alacritty
+      libreoffice: libreoffice
+      balena-etcher: balenaetcher
+      calibre: calibre
+      obsidian: obsidian
+      dbeaver: dbeaver-community

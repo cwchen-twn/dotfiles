@@ -1,0 +1,17 @@
+# ~/.profile: login shells (bash/sh, display managers). Managed by chezmoi.
+
+if [ -n "$BASH_VERSION" ] && [ -f "$HOME/.bashrc" ]; then
+    . "$HOME/.bashrc"
+fi
+
+for d in "$HOME/bin" "$HOME/.local/bin"{{ if has "rust" .runtimes }} "$HOME/.cargo/bin"{{ end }}; do
+    case ":$PATH:" in *":$d:"*) ;; *) [ -d "$d" ] && PATH="$d:$PATH" ;; esac
+done
+export PATH
+
+export EDITOR=nvim
+
+# mise shims so GUI apps / non-interactive shells see mise-managed tools
+if command -v mise >/dev/null 2>&1; then
+    eval "$(mise activate bash --shims)"
+fi

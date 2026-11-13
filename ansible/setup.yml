@@ -1,0 +1,39 @@
+---
+# Machine setup. Run by chezmoi (run_onchange_after_10-ansible), selections passed as extra vars.
+- name: Machine setup
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: true
+  vars:
+    devops: []
+    runtimes: []
+    desktop: []
+    extras: []
+    user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
+    home: "{{ lookup('env', 'HOME') }}"
+    is_debian: "{{ ansible_os_family == 'Debian' }}"
+    is_mac: "{{ ansible_os_family == 'Darwin' }}"
+    arch_deb: "{{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}"
+    keyrings: /etc/apt/keyrings
+  pre_tasks:
+    - name: Homebrew tasks run unprivileged on macOS
+      ansible.builtin.set_fact:
+        ansible_become: false
+      when: is_mac
+  roles:
+    - base
+    - role: devops
+      when: devops | length > 0
+    - role: runtimes
+      when: runtimes | length > 0
+    - role: desktop
+      when: desktop | length > 0
+    - role: nvidia
+      when: "'nvidia-cuda' in extras and is_debian"
+    - role: postgres
+      when: "'postgres' in extras"
+    - role: vpn
+      when: extras | intersect(['openvpn3', 'openfortivpn', 'nordvpn']) | length > 0
+    - role: claude
+      when: "'claude-code' in extras"

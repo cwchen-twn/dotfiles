@@ -1,0 +1,39 @@
+# Managed by chezmoi: edit with `chezmoi edit ~/.config/mise/config.toml`.
+# `mise up` upgrades within the constraints below; `mise ls` shows what is installed.
+
+[tools]
+# core
+lazygit = "latest"
+neovim = "0.9"           # plugin config not yet verified on 0.10+
+glab = "latest"
+tea = "latest"
+sops = "latest"
+age = "latest"
+gitleaks = "latest"
+bitwarden = "latest"
+"github:rtk-ai/rtk" = "0.42.4"
+"github:DeusData/codebase-memory-mcp" = "latest"
+{{- if has "kubernetes" .devops }}
+kubectl = "latest"
+helm = "latest"
+kubectx = "latest"
+{{- end }}
+{{- if has "terraform" .devops }}
+terraform = "latest"
+{{- end }}
+{{- if has "node" .runtimes }}
+node = "lts"
+pnpm = "latest"
+{{- end }}
+{{- if has "go" .runtimes }}
+go = "latest"
+{{- end }}
+{{- if has "java" .runtimes }}
+java = "jetbrains-21"
+maven = "latest"
+gradle = "latest"
+{{- end }}
+
+[settings]
+experimental = true
+idiomatic_version_file_enable_tools = ["node", "go", "java"]

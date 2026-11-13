@@ -1,0 +1,15 @@
+[".tmux/plugins/tpm"]
+type = "git-repo"
+url = "https://github.com/tmux-plugins/tpm.git"
+refreshPeriod = "168h"
+{{- if .desktop }}
+{{- $fontDir := ".local/share/fonts/JetBrainsMonoNerdFont" }}
+{{- if eq .chezmoi.os "darwin" }}{{ $fontDir = "Library/Fonts/JetBrainsMonoNerdFont" }}{{ end }}
+
+[{{ $fontDir | quote }}]
+type = "archive"
+url = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz"
+exact = true
+include = ["*.ttf"]
+refreshPeriod = "720h"
+{{- end }}

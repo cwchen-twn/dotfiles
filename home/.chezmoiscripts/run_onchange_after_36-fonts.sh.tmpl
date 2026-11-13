@@ -1,0 +1,6 @@
+{{ if and .desktop (eq .chezmoi.os "linux") -}}
+#!/usr/bin/env bash
+# refresh font cache after the Nerd Font external changes (monthly refresh)
+# {{ output "date" "+%Y-%m" | trim }}
+command -v fc-cache >/dev/null 2>&1 && fc-cache -f "$HOME/.local/share/fonts" >/dev/null
+{{ end -}}

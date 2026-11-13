@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Install Ansible (and Homebrew on macOS) so the playbook can run.
+set -euo pipefail
+command -v ansible-playbook >/dev/null 2>&1 && exit 0
+{{ if eq .chezmoi.os "darwin" -}}
+if ! command -v brew >/dev/null 2>&1; then
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+brew install ansible
+{{- else -}}
+sudo apt-get update
+sudo apt-get install -y ansible python3-debian
+{{- end }}

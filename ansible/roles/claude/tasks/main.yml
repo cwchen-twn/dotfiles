@@ -1,0 +1,5 @@
+---
+- name: Claude Code (native installer, self-updating, ~/.local/bin)
+  become: false
+  ansible.builtin.shell: curl -fsSL https://claude.ai/install.sh | bash
+  args: { creates: "{{ home }}/.local/bin/claude" }

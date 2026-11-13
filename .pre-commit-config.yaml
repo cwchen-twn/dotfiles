@@ -1,0 +1,12 @@
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: no-internal-hosts
+        name: block internal IPs / work domains
+        entry: bash -c 'if grep -nE "192\.168\.[0-9]+\.[0-9]+|\.gov\.py" "$@"; then exit 1; fi' --
+        language: system
+        exclude: '\.age$|^\.pre-commit-config\.yaml$'

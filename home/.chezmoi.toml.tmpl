@@ -1,0 +1,33 @@
+{{- /* Per-machine choices. Asked once on `chezmoi init`; re-ask with `chezmoi init --prompt`. */ -}}
+{{- $devopsAll   := list "kubernetes" "terraform" "docker" "tailscale" -}}
+{{- $runtimesAll := list "node" "go" "java" "rust" "bun" "python" -}}
+{{- $desktopAll  := list "brave" "vscode" "alacritty" "picom" "libinput-gestures" "shutter" "libreoffice" "balena-etcher" "calibre" "obsidian" "dbeaver" "fcitx5" -}}
+{{- $extrasAll   := list "postgres" "openvpn3" "openfortivpn" "nordvpn" "nvidia-cuda" "claude-code" -}}
+
+{{- $name   := promptStringOnce . "name" "Git user name" "cwchen-twn" -}}
+{{- $email  := promptStringOnce . "email" "Git user email" "cwchen.twn@gmail.com" -}}
+{{- $sshKey := promptStringOnce . "sshKey" "SSH key file in ~/.ssh used for git hosts" (printf "id_ed25519_%s" .chezmoi.hostname) -}}
+
+{{- $devops   := promptMultichoiceOnce . "devops" "DevOps tools" $devopsAll $devopsAll -}}
+{{- $runtimes := promptMultichoiceOnce . "runtimes" "Language runtimes" $runtimesAll $runtimesAll -}}
+{{- $desktop  := promptMultichoiceOnce . "desktop" "Desktop apps (deselect all on servers)" $desktopAll $desktopAll -}}
+{{- $extras   := promptMultichoiceOnce . "extras" "Extras" $extrasAll (list "claude-code") -}}
+
+sourceDir = {{ joinPath .chezmoi.homeDir "Documents/Gitea/cwchen-twn/dotfiles" | quote }}
+encryption = "age"
+
+[age]
+identity = {{ joinPath .chezmoi.homeDir ".config/chezmoi/key.txt" | quote }}
+recipient = "AGE_RECIPIENT_PLACEHOLDER"
+
+[diff]
+exclude = ["scripts"]
+
+[data]
+name = {{ $name | quote }}
+email = {{ $email | quote }}
+sshKey = {{ $sshKey | quote }}
+devops = {{ $devops | toToml }}
+runtimes = {{ $runtimes | toToml }}
+desktop = {{ $desktop | toToml }}
+extras = {{ $extras | toToml }}

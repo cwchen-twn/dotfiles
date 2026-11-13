@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# mise manages all non-apt CLI tools; installed to ~/.local/bin by the official installer.
+set -euo pipefail
+command -v mise >/dev/null 2>&1 || [ -x "$HOME/.local/bin/mise" ] && exit 0
+curl -fsSL https://mise.run | sh

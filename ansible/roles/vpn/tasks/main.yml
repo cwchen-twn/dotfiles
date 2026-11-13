@@ -1,0 +1,40 @@
+---
+- name: OpenVPN 3
+  when: is_debian and 'openvpn3' in extras
+  block:
+    - name: OpenVPN 3 repo
+      ansible.builtin.deb822_repository:
+        name: openvpn3
+        types: deb
+        uris: "https://packages.openvpn.net/openvpn3/debian"
+        suites: "{{ ansible_distribution_release }}"
+        components: main
+        architectures: "{{ arch_deb }}"
+        signed_by: https://packages.openvpn.net/packages-repo.gpg
+    - name: openvpn3
+      ansible.builtin.apt: { name: openvpn3, update_cache: true }
+
+- name: openfortivpn
+  ansible.builtin.apt: { name: openfortivpn }
+  when: is_debian and 'openfortivpn' in extras
+
+- name: NordVPN
+  when: is_debian and 'nordvpn' in extras
+  block:
+    - name: NordVPN repo
+      ansible.builtin.deb822_repository:
+        name: nordvpn
+        types: deb
+        uris: https://repo.nordvpn.com/deb/nordvpn/debian
+        suites: stable
+        components: main
+        signed_by: https://repo.nordvpn.com/gpg/nordvpn_public.asc
+    - name: nordvpn
+      ansible.builtin.apt: { name: nordvpn, update_cache: true }
+    - name: User in nordvpn group
+      ansible.builtin.user: { name: "{{ user }}", groups: nordvpn, append: true }
+
+- name: VPN clients (macOS)
+  when: is_mac
+  community.general.homebrew_cask:
+    name: "{{ (['openvpn-connect'] if 'openvpn3' in extras else []) + (['nordvpn'] if 'nordvpn' in extras else []) }}"

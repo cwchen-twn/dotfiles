@@ -1,0 +1,7 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+# unit hash: {{ include "dot_config/systemd/user/ssh-agent.service" | sha256sum }}
+set -euo pipefail
+systemctl --user daemon-reload
+systemctl --user enable --now ssh-agent.service
+{{ end -}}
