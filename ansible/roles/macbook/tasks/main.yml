@@ -1,0 +1,97 @@
+# Apple MacBook hardware on Debian/Ubuntu (auto-detected from DMI, see setup.yml):
+# Broadcom Wi-Fi firmware, fan control, power management, Fn keys and the FaceTime HD camera.
+- name: MacBook packages
+  ansible.builtin.apt:
+    name:
+      - mbpfan
+      - tlp
+      - dkms
+      - "{{ 'linux-headers-amd64' if ansible_distribution == 'Debian' else 'linux-headers-generic' }}"
+      - cpio
+      - xz-utils
+      - curl
+      - git
+    update_cache: true
+
+- name: Broadcom Wi-Fi firmware (Ubuntu ships it in linux-firmware)
+  ansible.builtin.apt: { name: firmware-brcm80211 }
+  when: ansible_distribution == 'Debian'
+
+- name: Fan control and power management
+  ansible.builtin.systemd_service: { name: "{{ item }}", enabled: true, state: started }
+  loop: [mbpfan, tlp]
+
+- name: F1-F12 act as function keys (hold Fn for media keys)
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/hid_apple.conf
+    content: "options hid_apple fnmode=2\n"
+    mode: "0644"
+  notify: Update initramfs
+
+# FaceTime HD camera: firmware extracted from Apple's update package + out-of-tree driver built with DKMS
+# (rebuilt automatically on kernel upgrades). https://github.com/patjak/facetimehd
+- name: FaceTime HD firmware source
+  ansible.builtin.git:
+    repo: https://github.com/patjak/facetimehd-firmware.git
+    dest: /usr/local/src/facetimehd-firmware
+    depth: 1
+    update: false
+
+- name: Extract and install FaceTime HD firmware
+  ansible.builtin.shell: make && make install
+  args:
+    chdir: /usr/local/src/facetimehd-firmware
+    creates: /lib/firmware/facetimehd/firmware.bin
+
+- name: FaceTime HD driver source
+  ansible.builtin.git:
+    repo: https://github.com/patjak/facetimehd.git
+    dest: /usr/local/src/facetimehd
+    depth: 1
+  register: facetimehd_src
+
+- name: Read driver version
+  ansible.builtin.slurp: { src: /usr/local/src/facetimehd/dkms.conf }
+  register: facetimehd_conf
+
+- name: Set driver version
+  ansible.builtin.set_fact:
+    facetimehd_ver: "{{ facetimehd_conf.content | b64decode | regex_search('PACKAGE_VERSION=\"?([^\"\\n]+)', '\\1') | first }}"
+
+- name: Copy driver into the DKMS tree
+  ansible.builtin.copy:
+    src: /usr/local/src/facetimehd/
+    dest: "/usr/src/facetimehd-{{ facetimehd_ver }}/"
+    remote_src: true
+    mode: preserve
+
+- name: Build and install the driver for every kernel with headers
+  ansible.builtin.shell: |
+    set -e
+    m=facetimehd v={{ facetimehd_ver }}
+    {% if facetimehd_src.changed %}dkms remove -m $m -v $v --all >/dev/null 2>&1 || true{% endif %}
+    dkms status -m $m -v $v | grep -q . || dkms add -m $m -v $v
+    for k in /lib/modules/*; do
+      k=${k##*/}
+      [ -e "/lib/modules/$k/build" ] || continue
+      dkms status -m $m -v $v -k "$k" | grep -q installed && continue
+      dkms install -m $m -v $v -k "$k"
+      echo CHANGED
+    done
+  args: { executable: /bin/bash }
+  register: facetimehd_dkms
+  changed_when: "'CHANGED' in facetimehd_dkms.stdout"
+
+- name: Load facetimehd at boot, blacklist the conflicting bdc_pci
+  ansible.builtin.copy:
+    dest: "{{ item.dest }}"
+    content: "{{ item.content }}"
+    mode: "0644"
+  loop:
+    - { dest: /etc/modules-load.d/facetimehd.conf, content: "facetimehd\n" }
+    - { dest: /etc/modprobe.d/facetimehd.conf, content: "blacklist bdc_pci\n" }
+
+- name: Load facetimehd now (fails harmlessly if the running kernel is older than the headers; works after reboot)
+  ansible.builtin.command: modprobe facetimehd
+  changed_when: false
+  failed_when: false

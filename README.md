@@ -9,7 +9,8 @@ Primary repo: https://git.chenantunez.com/cwchen-twn/dotfiles (mirrored to GitHu
 ## New machine
 
 ```sh
-sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply https://git.chenantunez.com/cwchen-twn/dotfiles.git
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
+    --source ~/Documents/Gitea/cwchen-twn/dotfiles https://git.chenantunez.com/cwchen-twn/dotfiles.git
 ```
 
 `init` asks once per machine for the git identity, the SSH key name, and checklists of what to install:
@@ -29,6 +30,24 @@ Deselecting something stops managing it; it does not uninstall it.
 
 Bootstrap order (`home/.chezmoiscripts/`): install ansible, install mise, fetch the age key from Vaultwarden, apply the dotfiles,
 then run the Ansible playbook, `mise install`, fisher, the ssh-agent unit, and the Claude plugins/MCP servers. Finally, create this machine's SSH key if it's missing.
+
+## Fresh Debian install from USB (laptops)
+
+`install/debian/` builds an unattended Debian netinst ISO: Debian stable + LXQt, no disk encryption, GPT/EFI/ext4.
+
+```sh
+install/debian/build-iso.sh --write /dev/sdX   # asks hostname, user, timezone, Wi-Fi, password; writes the stick
+```
+
+Boot the target from the stick (Mac: hold Option, pick "EFI Boot"). The default boot entry
+**wipes the first non-USB disk** and installs without questions (~15 min, needs the Wi-Fi from the build).
+After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above.
+
+- `preseed.cfg.tmpl`: the installer answers. Secrets are filled in at build time and only live in the ISO (`~/.cache/debian-iso/`, mode 600).
+- `pick-disk.sh`: picks the internal disk and zeroes its old partition tables (used drives, APFS, LVM).
+- `late.sh`: drops `~/bootstrap.sh`.
+- On MacBooks the `macbook` Ansible role runs automatically (DMI product name): Broadcom Wi-Fi firmware, `mbpfan`, `tlp`,
+  F1-F12 as function keys, and the FaceTime HD camera (`facetimehd` driver via DKMS + firmware extracted from Apple's update).
 
 ## Where things come from
 
@@ -66,4 +85,5 @@ chezmoi cd && git commit -am "..." && git push
 ```
 home/       chezmoi source state (.chezmoiroot)
 ansible/    playbook + roles run by home/.chezmoiscripts/run_onchange_after_10-ansible.sh.tmpl
+install/    unattended OS installers (Debian preseed ISO)
 ```
