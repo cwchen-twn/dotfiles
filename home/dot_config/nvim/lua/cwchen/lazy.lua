@@ -16,7 +16,7 @@ require("lazy").setup({
 		{ "LazyVim/LazyVim", import = "lazyvim.plugins" },
 		{ import = "lazyvim.plugins.extras.lsp.none-ls" },
 		{ import = "lazyvim.plugins.extras.ui.alpha" },
-		{ import = "walker088.plugins" },
+		{ import = "cwchen.plugins" },
 	},
 	defaults = {
 		install = { colorscheme = { "catppuccin" } },

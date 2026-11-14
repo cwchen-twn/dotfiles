@@ -3,10 +3,10 @@
 --end
 
 --_G.dd = function(...)
---	require("walker088.util.debug").dump(...)
+--	require("cwchen.util.debug").dump(...)
 --end
 --vim.print = _G.dd
 
-require("walker088.core.keymaps")
-require("walker088.core.options")
-require("walker088.lazy")
+require("cwchen.core.keymaps")
+require("cwchen.core.options")
+require("cwchen.lazy")
