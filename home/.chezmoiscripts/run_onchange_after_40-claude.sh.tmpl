@@ -2,6 +2,7 @@
 #!/usr/bin/env bash
 # claude data hash: {{ .claude | toJson | sha256sum }}
 set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"   # fresh machines: not on PATH until the next login
 command -v claude >/dev/null 2>&1 || { echo "claude not installed, skipping plugin/MCP setup"; exit 0; }
 {{ range .claude.marketplaces -}}
 claude plugin marketplace add {{ . | quote }} >/dev/null 2>&1 || true
