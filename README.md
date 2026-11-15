@@ -19,6 +19,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
 |---|---|
 | devops | kubernetes (kubectl, helm, kubectx), terraform, docker, tailscale |
 | runtimes | node (+pnpm), go, java (+maven, gradle), rust, bun, python (uv) |
+| desktop | brave, vscode, alacritty, libinput-gestures, shutter, libreoffice, balena-etcher, calibre, obsidian, dbeaver, fcitx5 |
 | extras | postgres, openvpn3, openfortivpn, nordvpn, nvidia-cuda, claude-code |
 
 Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age, gitleaks, rtk, codebase-memory-mcp and the Bitwarden CLI.
@@ -92,6 +93,18 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 | own installers | rustup (`~/.cargo`), bun (`~/.bun`), uv and claude (`~/.local/bin`) |
 
 Rule: nothing is copied into `/usr/local/bin` or `/opt` by hand. Anything not covered above goes in `~/.local/bin`.
+
+## What this repo manages, and how to list it
+
+| What | Command |
+|---|---|
+| mise tools and versions | `mise ls --current`; missing: `mise ls --missing`; updates: `mise outdated`, `mise up` |
+| files deployed by chezmoi | `chezmoi managed`; drift: `chezmoi status`, `chezmoi diff` |
+| this machine's selections | `chezmoi data \| jq '{devops,runtimes,desktop,extras}'` (change: `chezmoi init --prompt`) |
+| apt / Homebrew packages | `ansible/roles/*/tasks/main.yml`: base (core + monitoring), desktop (`apt_map`), devops, runtimes, macbook, vpn, nvidia, postgres; `ansible-playbook ansible/setup.yml --list-tasks` |
+| what apt installed by hand | `apt-mark showmanual` |
+| Claude Code plugins / MCP | `claude plugin list`, `claude mcp list` |
+| Neovim plugins / LSP tools | `:Lazy`, `:Mason` (lockfile: `~/.config/nvim/lazy-lock.json`) |
 
 ## Secrets
 
