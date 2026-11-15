@@ -73,6 +73,8 @@
       args: { creates: "{{ home }}/.cargo/bin/alacritty" }
       when: "'alacritty' in desktop and ansible_distribution_release in ['jammy', 'bookworm']"
 
+    # Not packaged in Debian/Ubuntu. Gestures: ~/.config/libinput-gestures.conf; started from
+    # ~/.config/autostart/libinput-gestures.desktop (both chezmoi). Bump the tag to upgrade.
     - name: libinput-gestures (from source)
       when: "'libinput-gestures' in desktop"
       block:
@@ -80,12 +82,15 @@
           ansible.builtin.git:
             repo: https://github.com/bulletmark/libinput-gestures.git
             dest: /usr/local/src/libinput-gestures
-            version: master
+            version: "2.81"
+            force: true
+          register: gestures_src
         - name: Install libinput-gestures
           ansible.builtin.command: make install
-          args:
-            chdir: /usr/local/src/libinput-gestures
-            creates: /usr/bin/libinput-gestures
+          args: { chdir: /usr/local/src/libinput-gestures }
+          when: gestures_src.changed or not ('/usr/bin/libinput-gestures' is file)
+        - name: xinput (inspect/tweak touchpad settings)
+          ansible.builtin.apt: { name: xinput }
         - name: User in input group
           ansible.builtin.user: { name: "{{ user }}", groups: input, append: true }
 

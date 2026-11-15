@@ -3,15 +3,23 @@
 {{ if ne .chezmoi.os "linux" }}
 .config/picom
 .config/libinput-gestures.conf
+.config/autostart
 {{ end }}
 {{ if not (has "picom" .desktop) }}
 .config/picom
 {{ end }}
 {{ if not (has "libinput-gestures" .desktop) }}
 .config/libinput-gestures.conf
+.config/autostart/libinput-gestures.desktop
 {{ end }}
 {{ if not (has "alacritty" .desktop) }}
 .config/alacritty
+{{ end }}
+{{ if not (stat "/sys/class/leds/smc::kbd_backlight") }}
+.local/bin/kbd-backlight-idle
+.config/autostart/kbd-backlight-idle.desktop
+.config/systemd/user/three-finger-drag.service
+.config/linux-3-finger-drag
 {{ end }}
 {{ if not (has "claude-code" .extras) }}
 .claude

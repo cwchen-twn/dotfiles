@@ -1,0 +1,18 @@
+# Managed by chezmoi (MacBooks only). macOS-style three-finger drag; binary built by the ansible macbook role.
+# Runs below the display server (evdev/uinput), so it doesn't need the graphical session (LXQt doesn't start
+# graphical-session.target anyway). If it stops, the touchpad simply works without three-finger drag.
+[Unit]
+Description=Three-finger drag (linux-3-finger-drag)
+ConditionPathExists=%h/.cargo/bin/linux-3-finger-drag
+# It refuses to start without ~/.config/linux-3-finger-drag/3fd-config.json (chezmoi); give up after 5 tries/min.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=exec
+ExecStart=%h/.cargo/bin/linux-3-finger-drag
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

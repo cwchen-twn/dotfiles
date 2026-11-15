@@ -29,6 +29,72 @@
     mode: "0644"
   notify: Update initramfs
 
+# Mac-like touchpad for every X session (login screen included). Overrides the libinput defaults from
+# /usr/share/X11/xorg.conf.d/40-libinput.conf; needs an X restart (log out/in). LXQt's touchpad settings
+# override these if you change them there. Gestures: libinput-gestures (desktop role).
+- name: xorg.conf.d directory
+  ansible.builtin.file: { path: /etc/X11/xorg.conf.d, state: directory, mode: "0755" }
+
+- name: Touchpad behaves like macOS (tap, natural scrolling, two-finger right-click)
+  ansible.builtin.copy:
+    dest: /etc/X11/xorg.conf.d/50-macbook-touchpad.conf
+    mode: "0644"
+    content: |
+      Section "InputClass"
+          Identifier "MacBook touchpad"
+          MatchIsTouchpad "on"
+          MatchDriver "libinput"
+          Option "Tapping" "on"
+          Option "TappingDrag" "on"
+          Option "NaturalScrolling" "true"
+          Option "ClickMethod" "clickfinger"
+          Option "DisableWhileTyping" "true"
+          Option "ScrollMethod" "twofinger"
+      EndSection
+
+# macOS-style three-finger drag. Xorg's libinput driver (1.5.0) can't enable it, so linux-3-finger-drag grabs the
+# touchpad, turns 3-finger drags into a held left button on a virtual mouse and mirrors everything else to a clone
+# touchpad (which the xorg.conf.d settings above still apply to). Consequence: 3-finger swipes no longer exist,
+# so workspace gestures use 4 fingers (as on macOS with three-finger drag on). Started by the systemd user unit
+# ~/.config/systemd/user/three-finger-drag.service (chezmoi); tuning: ~/.config/linux-3-finger-drag/3fd-config.json.
+# https://github.com/lmr97/linux-3-finger-drag
+- name: Three-finger drag
+  vars:
+    tfd_version: v1.7.0
+    cargo: "{{ home }}/.cargo/bin/cargo"
+  block:
+    - name: Build dependencies and uinput access (input group)
+      ansible.builtin.apt: { name: [pkg-config, libinput-dev, libudev-dev] }
+
+    - name: uinput writable by the input group
+      ansible.builtin.copy:
+        dest: /etc/udev/rules.d/60-uinput.rules
+        content: |
+          KERNEL=="uinput", GROUP="input", MODE="0660", TAG+="uaccess"
+        mode: "0644"
+      register: uinput_rule
+
+    - name: Load uinput at boot
+      ansible.builtin.copy: { dest: /etc/modules-load.d/uinput.conf, content: "uinput\n", mode: "0644" }
+
+    - name: Load uinput now and apply the rule
+      ansible.builtin.shell: modprobe uinput && udevadm control --reload && udevadm trigger --sysname-match=uinput
+      when: uinput_rule.changed
+      changed_when: true
+
+    - name: Installed version
+      become: false
+      ansible.builtin.shell: "{{ cargo }} install --list 2>/dev/null | grep -q '^linux-3-finger-drag {{ tfd_version }}:'"
+      register: tfd_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Build linux-3-finger-drag into ~/.cargo/bin (needs the rust runtime)
+      become: false
+      ansible.builtin.command: >-
+        {{ cargo }} install --locked --git https://github.com/lmr97/linux-3-finger-drag --tag {{ tfd_version }}
+      when: tfd_installed.rc != 0 and (cargo is file)
+
 # FaceTime HD camera: firmware extracted from Apple's update package + out-of-tree driver built with DKMS
 # (rebuilt automatically on kernel upgrades). https://github.com/patjak/facetimehd
 - name: FaceTime HD firmware source

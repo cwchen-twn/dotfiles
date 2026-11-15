@@ -65,6 +65,11 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 - Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,
   no password manager, Bitwarden extension forced). Bookmarks, extensions and settings travel with Brave Sync;
   the profile directory is deliberately not in this repo.
+- Three-finger drag (MacBooks): [linux-3-finger-drag](https://github.com/lmr97/linux-3-finger-drag), built by the macbook
+  role into `~/.cargo/bin` (needs the rust runtime), run by the `three-finger-drag` systemd user unit. Xorg's libinput
+  driver can't do it natively; the program grabs the touchpad and mirrors everything else to a clone.
+- `libinput-gestures` (desktop app, autostarted; `~/.config/libinput-gestures.conf`): 4 fingers left/right switch workspace,
+  up shows the desktop, down opens the menu; pinch zooms (3 fingers are taken by the drag, as on macOS).
 - Leave the Wi-Fi SSID empty to pick the network and type the passphrase on the target instead (the installer may then
   also ask to retry mounting the stick: answer Yes).
 

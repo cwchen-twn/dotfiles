@@ -1,0 +1,13 @@
+{{ if and (eq .chezmoi.os "linux") (stat "/sys/class/leds/smc::kbd_backlight") -}}
+#!/usr/bin/env bash
+# MacBook: enable three-finger drag (binary from the ansible macbook role, which runs before this).
+# unit hash: {{ include "dot_config/systemd/user/three-finger-drag.service" | sha256sum }}
+set -euo pipefail
+systemctl --user daemon-reload
+systemctl --user enable three-finger-drag.service
+if [ -x "$HOME/.cargo/bin/linux-3-finger-drag" ]; then
+    systemctl --user restart three-finger-drag.service
+else
+    echo "three-finger-drag: binary not built yet (needs the rust runtime); re-run chezmoi apply after installing it" >&2
+fi
+{{ end -}}
