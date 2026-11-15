@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "rtk hook claude"
+            "command": "command -v rtk >/dev/null 2>&1 || exit 0; exec rtk hook claude"
           }
         ]
       },
@@ -16,10 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codebase-memory-mcp",
-            "args": [
-              "hook-augment"
-            ],
+            "command": "command -v codebase-memory-mcp >/dev/null 2>&1 || exit 0; exec codebase-memory-mcp hook-augment",
             "timeout": 5
           }
         ]
@@ -31,10 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codebase-memory-mcp",
-            "args": [
-              "hook-augment"
-            ],
+            "command": "command -v codebase-memory-mcp >/dev/null 2>&1 || exit 0; exec codebase-memory-mcp hook-augment",
             "timeout": 5
           }
         ]
@@ -46,10 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codebase-memory-mcp",
-            "args": [
-              "hook-augment"
-            ],
+            "command": "command -v codebase-memory-mcp >/dev/null 2>&1 || exit 0; exec codebase-memory-mcp hook-augment",
             "timeout": 5
           }
         ]
@@ -59,10 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codebase-memory-mcp",
-            "args": [
-              "hook-augment"
-            ],
+            "command": "command -v codebase-memory-mcp >/dev/null 2>&1 || exit 0; exec codebase-memory-mcp hook-augment",
             "timeout": 5
           }
         ]
@@ -72,10 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codebase-memory-mcp",
-            "args": [
-              "hook-augment"
-            ],
+            "command": "command -v codebase-memory-mcp >/dev/null 2>&1 || exit 0; exec codebase-memory-mcp hook-augment",
             "timeout": 5
           }
         ]
@@ -85,10 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codebase-memory-mcp",
-            "args": [
-              "hook-augment"
-            ],
+            "command": "command -v codebase-memory-mcp >/dev/null 2>&1 || exit 0; exec codebase-memory-mcp hook-augment",
             "timeout": 5
           }
         ]
@@ -100,10 +82,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codebase-memory-mcp",
-            "args": [
-              "hook-augment"
-            ],
+            "command": "command -v codebase-memory-mcp >/dev/null 2>&1 || exit 0; exec codebase-memory-mcp hook-augment",
             "timeout": 5
           }
         ]
@@ -117,6 +96,12 @@
     "cloudflare@cloudflare": true
   },
   "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
     "anthropic-agent-skills": {
       "source": {
         "source": "github",
@@ -134,5 +119,6 @@
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
   "skipAutoPermissionPrompt": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "theme": "dark"
 }

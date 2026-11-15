@@ -2,7 +2,8 @@
 #!/usr/bin/env bash
 # claude data hash: {{ .claude | toJson | sha256sum }}
 set -euo pipefail
-export PATH="$HOME/.local/bin:$PATH"   # fresh machines: not on PATH until the next login
+# chezmoi scripts do not get the interactive PATH: claude lives in ~/.local/bin, MCP servers come from mise.
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 command -v claude >/dev/null 2>&1 || { echo "claude not installed, skipping plugin/MCP setup"; exit 0; }
 {{ range .claude.marketplaces -}}
 claude plugin marketplace add {{ . | quote }} >/dev/null 2>&1 || true
@@ -11,6 +12,8 @@ claude plugin marketplace add {{ . | quote }} >/dev/null 2>&1 || true
 claude plugin install {{ . | quote }} --scope user >/dev/null 2>&1 || echo "plugin {{ . }} not installed (already present or failed)"
 {{ end -}}
 {{ range $name, $cmd := .claude.mcpServers -}}
-claude mcp get {{ $name | quote }} >/dev/null 2>&1 || claude mcp add --scope user {{ $name | quote }} -- {{ range $cmd }}{{ . | quote }} {{ end }}
+claude mcp get {{ $name | quote }} >/dev/null 2>&1 || claude mcp add --scope user {{ $name | quote }} -- {{ range $cmd }}{{ . | quote }} {{ end }}\
+    || echo "MCP server {{ $name }} NOT registered" >&2
+command -v {{ index $cmd 0 | quote }} >/dev/null 2>&1 || echo "MCP server {{ $name }}: {{ index $cmd 0 }} not on PATH (mise install?)" >&2
 {{ end -}}
 {{ end -}}
