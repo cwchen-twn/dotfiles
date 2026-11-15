@@ -57,6 +57,11 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   F1-F12 as function keys, the FaceTime HD camera (`facetimehd` driver via DKMS + firmware extracted from Apple's update),
   and hibernation (`install/debian/hibernate.sh`: resumes from a swap partition >= RAM, else creates a RAM + 2 GB swap file).
 - The build asks for the swap partition size (default 16 GB; >= RAM to hibernate).
+- The `lxqt` Ansible role sets only specific keys in `~/.config/lxqt/*.conf` (LXQt rewrites those files, so chezmoi doesn't
+  own them): on Retina MacBooks 2x scaling (`Xft.dpi: 192` in `~/.Xresources`, which Qt, Brave, GTK via `GDK_SCALE` and
+  Alacritty all follow); system-wide dark mode (LXQt theme/palette, GTK, freedesktop color-scheme); Brave as default browser; Alacritty as terminal
+  (Ctrl+Alt+T); panel quick launch + menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, as selected).
+  Also 4 workspaces in a row for the gestures.
 - Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,
   no password manager, Bitwarden extension forced). Bookmarks, extensions and settings travel with Brave Sync;
   the profile directory is deliberately not in this repo.

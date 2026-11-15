@@ -1,0 +1,29 @@
+# HiDPI (the `hidpi` var from setup.yml): 2x via Xft.dpi in ~/.Xresources; Qt6, Chromium, GTK (GDK_SCALE) and alacritty
+# all scale from it. The panel keeps LXQt's default sizes because Qt doubles them.
+lxqt_hidpi: "{{ hidpi | default(false) }}"
+lxqt_dpi: 192
+lxqt_cursor_size: 48
+lxqt_xfwm4_theme: Default-xhdpi   # xfwm4 title bars don't scale with Xft.dpi
+lxqt_workspaces: 4  # keep in sync with --cols in ~/.config/libinput-gestures.conf
+
+# System-wide dark mode: LXQt theme + palette, GTK 3/4, and the freedesktop color-scheme (Brave, VS Code, Electron).
+lxqt_dark: true
+lxqt_dark_palette: Kvantum   # /usr/share/lxqt/palettes/<name>
+
+# Panel quick launch + main menu favorites, in order. `app` must be in the chezmoi desktop selection ('' = always);
+# missing .desktop files are skipped.
+lxqt_favorites:
+  - { app: "", files: [/usr/share/applications/pcmanfm-qt.desktop] }
+  - { app: brave, files: [/usr/share/applications/brave-browser.desktop] }
+  - { app: alacritty, files: [/usr/share/applications/Alacritty.desktop] }
+  - { app: vscode, files: [/usr/share/applications/com.microsoft.VSCode.desktop, /usr/share/applications/code.desktop] }
+  - { app: obsidian, files: ["{{ home }}/.local/share/applications/obsidian.desktop"] }
+  - { app: dbeaver, files: [/usr/share/applications/dbeaver-ce.desktop] }
+
+lxqt_browser_mimetypes:
+  - text/html
+  - application/xhtml+xml
+  - x-scheme-handler/http
+  - x-scheme-handler/https
+  - x-scheme-handler/about
+  - x-scheme-handler/unknown

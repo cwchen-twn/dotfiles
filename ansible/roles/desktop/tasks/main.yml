@@ -107,6 +107,11 @@
           ansible.builtin.apt:
             deb: "{{ etcher_rel.json.assets | selectattr('name', 'search', 'amd64\\.deb$') | map(attribute='browser_download_url') | first }}"
 
+    - name: FUSE 2 for AppImages
+      ansible.builtin.apt:
+        name: "{{ 'libfuse2' if ansible_distribution_release in ['bookworm', 'jammy'] else 'libfuse2t64' }}"
+      when: "'obsidian' in desktop"
+
     - name: Obsidian AppImage
       when: "'obsidian' in desktop"
       become: false
@@ -117,8 +122,9 @@
             headers: "{{ github_api_headers }}"
             return_content: true
           register: obsidian_rel
-        - name: Applications dir
-          ansible.builtin.file: { path: "{{ home }}/Applications", state: directory, mode: "0755" }
+        - name: Applications dirs
+          ansible.builtin.file: { path: "{{ item }}", state: directory, mode: "0755" }
+          loop: ["{{ home }}/Applications", "{{ home }}/.local/share/applications"]
         - name: Download AppImage
           ansible.builtin.get_url:
             url: "{{ obsidian_rel.json.assets | selectattr('name', 'match', '^Obsidian-[0-9.]+\\.AppImage$') | map(attribute='browser_download_url') | first }}"
@@ -130,6 +136,20 @@
             dest: "{{ home }}/.local/bin/obsidian"
             state: link
             force: true
+        - name: Menu entry (Papirus ships the obsidian icon)
+          ansible.builtin.copy:
+            dest: "{{ home }}/.local/share/applications/obsidian.desktop"
+            mode: "0644"
+            content: |
+              [Desktop Entry]
+              Type=Application
+              Name=Obsidian
+              Comment=Knowledge base
+              Exec={{ home }}/Applications/Obsidian.AppImage %U
+              Icon=obsidian
+              Terminal=false
+              Categories=Office;
+              MimeType=x-scheme-handler/obsidian;
 
 - name: Desktop apps (macOS)
   when: is_mac

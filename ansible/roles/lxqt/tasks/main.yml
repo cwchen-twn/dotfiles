@@ -1,0 +1,173 @@
+# User-level LXQt settings: HiDPI, dark mode, default browser/terminal, favorites, keyboard-backlight keys.
+# LXQt rewrites its own .conf files, so only the keys below are managed (community.general.ini_file);
+# everything else stays editable in the LXQt settings UI. Takes effect on the next login.
+- name: Detect LXQt and the MacBook keyboard backlight
+  ansible.builtin.stat: { path: "{{ item }}" }
+  loop: [/usr/bin/startlxqt, /sys/class/leds/smc::kbd_backlight]
+  register: lxqt_detect
+
+- name: Find a screen backlight (laptops)
+  ansible.builtin.find: { paths: /sys/class/backlight, file_type: any }
+  register: lxqt_backlight
+
+- name: LXQt user settings
+  when: lxqt_detect.results[0].stat.exists
+  become: false
+  vars:
+    kbd_backlight: "{{ lxqt_detect.results[1].stat.exists }}"
+    screen_backlight: "{{ lxqt_backlight.matched > 0 }}"
+    cfg: "{{ home }}/.config"
+  block:
+    - name: Find the favorites' desktop files
+      ansible.builtin.stat: { path: "{{ item }}" }
+      loop: "{{ lxqt_favorites | selectattr('app', 'in', desktop + ['']) | map(attribute='files') | flatten }}"
+      register: lxqt_fav_stat
+
+    - name: Read the dark palette
+      ansible.builtin.slurp: { src: "/usr/share/lxqt/palettes/{{ lxqt_dark_palette }}" }
+      register: lxqt_palette
+      when: lxqt_dark | bool
+
+    - name: Build the managed key list
+      ansible.builtin.set_fact:
+        lxqt_favs: "{{ lxqt_fav_stat.results | selectattr('stat.exists') | map(attribute='item') | list }}"
+        lxqt_ini: "{{ hidpi_ini + dark_ini + browser_ini + terminal_ini + kbd_ini + screen_ini }}"
+      vars:
+        # Xft.dpi itself goes to ~/.Xresources (below); these keep LXQt's own settings consistent with it.
+        hidpi_ini: "{{ [
+            ['lxqt/session.conf', 'Font', 'dpi', lxqt_dpi],
+            ['lxqt/session.conf', 'Mouse', 'cursor_size', lxqt_cursor_size],
+            ['lxqt/session.conf', 'Environment', 'GDK_SCALE', 2],
+            ['lxqt/session.conf', 'Environment', 'GDK_DPI_SCALE', 0.5],
+            ['lxqt/panel.conf', 'panel1', 'panelSize', 32],
+            ['lxqt/panel.conf', 'panel1', 'iconSize', 22],
+          ] if lxqt_hidpi | bool else [] }}"
+        dark_ini: >-
+          {%- set out = [] -%}
+          {%- if lxqt_dark | bool -%}
+            {%- set _ = out.extend([
+                ['lxqt/lxqt.conf', 'General', 'theme', 'dark'],
+                ['lxqt/lxqt.conf', 'General', 'icon_theme', 'Papirus-Dark'],
+                ['lxqt/lxqt.conf', 'General', 'palette_override', 'true']]) -%}
+            {%- for kv in (lxqt_palette.content | b64decode) | regex_findall('(?m)^(\\w+)=(\\S+)$') -%}
+              {%- set _ = out.append(['lxqt/lxqt.conf', 'Palette', kv[0], kv[1]]) -%}
+            {%- endfor -%}
+            {%- for f in ['gtk-3.0/settings.ini', 'gtk-4.0/settings.ini'] -%}
+              {%- set _ = out.extend([
+                  [f, 'Settings', 'gtk-theme-name', 'Adwaita-dark'],
+                  [f, 'Settings', 'gtk-icon-theme-name', 'Papirus-Dark'],
+                  [f, 'Settings', 'gtk-application-prefer-dark-theme', 1]]) -%}
+            {%- endfor -%}
+          {%- endif -%}
+          {{ out }}
+        browser_ini: >-
+          {%- set out = [] -%}
+          {%- if 'brave' in desktop -%}
+            {%- set _ = out.append(['lxqt/session.conf', 'Environment', 'BROWSER', 'brave-browser']) -%}
+            {%- for f in ['mimeapps.list', 'lxqt-mimeapps.list'] -%}
+              {%- for m in lxqt_browser_mimetypes -%}
+                {%- set _ = out.append([f, 'Default Applications', m, 'brave-browser.desktop']) -%}
+              {%- endfor -%}
+            {%- endfor -%}
+          {%- endif -%}
+          {{ out }}
+        terminal_ini: "{{ [
+            ['lxqt/session.conf', 'Environment', 'TERM', 'alacritty'],
+            ['lxqt/globalkeyshortcuts.conf', 'Control%2BAlt%2BT.1', 'Comment', 'Alacritty'],
+            ['lxqt/globalkeyshortcuts.conf', 'Control%2BAlt%2BT.1', 'Enabled', 'true'],
+            ['lxqt/globalkeyshortcuts.conf', 'Control%2BAlt%2BT.1', 'Exec', 'alacritty'],
+          ] if 'alacritty' in desktop else [] }}"
+        # Screen brightness keys (MacBook: Fn+F1/F2). LXQt's own bindings only live in /etc/xdg, which lxqt-globalkeysd
+        # ignores once ~/.config/lxqt/globalkeyshortcuts.conf exists; its 2% steps are also too small to notice.
+        # 5% steps, never below 1% (fully dark looks like a dead screen). brightnessctl's udev rule: video group.
+        screen_ini: "{{ [
+            ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessUp.103', 'Comment', 'Screen brighter'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessUp.103', 'Enabled', 'true'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessUp.103', 'Exec', 'brightnessctl, -q, -c, backlight, --min-value=1%, set, 5%+'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessDown.104', 'Comment', 'Screen darker'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessDown.104', 'Enabled', 'true'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessDown.104', 'Exec', 'brightnessctl, -q, -c, backlight, --min-value=1%, set, 5%-'],
+          ] if screen_backlight | bool else [] }}"
+        # Fn+F6 / Fn+F5 (XF86KbdBrightnessUp/Down); brightnessctl is installed by the macbook role.
+        kbd_ini: "{{ [
+            ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessUp.101', 'Comment', 'Keyboard backlight up'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessUp.101', 'Enabled', 'true'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessUp.101', 'Exec', 'brightnessctl, -q, -d, smc::kbd_backlight, set, +10%'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessDown.102', 'Comment', 'Keyboard backlight down'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessDown.102', 'Enabled', 'true'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessDown.102', 'Exec', 'brightnessctl, -q, -d, smc::kbd_backlight, set, 10%-'],
+          ] if kbd_backlight | bool else [] }}"
+
+    - name: Config dirs
+      ansible.builtin.file: { path: "{{ cfg }}/{{ item }}", state: directory, mode: "0755" }
+      loop: [lxqt, gtk-3.0, gtk-4.0]
+
+    - name: HiDPI X resources (merged at login by /etc/X11/Xsession; read by Qt, Chromium, GTK, alacritty)
+      ansible.builtin.lineinfile:
+        path: "{{ home }}/.Xresources"
+        regexp: '^{{ item.key | regex_escape }}:'
+        line: "{{ item.key }}: {{ item.value }}"
+        create: true
+        mode: "0644"
+      loop: "{{ {'Xft.dpi': lxqt_dpi, 'Xcursor.size': lxqt_cursor_size} | dict2items }}"
+      when: lxqt_hidpi | bool
+
+    - name: LXQt and GTK settings (HiDPI, dark mode, default apps, shortcuts)
+      community.general.ini_file:
+        path: "{{ cfg }}/{{ item[0] }}"
+        section: "{{ item[1] }}"
+        option: "{{ item[2] }}"
+        value: "{{ item[3] }}"
+        no_extra_spaces: true
+        mode: "0644"
+      loop: "{{ lxqt_ini }}"
+      loop_control: { label: "{{ item[0] }} [{{ item[1] }}] {{ item[2] }}" }
+
+    - name: Favorites in the panel quick launch and the main menu
+      community.general.ini_file:
+        path: "{{ cfg }}/lxqt/panel.conf"
+        section: "{{ item[0] }}"
+        option: "{{ item[1] }}"
+        value: "{{ item[2] }}"
+        no_extra_spaces: true
+        mode: "0644"
+      loop: >-
+        {%- set out = [['quicklaunch', 'apps\\size', lxqt_favs | length], ['mainmenu', 'favorites\\size', lxqt_favs | length]] -%}
+        {%- for f in lxqt_favs -%}
+          {%- set _ = out.append(['quicklaunch', 'apps\\' ~ loop.index ~ '\\desktop', f]) -%}
+          {%- set _ = out.append(['mainmenu', 'favorites\\' ~ loop.index ~ '\\desktopFile', f]) -%}
+        {%- endfor -%}
+        {{ out }}
+      loop_control: { label: "[{{ item[0] }}] {{ item[1] }}" }
+
+    # xfwm4 keeps this in xfconf (needs the running session's D-Bus); skipped when run outside the desktop.
+    - name: Workspaces (xfwm4), one row like macOS Spaces; 3-finger swipes switch between them
+      ansible.builtin.shell: |
+        command -v xfconf-query >/dev/null && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || exit 0
+        [ "$(xfconf-query -c xfwm4 -p /general/workspace_count 2>/dev/null)" = "{{ lxqt_workspaces }}" ] && exit 0
+        xfconf-query -c xfwm4 -p /general/workspace_count -n -t int -s {{ lxqt_workspaces }} && echo CHANGED
+      register: lxqt_ws
+      changed_when: "'CHANGED' in lxqt_ws.stdout"
+
+    # gsettings/xfconf live behind the session's D-Bus: skipped when run outside the desktop session.
+    - name: Window manager theme and freedesktop dark color-scheme
+      ansible.builtin.shell: |
+        [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || exit 0
+        set_if() { [ "$(sh -c "$1" 2>/dev/null)" = "$2" ] || { sh -c "$3" && echo CHANGED; }; }
+        {% if lxqt_hidpi | bool %}
+        command -v xfconf-query >/dev/null && set_if "xfconf-query -c xfwm4 -p /general/theme" "{{ lxqt_xfwm4_theme }}" \
+            "xfconf-query -c xfwm4 -p /general/theme -n -t string -s {{ lxqt_xfwm4_theme }}"
+        {% endif %}
+        {% if lxqt_dark | bool %}
+        command -v gsettings >/dev/null || exit 0
+        set_if "gsettings get org.gnome.desktop.interface color-scheme" "'prefer-dark'" \
+            "gsettings set org.gnome.desktop.interface color-scheme prefer-dark"
+        set_if "gsettings get org.gnome.desktop.interface gtk-theme" "'Adwaita-dark'" \
+            "gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark"
+        set_if "gsettings get org.gnome.desktop.interface icon-theme" "'Papirus-Dark'" \
+            "gsettings set org.gnome.desktop.interface icon-theme Papirus-Dark"
+        {% endif %}
+        true
+      args: { executable: /bin/bash }
+      register: lxqt_dbus
+      changed_when: "'CHANGED' in lxqt_dbus.stdout"
