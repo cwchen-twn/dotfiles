@@ -33,7 +33,6 @@
           - ripgrep
           - fd-find
           - jq
-          - htop
           - tree
           - curl
           - wget
@@ -53,11 +52,12 @@
           - nvtop           # GPU monitor
           - s-tui           # CPU frequency/temperature + stress
           - acpi            # acpi -b: battery
+          - speedtest-cli   # speedtest
 
 - name: macOS base
   when: is_mac
   community.general.homebrew:
-    name: [git, gh, fish, tmux, vim, ripgrep, fd, jq, htop, tree, wget, p7zip, zstd, shellcheck, mise]
+    name: [git, gh, fish, tmux, vim, ripgrep, fd, jq, tree, smartmontools, wget, p7zip, zstd, shellcheck, mise]
 
 - name: Register fish as a login shell
   ansible.builtin.lineinfile:

@@ -7,7 +7,6 @@ command -q tlp-stat; and alias battery "sudo tlp-stat -b"   # health, cycles, ch
 {{- if has "nvidia-cuda" .extras }}
 alias gputop "watch -n 0.5 nvidia-smi"
 {{- end }}
-alias speedtest "curl -s https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py | python3 -"
 
 # personal Vaultwarden, kept separate from any work `bw` session
 function bwp --wraps bw --description "bw against vw.chenantunez.com"

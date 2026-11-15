@@ -37,7 +37,6 @@
           brave: [brave-browser]
           vscode: [code]
           alacritty: "{{ ['alacritty'] if ansible_distribution_release not in ['jammy', 'bookworm'] else [] }}"
-          picom: [picom]
           libinput-gestures: [wmctrl, xdotool, libinput-tools]
           shutter: [shutter]
           libreoffice: [libreoffice]

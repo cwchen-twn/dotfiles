@@ -1,12 +1,8 @@
 {{- /* Paths are targets relative to $HOME. Templated per machine. */ -}}
 
 {{ if ne .chezmoi.os "linux" }}
-.config/picom
 .config/libinput-gestures.conf
 .config/autostart
-{{ end }}
-{{ if not (has "picom" .desktop) }}
-.config/picom
 {{ end }}
 {{ if not (has "libinput-gestures" .desktop) }}
 .config/libinput-gestures.conf

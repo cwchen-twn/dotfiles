@@ -17,3 +17,5 @@
 .config/nvim/lua/cwchen/plugins/version-control.lua
 .config/nvim/lua/cwchen/plugins/vim-maximizer.lua
 .config/nvim/lua/cwchen/plugins/which-key.lua
+# picom: redundant with xfwm4/LXQt compositing (2026-11)
+.config/picom
