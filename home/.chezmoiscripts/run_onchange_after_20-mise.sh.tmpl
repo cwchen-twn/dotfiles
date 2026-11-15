@@ -3,4 +3,15 @@
 set -euo pipefail
 command -v mise >/dev/null 2>&1 || { echo "mise not found, skipping"; exit 0; }
 mise trust "$HOME/.config/mise/config.toml" >/dev/null 2>&1 || true
-mise install --yes
+# Most tools come from GitHub releases; anonymous API calls are capped at 60/h, which a fresh machine exceeds.
+if [ -z "${GITHUB_TOKEN:-}" ] && command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    GITHUB_TOKEN=$(gh auth token) && export GITHUB_TOKEN
+fi
+# One bad entry must not hide the rest: install what we can, then report what is missing.
+mise install --yes || true
+missing=$(mise ls --missing --no-header 2>/dev/null | awk '{print $1 "@" $2}' || true)
+if [ -n "$missing" ]; then
+    printf '\n\033[1;31mmise: these tools are NOT installed:\033[0m\n%s\n' "$missing" >&2
+    [ -z "${GITHUB_TOKEN:-}" ] && echo "Hint: GitHub rate limit? Run 'gh auth login', then 'mise install'." >&2
+    exit 1
+fi
