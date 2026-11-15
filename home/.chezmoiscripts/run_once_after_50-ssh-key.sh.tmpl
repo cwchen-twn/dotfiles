@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-# Ensure this machine has its own SSH key for git hosts; register it where we're logged in.
+# Ensure this machine has its own SSH key for git hosts. Registering it needs gh/glab/tea logins,
+# which a fresh machine doesn't have yet: that's `register-ssh-key` (fish), run after bootstrap.
 set -euo pipefail
 KEY="$HOME/.ssh/{{ .sshKey }}"
 [ -f "$KEY" ] && exit 0
 mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
 ssh-keygen -t ed25519 -C "{{ .name }}@{{ .chezmoi.hostname }}" -f "$KEY"
-TITLE="{{ .chezmoi.hostname }}"
-gh auth status >/dev/null 2>&1 && gh ssh-key add "$KEY.pub" --title "$TITLE" || echo "gh: not logged in, add $KEY.pub to GitHub manually"
-glab auth status >/dev/null 2>&1 && glab ssh-key add "$KEY.pub" --title "$TITLE" || echo "glab: not logged in, add $KEY.pub to GitLab manually"
-command -v tea >/dev/null 2>&1 && tea api -X POST /user/keys -f title="$TITLE" -f key="$(cat "$KEY.pub")" >/dev/null \
-    || echo "tea: add $KEY.pub to git.chenantunez.com manually"
+echo "New SSH key $KEY: run 'register-ssh-key' to log in to GitHub/GitLab/Gitea and upload it."
