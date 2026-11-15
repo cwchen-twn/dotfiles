@@ -7,7 +7,7 @@ export BITWARDENCLI_APPDATA_DIR="{{ .chezmoi.homeDir }}/.config/bw-personal"
 MISE="$(command -v mise || echo "$HOME/.local/bin/mise")"
 bw() { "$MISE" exec bitwarden@latest -- bw "$@"; }
 bw config server https://vw.chenantunez.com >/dev/null
-bw login --check >/dev/null 2>&1 || bw login
+bw login --check >/dev/null 2>&1 || bw login --raw >/dev/null   # prompts go to stderr; drop the printed session key
 BW_SESSION="$(bw unlock --raw)"; export BW_SESSION
 bw sync >/dev/null
 mkdir -p "$(dirname "$KEY")"

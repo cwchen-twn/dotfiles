@@ -4,6 +4,7 @@
   ansible.builtin.apt:
     name:
       - mbpfan
+      - brightnessctl     # keyboard backlight: brightnessctl -d smc::kbd_backlight set 50%
       - tlp
       - dkms
       - "{{ 'linux-headers-amd64' if ansible_distribution == 'Debian' else 'linux-headers-generic' }}"
