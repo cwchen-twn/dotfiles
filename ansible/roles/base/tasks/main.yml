@@ -44,6 +44,15 @@
           - zstd
           - shellcheck
           - fontconfig
+          # system info / monitoring (needs root or kernel interfaces; CLI ones like btop come from mise)
+          - inxi            # hardware report: inxi -Fxz
+          - lm-sensors      # sensors: temps, fans
+          - smartmontools   # sudo smartctl -a /dev/sda: disk health
+          - iotop-c         # per-process disk IO
+          - nethogs         # per-process network
+          - nvtop           # GPU monitor
+          - s-tui           # CPU frequency/temperature + stress
+          - acpi            # acpi -b: battery
 
 - name: macOS base
   when: is_mac

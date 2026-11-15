@@ -22,7 +22,9 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
 | desktop | brave, vscode, alacritty, picom, libinput-gestures, shutter, libreoffice, balena-etcher, calibre, obsidian, dbeaver, fcitx5 |
 | extras | postgres, openvpn3, openfortivpn, nordvpn, nvidia-cuda, claude-code |
 
-Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, jq, sops, age, gitleaks, rtk, codebase-memory-mcp and the Bitwarden CLI.
+Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age, gitleaks, rtk, codebase-memory-mcp and the Bitwarden CLI.
+System info / monitoring: fastfetch, btop, duf, gdu (mise); inxi (`sysinfo`), lm-sensors, smartmontools, iotop-c, nethogs,
+nvtop, s-tui, acpi, speedtest-cli (apt); `batinfo`, `battery` (TLP health) and `sudo intel_gpu_top` on MacBooks.
 The JetBrainsMono Nerd Font is installed when any desktop app is selected.
 
 Change the selection later with `chezmoi init --prompt` (or `chezmoi edit-config`), then `chezmoi apply`.

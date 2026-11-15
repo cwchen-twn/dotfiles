@@ -15,6 +15,11 @@ bitwarden = "latest"
 "github:DeusData/codebase-memory-mcp" = "latest"
 fzf = "latest"
 tree-sitter = "latest"   # nvim-treesitter builds parsers with it
+# system info / monitoring (kernel-level ones come from apt, ansible base role)
+fastfetch = "latest"     # neofetch successor
+btop = "latest"
+duf = "latest"           # df
+gdu = "latest"           # du, interactive
 {{- if has "kubernetes" .devops }}
 kubectl = "latest"
 helm = "latest"

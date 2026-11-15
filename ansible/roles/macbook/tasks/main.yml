@@ -13,6 +13,7 @@
       - curl
       - git
       - xprintidle      # kbd-backlight-idle
+      - intel-gpu-tools # sudo intel_gpu_top (Iris 6100)
     update_cache: true
 
 - name: Broadcom Wi-Fi firmware (Ubuntu ships it in linux-firmware)
