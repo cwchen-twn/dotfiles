@@ -52,8 +52,8 @@ ask USERNAME_NEW "Username" "$USER"
 ask FULLNAME "Full name" "$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1)"
 ask TIMEZONE "Timezone" "$(timedatectl show -p Timezone --value 2>/dev/null || echo UTC)"
 ask KEYMAP "Keyboard layout (xkb)" us
-ask WIFI_SSID "Wi-Fi SSID"
-ask_secret WIFI_PASS "Wi-Fi password"
+ask WIFI_SSID "Wi-Fi SSID (empty: choose the network on the target during install)"
+[ -z "$WIFI_SSID" ] || ask_secret WIFI_PASS "Wi-Fi password"
 if [ -z "${PASSHASH-}" ]; then
     ask_secret USER_PASS "Login password for $USERNAME_NEW"
     PASSHASH=$(openssl passwd -6 -stdin <<<"$USER_PASS")
@@ -77,6 +77,14 @@ trap 'rm -rf "$work"' EXIT
 umask 077
 
 cfg=$(<"$here/preseed.cfg.tmpl")
+# Without Wi-Fi answers, drop them and lower the priority to "high" so the installer asks for the network
+# (netcfg's ESSID/passphrase questions are high priority; everything else is preseeded).
+priority=critical
+if [ -z "$WIFI_SSID" ]; then
+    cfg=$(grep -v '^d-i netcfg/wireless_' <<<"$cfg")
+    WIFI_PASS=
+    priority=high
+fi
 for v in HOSTNAME_NEW:HOSTNAME USERNAME_NEW:USERNAME FULLNAME TIMEZONE KEYMAP WIFI_SSID WIFI_PASS PASSHASH; do
     src=${v%%:*} key=${v#*:}
     cfg=${cfg//@@$key@@/${!src}}
@@ -93,7 +101,7 @@ chmod u+w "$work/grub.orig"
     cat <<EOF
 menuentry --hotkey=u 'Auto install (WIPES internal disk)' {
     set background_color=black
-    linux    /install.amd/vmlinuz auto=true priority=critical file=/cdrom/preseed/preseed.cfg locale=en_US.UTF-8 keymap=$KEYMAP hostname=$HOSTNAME_NEW --- quiet
+    linux    /install.amd/vmlinuz auto=true priority=$priority file=/cdrom/preseed/preseed.cfg locale=en_US.UTF-8 keymap=$KEYMAP hostname=$HOSTNAME_NEW --- quiet
     initrd   /install.amd/initrd.gz
 }
 EOF
@@ -107,7 +115,7 @@ xorriso -indev "$cache/$iso" -outdev "$out" -boot_image any replay \
     -map "$here/late.sh" /preseed/late.sh \
     -map "$work/grub.cfg" /boot/grub/grub.cfg >/dev/null 2>&1
 chmod 600 "$out"
-echo "built $out (from $iso; contains your Wi-Fi password, keep it private)"
+echo "built $out (from $iso; contains your password hash${WIFI_SSID:+ and Wi-Fi password}, keep it private)"
 
 # --- write to USB
 [ -n "$write_dev" ] || exit 0
