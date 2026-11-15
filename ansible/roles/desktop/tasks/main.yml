@@ -42,7 +42,7 @@
           shutter: [shutter]
           libreoffice: [libreoffice]
           calibre: [calibre]
-          fcitx5: [fcitx5, fcitx5-chewing, fcitx5-chinese-addons]
+          fcitx5: [fcitx5, fcitx5-chewing, fcitx5-chinese-addons, fonts-noto-cjk]  # input methods: ~/.config/fcitx5/profile
 
     # Fixed Brave defaults (check brave://policy). Personal data (bookmarks, extensions, settings) goes through
     # Brave Sync; the profile dir is never versioned (cookies, passwords, binary databases).

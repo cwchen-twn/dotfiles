@@ -12,6 +12,9 @@
 .config/libinput-gestures.conf
 .config/autostart/libinput-gestures.desktop
 {{ end }}
+{{ if not (has "fcitx5" .desktop) }}
+.config/fcitx5
+{{ end }}
 {{ if not (has "alacritty" .desktop) }}
 .config/alacritty
 {{ end }}

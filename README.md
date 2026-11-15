@@ -69,6 +69,8 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   Themes: GRUB from gnome-look.org (GRUB Themes) or github.com/vinceliuice/grub2-themes (2k variants), set `GRUB_THEME`
   in `/etc/default/grub.d/hidpi.cfg`; SDDM (Qt6 only) from store.kde.org (SDDM Login Themes), set `[Theme] Current=` in
   `/etc/sddm.conf.d/`. Inspiration: r/unixporn.
+- fcitx5 (desktop app): US keyboard + Chewing (`~/.config/fcitx5/profile`, chezmoi; stop fcitx5 before editing it by
+  hand, it saves its profile on exit). Ctrl+Space toggles, Shift_L switches temporarily. CJK font: `fonts-noto-cjk`.
 - Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,
   no password manager, Bitwarden extension forced). Bookmarks, extensions and settings travel with Brave Sync;
   the profile directory is deliberately not in this repo.
