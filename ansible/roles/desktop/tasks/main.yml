@@ -76,6 +76,7 @@
         - name: Latest balenaEtcher release
           ansible.builtin.uri:
             url: https://api.github.com/repos/balena-io/etcher/releases/latest
+            headers: "{{ github_api_headers }}"
             return_content: true
           register: etcher_rel
           become: false
@@ -90,6 +91,7 @@
         - name: Latest Obsidian release
           ansible.builtin.uri:
             url: https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest
+            headers: "{{ github_api_headers }}"
             return_content: true
           register: obsidian_rel
         - name: Applications dir

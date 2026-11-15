@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Log in to GitHub before anything downloads from it: Ansible and mise fetch ~20 release binaries through the GitHub
+# API, and anonymous calls are capped at 60/h (a fresh machine runs out). Later steps export `gh auth token`.
+# Skippable: without a login they still work, they just may hit the limit (then `gh auth login` + `chezmoi apply`).
+set -euo pipefail
+if ! command -v gh >/dev/null 2>&1; then
+{{- if eq .chezmoi.os "darwin" }}
+    brew install gh
+{{- else }}
+    sudo apt-get install -y gh
+{{- end }}
+fi
+gh auth status --hostname github.com >/dev/null 2>&1 && exit 0
+read -r -p "Log in to GitHub now? It raises the API rate limit for the downloads that follow. [Y/n] " ans </dev/tty || ans=n
+case "$ans" in
+    [nN]*) echo "gh: skipped, GitHub downloads may hit the anonymous rate limit" >&2 ;;
+    *) gh auth login --hostname github.com --git-protocol ssh --skip-ssh-key --web \
+        || echo "gh: login failed, continuing (GitHub downloads may hit the anonymous rate limit)" >&2 ;;
+esac

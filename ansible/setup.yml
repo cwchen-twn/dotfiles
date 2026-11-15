@@ -16,6 +16,8 @@
     is_mac: "{{ ansible_os_family == 'Darwin' }}"
     arch_deb: "{{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}"
     keyrings: /etc/apt/keyrings
+    # api.github.com calls: authenticated (gh token, exported by the chezmoi script) when available.
+    github_api_headers: "{{ {'Authorization': 'Bearer ' ~ lookup('env', 'GITHUB_TOKEN')} if lookup('env', 'GITHUB_TOKEN') else {} }}"
   pre_tasks:
     - name: Homebrew tasks run unprivileged on macOS
       ansible.builtin.set_fact:

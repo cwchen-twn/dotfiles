@@ -28,8 +28,14 @@ The JetBrainsMono Nerd Font is installed when any desktop app is selected.
 Change the selection later with `chezmoi init --prompt` (or `chezmoi edit-config`), then `chezmoi apply`.
 Deselecting something stops managing it; it does not uninstall it.
 
-Bootstrap order (`home/.chezmoiscripts/`): install ansible, install mise, fetch the age key from Vaultwarden, apply the dotfiles,
+Bootstrap order (`home/.chezmoiscripts/`): install ansible, install mise, fetch the age key from Vaultwarden, log in to GitHub
+(`gh`, optional: Ansible and mise download ~20 release binaries through the GitHub API, which allows only 60 anonymous
+requests/h; with the login they use `gh auth token`), apply the dotfiles,
 then run the Ansible playbook, `mise install`, fisher, the ssh-agent unit, and the Claude plugins/MCP servers. Finally, create this machine's SSH key if it's missing.
+
+Afterwards: log out and back in (login shell, groups, desktop settings), then run `register-ssh-key` (fish). It logs in to
+`gh`, `glab` and `tea` where needed and uploads the key. If you skipped the GitHub login and a step hit the rate limit:
+`gh auth login`, then `chezmoi apply` (re-runs only what changed or failed).
 
 ## Fresh Debian install from USB (laptops)
 

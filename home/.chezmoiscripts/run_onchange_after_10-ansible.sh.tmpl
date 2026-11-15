@@ -4,6 +4,10 @@
 # selections: {{ dict "devops" .devops "runtimes" .runtimes "desktop" .desktop "extras" .extras | toJson | sha256sum }}
 set -euo pipefail
 command -v ansible-playbook >/dev/null 2>&1 || { echo "ansible-playbook not found, skipping"; exit 0; }
+# GitHub API lookups (latest releases) authenticate with gh's token when logged in: 5000/h instead of 60/h.
+if [ -z "${GITHUB_TOKEN:-}" ] && command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    GITHUB_TOKEN=$(gh auth token) && export GITHUB_TOKEN
+fi
 cd {{ joinPath .chezmoi.workingTree "ansible" | quote }}
 ansible-galaxy collection install -r requirements.yml >/dev/null
 ansible-playbook setup.yml --ask-become-pass \
