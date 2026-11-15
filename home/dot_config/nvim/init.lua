@@ -1,12 +1,3 @@
---if vim.loader then
---	vim.loader.enable()
---end
-
---_G.dd = function(...)
---	require("cwchen.util.debug").dump(...)
---end
---vim.print = _G.dd
-
-require("cwchen.core.keymaps")
-require("cwchen.core.options")
+-- LazyVim + personal overrides. Options/keymaps: lua/cwchen/core (loaded by LazyVim via lua/config/*),
+-- plugins: lua/cwchen/plugins (only additions and overrides of LazyVim's defaults).
 require("cwchen.lazy")

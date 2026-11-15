@@ -1,13 +1,12 @@
-# NEOVIM Configuration
+# Neovim configuration
 
-## Setup
+[LazyVim](https://www.lazyvim.org/) plus personal overrides, on Neovim 0.12 (mise).
 
-```bash
-$ sudo apt update
-$ sudo apt upgrade -y
-$ sudo apt install -y ripgrep fd-find
-```
+- `lua/cwchen/lazy.lua`: LazyVim + extras (telescope, nvim-cmp, alpha, languages, prettier, eslint).
+- `lua/cwchen/core/`: options and keymaps, loaded after LazyVim's defaults via `lua/config/`.
+- `lua/cwchen/plugins/`: only additions/overrides (catppuccin, nvim-tree instead of the snacks explorer/neo-tree,
+  auto-session instead of persistence, tmux navigator, flog, maximizer, colorizer, surround, telescope/cmp keys).
+- `lazy-lock.json`: pinned plugin commits. Update with `:Lazy update`, then `chezmoi re-add ~/.config/nvim/lazy-lock.json`.
 
-## Reference
-
-- [effective-neovim-setup-for-web-development-towards-2024](https://www.devas.life/effective-neovim-setup-for-web-development-towards-2024/)
+Dependencies (ripgrep, fd, fzf, tree-sitter, node, go, …) come from the dotfiles (apt/mise). LSP servers, formatters
+and linters are installed by Mason on first start (`:Mason`).

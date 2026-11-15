@@ -1,0 +1,19 @@
+# Targets chezmoi deletes (it never removes files just because they left the source).
+# nvim: old hand-rolled plugin specs, replaced by LazyVim + extras (2026-11)
+.config/nvim/lua/cwchen/plugins/alpha-nvim.lua
+.config/nvim/lua/cwchen/plugins/auto-session.lua
+.config/nvim/lua/cwchen/plugins/bufferline.lua
+.config/nvim/lua/cwchen/plugins/colorizer.lua
+.config/nvim/lua/cwchen/plugins/comment.lua
+.config/nvim/lua/cwchen/plugins/dressing.lua
+.config/nvim/lua/cwchen/plugins/init.lua
+.config/nvim/lua/cwchen/plugins/lsp.lua
+.config/nvim/lua/cwchen/plugins/lualine.lua
+.config/nvim/lua/cwchen/plugins/markdown.lua
+.config/nvim/lua/cwchen/plugins/nvim-cmp.lua
+.config/nvim/lua/cwchen/plugins/nvim-surround.lua
+.config/nvim/lua/cwchen/plugins/nvim-web-devicons.lua
+.config/nvim/lua/cwchen/plugins/telescope.lua
+.config/nvim/lua/cwchen/plugins/version-control.lua
+.config/nvim/lua/cwchen/plugins/vim-maximizer.lua
+.config/nvim/lua/cwchen/plugins/which-key.lua

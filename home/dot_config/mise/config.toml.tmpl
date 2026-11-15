@@ -4,7 +4,7 @@
 [tools]
 # core
 lazygit = "latest"
-"aqua:neovim/neovim" = "0.9.5"  # plugin config not yet verified on 0.10+
+"aqua:neovim/neovim" = "0.12"  # LazyVim needs >= 0.11
 glab = "latest"
 "forgejo:gitea/tea" = { version = "latest", api_url = "https://gitea.com/api/v1" }
 sops = "latest"
@@ -13,6 +13,8 @@ gitleaks = "latest"
 bitwarden = "latest"
 "github:rtk-ai/rtk" = "0.42.4"
 "github:DeusData/codebase-memory-mcp" = "latest"
+fzf = "latest"
+tree-sitter = "latest"   # nvim-treesitter builds parsers with it
 {{- if has "kubernetes" .devops }}
 kubectl = "latest"
 helm = "latest"
