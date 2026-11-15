@@ -1,10 +1,10 @@
 # Apple MacBook hardware on Debian/Ubuntu (auto-detected from DMI, see setup.yml):
-# Broadcom Wi-Fi firmware, fan control, power management, Fn keys and the FaceTime HD camera.
+# Broadcom Wi-Fi firmware, fan control, power management, Fn keys, touchpad, keyboard backlight and the FaceTime HD camera.
 - name: MacBook packages
   ansible.builtin.apt:
     name:
       - mbpfan
-      - brightnessctl     # keyboard backlight: brightnessctl -d smc::kbd_backlight set 50%
+      - brightnessctl     # screen/keyboard brightness keys (lxqt role) and kbd-backlight-idle
       - tlp
       - dkms
       - "{{ 'linux-headers-amd64' if ansible_distribution == 'Debian' else 'linux-headers-generic' }}"
@@ -12,11 +12,25 @@
       - xz-utils
       - curl
       - git
+      - xprintidle      # kbd-backlight-idle
     update_cache: true
 
 - name: Broadcom Wi-Fi firmware (Ubuntu ships it in linux-firmware)
   ansible.builtin.apt: { name: firmware-brcm80211 }
   when: ansible_distribution == 'Debian'
+
+# Quieter than Debian's defaults (63/66/86 spins up on any compile). The CPU throttles at ~105 C, so this is safe.
+# Live tweaks: edit /etc/mbpfan.conf + `sudo systemctl restart mbpfan`; watch with `watch cat /sys/devices/platform/applesmc.768/fan1_input`.
+- name: Fan curve (mbpfan)
+  ansible.builtin.lineinfile:
+    path: /etc/mbpfan.conf
+    regexp: '^\s*{{ item.key }}\s*='
+    line: "{{ item.key }} = {{ item.value }}"
+    insertafter: '^\[general\]'
+  loop: "{{ mbpfan_conf | dict2items }}"
+  vars:
+    mbpfan_conf: { low_temp: 68, high_temp: 76, max_temp: 90 }
+  notify: Restart mbpfan
 
 - name: Fan control and power management
   ansible.builtin.systemd_service: { name: "{{ item }}", enabled: true, state: started }
@@ -168,3 +182,58 @@
   ansible.builtin.script: "{{ playbook_dir }}/../install/debian/hibernate.sh"
   register: hibernate
   changed_when: "'CHANGED' in hibernate.stdout"
+
+# Retina screen (`hidpi`, see setup.yml): readable GRUB, console and login screen. The desktop session itself is the
+# lxqt role (Xft.dpi in ~/.Xresources).
+- name: HiDPI boot and login
+  when: hidpi | bool
+  block:
+    - name: GRUB font at 36 px (the default unicode.pf2 is 16 px on a 2560x1600 framebuffer)
+      ansible.builtin.command: >-
+        grub-mkfont -s 36 -o /boot/grub/fonts/dejavu-mono-36.pf2 /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf
+      args: { creates: /boot/grub/fonts/dejavu-mono-36.pf2 }
+      notify: Update grub
+
+    # Themes: unpack one under /boot/grub/themes/<name>/ and set GRUB_THEME to its theme.txt (it then sets its own
+    # fonts). Browse: gnome-look.org (GRUB Themes), github.com/vinceliuice/grub2-themes (has 2k variants).
+    - name: GRUB uses it
+      ansible.builtin.copy:
+        dest: /etc/default/grub.d/hidpi.cfg
+        mode: "0644"
+        content: |
+          GRUB_FONT=/boot/grub/fonts/dejavu-mono-36.pf2
+          GRUB_GFXPAYLOAD_LINUX=keep
+          #GRUB_THEME=/boot/grub/themes/<name>/theme.txt
+      notify: Update grub
+
+    - name: Console (TTY and boot messages) in Terminus 16x32
+      ansible.builtin.lineinfile:
+        path: /etc/default/console-setup
+        regexp: '^{{ item.key }}='
+        line: '{{ item.key }}="{{ item.value }}"'
+      loop: "{{ {'FONTFACE': 'Terminus', 'FONTSIZE': '16x32'} | dict2items }}"
+      notify: Update initramfs
+
+    # SDDM's greeter is Qt6 and scales from Xft.dpi like the session. Themes (must be Qt6 for sddm 0.21): browse
+    # store.kde.org (SDDM Login Themes), unpack into /usr/share/sddm/themes/<name>, add [Theme] Current=<name> here.
+    - name: SDDM config dir
+      ansible.builtin.file: { path: /etc/sddm.conf.d, state: directory, mode: "0755" }
+
+    - name: SDDM greeter at 2x
+      ansible.builtin.copy:
+        dest: /etc/sddm.conf.d/10-hidpi.conf
+        mode: "0644"
+        content: |
+          [X11]
+          EnableHiDPI=true
+          DisplayCommand=/etc/sddm/Xsetup-hidpi
+
+    - name: SDDM display setup script (stock Xsetup + Xft.dpi for the greeter)
+      ansible.builtin.copy:
+        dest: /etc/sddm/Xsetup-hidpi
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          # Managed by ansible (macbook role). Runs as root before the SDDM greeter appears.
+          /usr/share/sddm/scripts/Xsetup
+          printf 'Xft.dpi: 192\nXcursor.size: 48\n' | xrdb -merge

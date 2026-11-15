@@ -55,13 +55,20 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   NetworkManager's automatic choice of WPA3-SAE fails on WPA2/WPA3 mixed APs with the MacBook's Broadcom chip).
 - On MacBooks the `macbook` Ansible role runs automatically (DMI product name): Broadcom Wi-Fi firmware, `mbpfan`, `tlp`,
   F1-F12 as function keys, the FaceTime HD camera (`facetimehd` driver via DKMS + firmware extracted from Apple's update),
-  and hibernation (`install/debian/hibernate.sh`: resumes from a swap partition >= RAM, else creates a RAM + 2 GB swap file).
+  hibernation (`install/debian/hibernate.sh`: resumes from a swap partition >= RAM, else creates a RAM + 2 GB swap file),
+  a quieter `mbpfan` curve, a macOS-like touchpad (tap to click, natural scrolling, two-finger right-click:
+  `/etc/X11/xorg.conf.d/50-macbook-touchpad.conf`), and the keyboard backlight (Fn+F5/F6 via `brightnessctl`, off after
+  60 s idle via `~/.local/bin/kbd-backlight-idle`, `KBD_IDLE_SECS` to change).
 - The build asks for the swap partition size (default 16 GB; >= RAM to hibernate).
 - The `lxqt` Ansible role sets only specific keys in `~/.config/lxqt/*.conf` (LXQt rewrites those files, so chezmoi doesn't
   own them): on Retina MacBooks 2x scaling (`Xft.dpi: 192` in `~/.Xresources`, which Qt, Brave, GTK via `GDK_SCALE` and
   Alacritty all follow); system-wide dark mode (LXQt theme/palette, GTK, freedesktop color-scheme); Brave as default browser; Alacritty as terminal
   (Ctrl+Alt+T); panel quick launch + menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, as selected).
   Also 4 workspaces in a row for the gestures.
+- Retina boot and login (macbook role): GRUB font at 36 px, console in Terminus 16x32, SDDM greeter at 2x.
+  Themes: GRUB from gnome-look.org (GRUB Themes) or github.com/vinceliuice/grub2-themes (2k variants), set `GRUB_THEME`
+  in `/etc/default/grub.d/hidpi.cfg`; SDDM (Qt6 only) from store.kde.org (SDDM Login Themes), set `[Theme] Current=` in
+  `/etc/sddm.conf.d/`. Inspiration: r/unixporn.
 - Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,
   no password manager, Bitwarden extension forced). Bookmarks, extensions and settings travel with Brave Sync;
   the profile directory is deliberately not in this repo.
