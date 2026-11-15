@@ -5,7 +5,7 @@
 #   install/debian/build-iso.sh --write /dev/sdX
 #
 # Asks for hostname, user, timezone, keymap, Wi-Fi and the login password. Any answer can be given up front as an
-# env var (HOSTNAME_NEW USERNAME_NEW FULLNAME TIMEZONE KEYMAP WIFI_SSID WIFI_PASS PASSHASH) for unattended builds.
+# env var (HOSTNAME_NEW USERNAME_NEW FULLNAME TIMEZONE KEYMAP SWAP_GB WIFI_SSID WIFI_PASS PASSHASH) for unattended builds.
 # Secrets only end up in the generated ISO (mode 600), never in the repo.
 set -euo pipefail
 shopt -u patsub_replacement 2>/dev/null || true   # keep '&' literal in ${var//pat/repl}
@@ -52,6 +52,9 @@ ask USERNAME_NEW "Username" "$USER"
 ask FULLNAME "Full name" "$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1)"
 ask TIMEZONE "Timezone" "$(timedatectl show -p Timezone --value 2>/dev/null || echo UTC)"
 ask KEYMAP "Keyboard layout (xkb)" us
+ask SWAP_GB "Swap size in GB (>= the target's RAM to hibernate)" 16
+[[ $SWAP_GB =~ ^[0-9]+$ ]] && [ "$SWAP_GB" -gt 0 ] || { echo "swap size must be a whole number of GB" >&2; exit 1; }
+SWAP_MB=$((SWAP_GB * 1024))
 ask WIFI_SSID "Wi-Fi SSID (empty: choose the network on the target during install)"
 [ -z "$WIFI_SSID" ] || ask_secret WIFI_PASS "Wi-Fi password"
 if [ -z "${PASSHASH-}" ]; then
@@ -85,7 +88,7 @@ if [ -z "$WIFI_SSID" ]; then
     WIFI_PASS=
     priority=high
 fi
-for v in HOSTNAME_NEW:HOSTNAME USERNAME_NEW:USERNAME FULLNAME TIMEZONE KEYMAP WIFI_SSID WIFI_PASS PASSHASH; do
+for v in HOSTNAME_NEW:HOSTNAME USERNAME_NEW:USERNAME FULLNAME TIMEZONE KEYMAP SWAP_MB WIFI_SSID WIFI_PASS PASSHASH; do
     src=${v%%:*} key=${v#*:}
     cfg=${cfg//@@$key@@/${!src}}
 done
@@ -101,7 +104,7 @@ chmod u+w "$work/grub.orig"
     cat <<EOF
 menuentry --hotkey=u 'Auto install (WIPES internal disk)' {
     set background_color=black
-    linux    /install.amd/vmlinuz auto=true priority=$priority file=/cdrom/preseed/preseed.cfg locale=en_US.UTF-8 keymap=$KEYMAP hostname=$HOSTNAME_NEW --- quiet
+    linux    /install.amd/vmlinuz auto=true priority=$priority cdrom-detect/retry=true file=/cdrom/preseed/preseed.cfg locale=en_US.UTF-8 keymap=$KEYMAP hostname=$HOSTNAME_NEW --- quiet
     initrd   /install.amd/initrd.gz
 }
 EOF

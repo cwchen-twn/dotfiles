@@ -48,7 +48,8 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 - `late.sh`: drops `~/bootstrap.sh`.
 - On MacBooks the `macbook` Ansible role runs automatically (DMI product name): Broadcom Wi-Fi firmware, `mbpfan`, `tlp`,
   F1-F12 as function keys, the FaceTime HD camera (`facetimehd` driver via DKMS + firmware extracted from Apple's update),
-  and hibernation (swap file of RAM + 2 GB used as the resume device).
+  and hibernation (`install/debian/hibernate.sh`: resumes from a swap partition >= RAM, else creates a RAM + 2 GB swap file).
+- The build asks for the swap partition size (default 16 GB; >= RAM to hibernate).
 - Leave the Wi-Fi SSID empty to pick the network and type the passphrase on the target instead (the installer may then
   also ask to retry mounting the stick: answer Yes).
 

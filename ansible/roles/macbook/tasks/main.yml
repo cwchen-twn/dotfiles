@@ -96,54 +96,8 @@
   changed_when: false
   failed_when: false
 
-# Hibernation: a swap file of RAM + 2 GB (the installer's swap partition is capped at ~1 GB), preferred over the
-# partition (pri=10) and used as the resume device. Shows up as "Hibernate" in LXQt's leave menu.
-- name: Swap file sized for hibernation
-  ansible.builtin.shell: |
-    set -e
-    want={{ ansible_memtotal_mb + 2048 }}
-    if [ -f /swapfile ] && [ $(( $(stat -c %s /swapfile) / 1048576 )) -ge "$want" ]; then exit 0; fi
-    swapoff /swapfile 2>/dev/null || true
-    rm -f /swapfile
-    fallocate -l "${want}M" /swapfile
-    chmod 600 /swapfile
-    mkswap /swapfile >/dev/null
-    echo CHANGED
-  register: swapfile
-  changed_when: "'CHANGED' in swapfile.stdout"
-
-- name: Swap file in fstab
-  ansible.builtin.lineinfile:
-    path: /etc/fstab
-    regexp: '^/swapfile\s'
-    line: /swapfile none swap sw,pri=10 0 0
-
-- name: Swap file active
-  ansible.builtin.shell: swapon --show=NAME --noheadings | grep -qx /swapfile || { swapon -p 10 /swapfile; echo CHANGED; }
-  register: swapon
-  changed_when: "'CHANGED' in swapon.stdout"
-
-- name: Find resume device and offset
-  ansible.builtin.shell: |
-    findmnt -no UUID -T /swapfile
-    filefrag -v /swapfile | awk '$1 == "0:" { sub(/\.\.$/, "", $4); print $4 }'
-  register: resume_info
-  changed_when: false
-
-- name: Resume from the swap file (initramfs)
-  ansible.builtin.copy:
-    dest: /etc/initramfs-tools/conf.d/resume
-    content: "RESUME=UUID={{ resume_info.stdout_lines[0] }}\n"
-    mode: "0644"
-  notify: Update initramfs
-
-- name: grub drop-in directory
-  ansible.builtin.file: { path: /etc/default/grub.d, state: directory, mode: "0755" }
-
-- name: Resume from the swap file (kernel command line)
-  ansible.builtin.copy:
-    dest: /etc/default/grub.d/hibernate.cfg
-    content: |
-      GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT resume=UUID={{ resume_info.stdout_lines[0] }} resume_offset={{ resume_info.stdout_lines[1] }}"
-    mode: "0644"
-  notify: Update grub
+# Hibernation: resume from a swap partition >= RAM, or create a RAM + 2 GB /swapfile. Same script as the standalone one.
+- name: Hibernation (swap + resume device)
+  ansible.builtin.script: "{{ playbook_dir }}/../install/debian/hibernate.sh"
+  register: hibernate
+  changed_when: "'CHANGED' in hibernate.stdout"
