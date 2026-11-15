@@ -57,6 +57,9 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   F1-F12 as function keys, the FaceTime HD camera (`facetimehd` driver via DKMS + firmware extracted from Apple's update),
   and hibernation (`install/debian/hibernate.sh`: resumes from a swap partition >= RAM, else creates a RAM + 2 GB swap file).
 - The build asks for the swap partition size (default 16 GB; >= RAM to hibernate).
+- Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,
+  no password manager, Bitwarden extension forced). Bookmarks, extensions and settings travel with Brave Sync;
+  the profile directory is deliberately not in this repo.
 - Leave the Wi-Fi SSID empty to pick the network and type the passphrase on the target instead (the installer may then
   also ask to retry mounting the stick: answer Yes).
 

@@ -44,6 +44,29 @@
           calibre: [calibre]
           fcitx5: [fcitx5, fcitx5-chewing, fcitx5-chinese-addons]
 
+    # Fixed Brave defaults (check brave://policy). Personal data (bookmarks, extensions, settings) goes through
+    # Brave Sync; the profile dir is never versioned (cookies, passwords, binary databases).
+    - name: Brave managed policies
+      when: "'brave' in desktop"
+      block:
+        - name: Brave policy dir
+          ansible.builtin.file: { path: /etc/brave/policies/managed, state: directory, mode: "0755" }
+        - name: Brave policies
+          ansible.builtin.copy:
+            dest: /etc/brave/policies/managed/dotfiles.json
+            mode: "0644"
+            content: "{{ brave_policies | to_nice_json }}\n"
+          vars:
+            brave_policies:
+              BraveRewardsDisabled: true
+              BraveWalletDisabled: true
+              BraveVPNDisabled: true
+              BraveNewsDisabled: true
+              BraveAIChatEnabled: false
+              PasswordManagerEnabled: false   # Bitwarden instead
+              ExtensionInstallForcelist:
+                - nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx   # Bitwarden
+
     - name: alacritty via cargo on older releases (jammy/bookworm lack it)
       become: false
       ansible.builtin.command: "{{ home }}/.cargo/bin/cargo install alacritty"
