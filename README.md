@@ -33,8 +33,8 @@ Network toolbox (apt unless noted; `myip` and `ports` are fish functions):
 |---|---|
 | DNS | dig, nslookup, host (bind9-dnsutils), whois, doggo (mise) |
 | Reachability / path | mtr, traceroute, arping, gping (mise) |
-| Scanning / discovery | nmap (+ ncat), arp-scan (`sudo arp-scan -l`), netcat |
-| HTTP / TLS / APIs | xh, grpcurl, websocat (mise), testssl.sh, sslscan |
+| Scanning / discovery | nmap (+ ncat), arp-scan (`sudo arp-scan -l`, in /usr/sbin), netcat |
+| HTTP / TLS / APIs | xh, grpcurl, websocat (mise), testssl (Debian's name for testssl.sh), sslscan |
 | Mail | swaks |
 | Capture | tcpdump, tshark, ngrep (with sudo) |
 | Bandwidth | iperf3, iftop, nload, nethogs, speedtest-cli |
