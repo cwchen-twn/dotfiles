@@ -11,6 +11,9 @@
 {{ if not (has "fcitx5" .desktop) }}
 .config/fcitx5
 {{ end }}
+{{ if or (ne .chezmoi.os "linux") (not .desktop) }}
+.config/fontconfig
+{{ end }}
 {{ if not (has "alacritty" .desktop) }}
 .config/alacritty
 {{ end }}

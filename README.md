@@ -25,7 +25,8 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
 Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age, gitleaks, rtk, codebase-memory-mcp and the Bitwarden CLI.
 System info / monitoring: fastfetch, btop, duf, gdu (mise); inxi (`sysinfo`), lm-sensors, smartmontools, iotop-c, nethogs,
 nvtop, s-tui, acpi, speedtest-cli (apt); `batinfo`, `battery` (TLP health) and `sudo intel_gpu_top` on MacBooks.
-The JetBrainsMono Nerd Font is installed when any desktop app is selected.
+The JetBrainsMono Nerd Font is installed when any desktop app is selected, and on Linux it is the default `monospace`
+(`~/.config/fontconfig/conf.d/50-monospace.conf`), so every terminal and code font gets Nerd Font icons.
 
 Network toolbox (apt unless noted; `myip` and `ports` are fish functions):
 
