@@ -138,6 +138,7 @@ Rule: nothing is copied into `/usr/local/bin` or `/opt` by hand. Anything not co
 | what apt installed by hand | `apt-mark showmanual` |
 | Claude Code plugins / MCP | `claude plugin list`, `claude mcp list` |
 | Neovim plugins / LSP tools | `:Lazy`, `:Mason` (lockfile: `~/.config/nvim/lazy-lock.json`) |
+| Neovim keymaps | `nvim-keys` (cheat sheet generated from the live config), `:Cheatsheet`, or press Space and wait |
 
 ## Secrets
 

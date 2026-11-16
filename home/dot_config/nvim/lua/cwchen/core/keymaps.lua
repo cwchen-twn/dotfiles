@@ -63,3 +63,10 @@ keymap.set("n", "<leader>hb", gs("blame_line", { full = true }), { desc = "Blame
 keymap.set("n", "<leader>hd", gs("diffthis"), { desc = "Diff against index" })
 keymap.set("n", "<leader>hD", gs("diffthis", "~"), { desc = "Diff against last commit" })
 keymap.set("n", "<leader>tb", gs("toggle_current_line_blame"), { desc = "Toggle line blame" })
+
+---------------------
+-- cheat sheet generated from the live keymaps (lua/cwchen/cheatsheet.lua)
+vim.api.nvim_create_user_command("Cheatsheet", function()
+	require("cwchen.cheatsheet").open()
+end, { desc = "Regenerate the keymap cheat sheet and open it" })
+keymap.set("n", "<leader>ch", "<cmd>Cheatsheet<CR>", { desc = "Cheat sheet (keymaps)" })

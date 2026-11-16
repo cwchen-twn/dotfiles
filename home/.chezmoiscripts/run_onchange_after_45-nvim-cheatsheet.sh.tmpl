@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Regenerate the Neovim cheat sheet (~/.local/share/nvim/cheatsheet.html) whenever the nvim config or its plugin
+# lockfile changes, so it always matches the real keymaps. In Neovim: :Cheatsheet / <Space>ch.
+# nvim config hash: {{ range (glob (joinPath .chezmoi.sourceDir "dot_config/nvim/**/*")) }}{{ if not (stat .).isDir }}{{ include . | sha256sum }}{{ end }}{{ end }}
+set -uo pipefail
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+command -v nvim >/dev/null 2>&1 || { echo "nvim not installed, skipping cheat sheet"; exit 0; }
+timeout 300 nvim --headless -c 'lua require("cwchen.cheatsheet").headless()' 2>/dev/null | tail -1 \
+    || echo "cheat sheet not regenerated (run :Cheatsheet in nvim)" >&2
+exit 0
