@@ -33,7 +33,7 @@ end
 {{- if has "kubernetes" .devops }}
 
 # clusters.yaml (chezmoi, encrypted): clusters + tokens. config (unmanaged): current-context, local extras.
-set -gx KUBECONFIG ~/.kube/config:~/.kube/clusters.yaml
+set -gx KUBECONFIG $HOME/.kube/config:$HOME/.kube/clusters.yaml
 {{- end }}
 
 {{- if eq .chezmoi.os "linux" }}
