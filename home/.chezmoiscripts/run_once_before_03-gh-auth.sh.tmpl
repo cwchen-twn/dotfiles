@@ -14,6 +14,6 @@ gh auth status --hostname github.com >/dev/null 2>&1 && exit 0
 read -r -p "Log in to GitHub now? It raises the API rate limit for the downloads that follow. [Y/n] " ans </dev/tty || ans=n
 case "$ans" in
     [nN]*) echo "gh: skipped, GitHub downloads may hit the anonymous rate limit" >&2 ;;
-    *) gh auth login --hostname github.com --git-protocol ssh --skip-ssh-key --web \
+    *) gh auth login --hostname github.com --git-protocol ssh --skip-ssh-key --web --scopes admin:public_key \
         || echo "gh: login failed, continuing (GitHub downloads may hit the anonymous rate limit)" >&2 ;;
 esac

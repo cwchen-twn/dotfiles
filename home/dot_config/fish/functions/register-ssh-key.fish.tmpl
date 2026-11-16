@@ -1,4 +1,5 @@
 # Managed by chezmoi. Log in to GitHub, GitLab and Gitea (if needed) and upload this machine's SSH key.
+# A host whose login fails or is cancelled is skipped; re-run to retry. Already-registered keys are left alone.
 function register-ssh-key --description "Upload ~/.ssh/{{ .sshKey }}.pub to GitHub, GitLab and Gitea"
     set -l key ~/.ssh/{{ .sshKey }}.pub
     set -l title (hostname)
@@ -7,33 +8,56 @@ function register-ssh-key --description "Upload ~/.ssh/{{ .sshKey }}.pub to GitH
         return 1
     end
     set -l pub (string split -f1,2 ' ' < $key | string join ' ')
+    set -l failed
 
-    # GitHub
-    gh auth status >/dev/null 2>&1; or gh auth login --git-protocol ssh --skip-ssh-key --web
-    if gh ssh-key list 2>/dev/null | string match -q "*$pub*"
+    # GitHub: uploading keys needs the admin:public_key scope, which a default `gh auth login` doesn't grant.
+    if not gh auth status --hostname github.com >/dev/null 2>&1
+        gh auth login --hostname github.com --git-protocol ssh --skip-ssh-key --web --scopes admin:public_key
+    else if not gh auth status --hostname github.com 2>&1 | string match -q '*admin:public_key*'
+        gh auth refresh --hostname github.com --scopes admin:public_key
+    end
+    if not gh auth status --hostname github.com >/dev/null 2>&1
+        echo "GitHub: not logged in, skipped" >&2; set -a failed GitHub
+    else if gh ssh-key list 2>/dev/null | string match -q "*$pub*"
         echo "GitHub: key already registered"
+    else if gh ssh-key add $key --title $title
+        echo "GitHub: key added"
     else
-        gh ssh-key add $key --title $title; and echo "GitHub: key added"
+        set -a failed GitHub
     end
 
     # GitLab
-    glab auth status >/dev/null 2>&1; or glab auth login --hostname gitlab.com
-    if glab ssh-key list 2>/dev/null | string match -q "*$pub*"
+    glab auth status --hostname gitlab.com >/dev/null 2>&1; or glab auth login --hostname gitlab.com
+    if not glab auth status --hostname gitlab.com >/dev/null 2>&1
+        echo "GitLab: not logged in, skipped" >&2; set -a failed GitLab
+    else if glab ssh-key list 2>/dev/null | string match -q "*$pub*"
         echo "GitLab: key already registered"
+    else if glab ssh-key add $key --title $title
+        echo "GitLab: key added"
     else
-        glab ssh-key add $key --title $title; and echo "GitLab: key added"
+        set -a failed GitLab
     end
 
-    # Gitea
+    # Gitea (the token also serves `git push` over HTTPS through tea's credential helper)
     if not tea login list 2>/dev/null | string match -q '*git.chenantunez.com*'
         echo "Gitea: create a token at https://git.chenantunez.com/user/settings/applications (scopes: user, repository)"
-        read -P "Gitea token: " -s token; or return 1
-        tea login add --name chenantunez --url https://git.chenantunez.com --token $token --ssh-key ~/.ssh/{{ .sshKey }}; or return 1
-        tea login default chenantunez >/dev/null
+        if read -P "Gitea token: " -s token
+            and tea login add --name chenantunez --url https://git.chenantunez.com --token $token --ssh-key ~/.ssh/{{ .sshKey }}
+            tea login default chenantunez >/dev/null
+        end
     end
-    if tea api /user/keys 2>/dev/null | string match -q "*$pub*"
+    if not tea login list 2>/dev/null | string match -q '*git.chenantunez.com*'
+        echo "Gitea: not logged in, skipped" >&2; set -a failed Gitea
+    else if tea api /user/keys 2>/dev/null | string match -q "*$pub*"
         echo "Gitea: key already registered"
+    else if tea api -X POST /user/keys -f title=$title -f key=(cat $key) >/dev/null
+        echo "Gitea: key added"
     else
-        tea api -X POST /user/keys -f title=$title -f key=(cat $key) >/dev/null; and echo "Gitea: key added"
+        set -a failed Gitea
+    end
+
+    if set -q failed[1]
+        echo "Not registered on: $failed (re-run register-ssh-key)" >&2
+        return 1
     end
 end
