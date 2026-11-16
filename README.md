@@ -152,6 +152,26 @@ The repo is public. Secrets are never committed in plain text:
 - Git HTTPS credentials come from `gh`, `glab` and `tea` credential helpers, not from `~/.git-credentials`.
 - `pre-commit install` enables gitleaks and an internal-IP check.
 
+## Printing, scanning and Bluetooth (Linux desktops)
+
+Driverless: any printer that speaks IPP Everywhere / AirPrint (almost every network printer since ~2013) works
+without a vendor driver; the same goes for its scanner (eSCL, via `sane-airscan`).
+
+```sh
+printers                     # printers on this network: model, host, color, duplex, scan, already added?
+printer-add 2 --default      # add #2 from that list (queue named after the model); no sudo (lpadmin group)
+lp FILE                      # or any app's print dialog; lpstat -p shows queues
+/usr/sbin/lpadmin -x QUEUE   # remove one
+simple-scan                  # scan (scanimage -L lists scanners)
+```
+
+Queues point at the printer's `.local` name, so they survive DHCP changes. `cups-browsed` stays off: it would add
+every printer on every network you join.
+
+Bluetooth: `bluez` + `blueman` (tray icon, "Bluetooth Manager") + `pulseaudio-module-bluetooth` for headphones. Pair
+from the tray, or `bluetoothctl` → `power on`, `scan on`, `pair MAC`, `trust MAC`, `connect MAC`. Pick the output in
+the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you need the mic).
+
 ## Kubernetes access
 
 Each cluster has a `cwchen-admin` ServiceAccount (kube-system) bound to `cluster-admin`, with a manually created

@@ -43,6 +43,30 @@
           calibre: [calibre]
           fcitx5: [fcitx5, fcitx5-chewing, fcitx5-chinese-addons, fonts-noto-cjk]  # input methods: ~/.config/fcitx5/profile
 
+    # Bluetooth audio (pair with the blueman tray or bluetoothctl) and driverless printing/scanning anywhere: fish
+    # `printers` lists the IPP/AirPrint printers on the network, `printer-add N` adds one (lpadmin group, no sudo).
+    - name: Audio server is PulseAudio?
+      ansible.builtin.stat: { path: /usr/bin/pulseaudio }
+      register: pulse_bin
+    - name: Bluetooth, printing and scanning
+      ansible.builtin.apt:
+        name:
+          - bluez
+          - blueman
+          - "{{ 'pulseaudio-module-bluetooth' if pulse_bin.stat.exists else 'libspa-0.2-bluetooth' }}"
+          - cups
+          - avahi-daemon   # mDNS: finds printers/scanners, resolves *.local
+          - avahi-utils
+          - libnss-mdns
+          - sane-airscan   # eSCL/WSD scanners, no vendor driver
+          - sane-utils
+          - ipp-usb        # USB printers as driverless IPP
+          - simple-scan
+    - name: Manage printers and scanners without sudo
+      ansible.builtin.user: { name: "{{ user }}", groups: [lpadmin, scanner, bluetooth], append: true }
+    - name: Bluetooth on
+      ansible.builtin.systemd_service: { name: bluetooth, enabled: true, state: started }
+
     # Fixed Brave defaults (check brave://policy). Personal data (bookmarks, extensions, settings) goes through
     # Brave Sync; the profile dir is never versioned (cookies, passwords, binary databases).
     - name: Brave managed policies
@@ -71,8 +95,8 @@
                 - nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx   # Bitwarden
                 - eimadpbcbfnmbkopoojfekhnkhdbieeh;https://clients2.google.com/service/update2/crx   # Dark Reader
 
-    # Laptops/desktops without a modem, network-printer auto-discovery or boot-time network dependencies.
-    # Printing still works: cups.socket starts CUPS on demand.
+    # Laptops/desktops without a modem or boot-time network dependencies. cups-browsed would add every printer on
+    # every network as a queue; `printers` / `printer-add` add only the ones you pick.
     - name: Find unused system services
       ansible.builtin.service_facts:
     - name: Unused system services off

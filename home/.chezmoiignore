@@ -3,6 +3,8 @@
 {{ if ne .chezmoi.os "linux" }}
 .config/libinput-gestures.conf
 .config/autostart
+.config/fish/functions/printers.fish
+.config/fish/functions/printer-add.fish
 {{ end }}
 {{ if not (has "libinput-gestures" .desktop) }}
 .config/libinput-gestures.conf
