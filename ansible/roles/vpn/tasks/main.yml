@@ -35,6 +35,16 @@
     - name: Restart tailscaled (DNS through resolved)
       ansible.builtin.systemd_service: { name: tailscaled, state: restarted }
       when: resolv_link is changed and tailscaled_bin.stat.exists
+    # OpenVPN 3 (the earlier client) and its repo: replaced by OpenVPN 2.x above.
+    - name: Purge OpenVPN 3
+      ansible.builtin.apt: { name: [openvpn3, openvpn3-client], state: absent, purge: true }
+    - name: OpenVPN 3 repo, key and state gone
+      ansible.builtin.file: { path: "{{ item }}", state: absent }
+      loop:
+        - /etc/apt/sources.list.d/openvpn3.sources
+        - /etc/apt/sources.list.d/openvpn3.list
+        - /etc/apt/keyrings/openvpn3.asc
+        - /var/lib/openvpn3
     # Legacy umbrella unit for /etc/openvpn/*.conf; unused (template units only), nothing to start at boot.
     - name: openvpn.service off at boot
       ansible.builtin.systemd_service: { name: openvpn.service, enabled: false }
