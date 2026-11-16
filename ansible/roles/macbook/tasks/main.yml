@@ -195,8 +195,7 @@
       args: { creates: /boot/grub/fonts/dejavu-mono-36.pf2 }
       notify: Update grub
 
-    # Themes: unpack one under /boot/grub/themes/<name>/ and set GRUB_THEME to its theme.txt (it then sets its own
-    # fonts). Browse: gnome-look.org (GRUB Themes), github.com/vinceliuice/grub2-themes (has 2k variants).
+    # Console/terminal font; the menu theme (and its fonts) comes from the boottheme role.
     - name: GRUB uses it
       ansible.builtin.copy:
         dest: /etc/default/grub.d/hidpi.cfg
@@ -204,7 +203,6 @@
         content: |
           GRUB_FONT=/boot/grub/fonts/dejavu-mono-36.pf2
           GRUB_GFXPAYLOAD_LINUX=keep
-          #GRUB_THEME=/boot/grub/themes/<name>/theme.txt
       notify: Update grub
 
     - name: Console (TTY and boot messages) in Terminus 16x32
@@ -215,8 +213,7 @@
       loop: "{{ {'FONTFACE': 'Terminus', 'FONTSIZE': '16x32'} | dict2items }}"
       notify: Update initramfs
 
-    # SDDM's greeter is Qt6 and scales from Xft.dpi like the session. Themes (must be Qt6 for sddm 0.21): browse
-    # store.kde.org (SDDM Login Themes), unpack into /usr/share/sddm/themes/<name>, add [Theme] Current=<name> here.
+    # SDDM's greeter is Qt6 and scales from Xft.dpi like the session; its theme comes from the boottheme role.
     - name: SDDM config dir
       ansible.builtin.file: { path: /etc/sddm.conf.d, state: directory, mode: "0755" }
 

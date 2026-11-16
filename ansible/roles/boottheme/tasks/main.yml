@@ -1,0 +1,182 @@
+# GRUB menu -> Plymouth splash -> SDDM login in one look, from an sddm-astronaut preset (see defaults/main.yml).
+- name: Packages (SDDM theme runtime, image/font tools, Plymouth)
+  ansible.builtin.apt:
+    name:
+      - qml6-module-qtquick-controls
+      - qml6-module-qtquick-layouts
+      - qml6-module-qtquick-effects
+      - qml6-module-qtquick-virtualkeyboard
+      - qml6-module-qtmultimedia
+      - qt6-svg-plugins
+      - libxcb-cursor0
+      - imagemagick
+      - rsync
+      - plymouth
+      - plymouth-themes
+
+- name: sddm-astronaut source (pinned)
+  ansible.builtin.git:
+    repo: https://github.com/Keyitdev/sddm-astronaut-theme.git
+    dest: "{{ boottheme_src }}"
+    version: "{{ boottheme_commit }}"
+    depth: 1
+    force: true
+
+- name: Preset wallpaper exists
+  ansible.builtin.stat: { path: "{{ boottheme_src }}/Backgrounds/{{ boottheme_preset }}.png" }
+  register: boottheme_wallpaper
+  failed_when: not boottheme_wallpaper.stat.exists
+
+# ---------------------------------------------------------------- login (SDDM)
+- name: SDDM theme files
+  ansible.builtin.command: >-
+    rsync -a --delete --itemize-changes --exclude .git --exclude Themes/astronaut.conf.user
+    {{ boottheme_src }}/ /usr/share/sddm/themes/sddm-astronaut-theme/
+  register: boottheme_rsync
+  changed_when: boottheme_rsync.stdout | length > 0
+
+- name: Theme fonts
+  ansible.builtin.command: >-
+    rsync -a --itemize-changes {{ boottheme_src }}/Fonts/ /usr/share/fonts/sddm-astronaut/
+  register: boottheme_fonts
+  changed_when: boottheme_fonts.stdout | length > 0
+
+- name: Font cache
+  ansible.builtin.command: fc-cache -f /usr/share/fonts/sddm-astronaut
+  when: boottheme_fonts.changed
+
+# SDDM loads <ConfigFile>.user on top of metadata.desktop's ConfigFile (Themes/astronaut.conf): the preset is
+# selected without editing upstream files.
+- name: Select the preset
+  ansible.builtin.copy:
+    src: "{{ boottheme_src }}/Themes/{{ boottheme_preset }}.conf"
+    dest: /usr/share/sddm/themes/sddm-astronaut-theme/Themes/astronaut.conf.user
+    remote_src: true
+    mode: "0644"
+
+- name: SDDM uses the theme
+  ansible.builtin.copy:
+    dest: /etc/sddm.conf.d/20-theme.conf
+    mode: "0644"
+    content: |
+      [Theme]
+      Current=sddm-astronaut-theme
+
+# ---------------------------------------------------------------- GRUB
+- name: GRUB theme dir
+  ansible.builtin.file: { path: "/boot/grub/themes/{{ boottheme_name }}", state: directory, mode: "0755" }
+
+- name: GRUB background (wallpaper cropped to the screen)
+  ansible.builtin.command: >-
+    magick {{ boottheme_wallpaper.stat.path }} -resize {{ boottheme_res }}^ -gravity center -extent {{ boottheme_res }}
+    -quality 92 /boot/grub/themes/{{ boottheme_name }}/background-{{ boottheme_res }}.jpg
+  args: { creates: "/boot/grub/themes/{{ boottheme_name }}/background-{{ boottheme_res }}.jpg" }
+  notify: boottheme update grub
+
+- name: GRUB panel and selection images
+  ansible.builtin.command: >-
+    magick -size 8x8 xc:"{{ item.color }}" /boot/grub/themes/{{ boottheme_name }}/{{ item.file }}
+  args: { creates: "/boot/grub/themes/{{ boottheme_name }}/{{ item.file }}" }
+  loop:
+    - { file: menu_c.png, color: "{{ boottheme_panel }}cc" }
+    - { file: select_c.png, color: "{{ boottheme_accent }}b3" }
+    - { file: terminal_c.png, color: "{{ boottheme_dark }}e6" }
+  notify: boottheme update grub
+
+- name: GRUB fonts
+  ansible.builtin.command: >-
+    grub-mkfont -s {{ item.size }} -o /boot/grub/themes/{{ boottheme_name }}/{{ item.font }}-{{ item.size }}.pf2
+    /usr/share/fonts/truetype/dejavu/{{ item.font }}.ttf
+  args: { creates: "/boot/grub/themes/{{ boottheme_name }}/{{ item.font }}-{{ item.size }}.pf2" }
+  loop:
+    - { font: DejaVuSans, size: "{{ boottheme_font_item }}" }
+    - { font: DejaVuSans-Bold, size: "{{ boottheme_font_item }}" }
+    - { font: DejaVuSans, size: "{{ boottheme_font_small }}" }
+    - { font: DejaVuSansMono, size: "{{ boottheme_font_small }}" }
+  notify: boottheme update grub
+
+- name: GRUB theme.txt
+  ansible.builtin.template:
+    src: theme.txt.j2
+    dest: "/boot/grub/themes/{{ boottheme_name }}/theme.txt"
+    mode: "0644"
+  notify: boottheme update grub
+
+- name: grub drop-in directory
+  ansible.builtin.file: { path: /etc/default/grub.d, state: directory, mode: "0755" }
+
+- name: GRUB uses the theme
+  ansible.builtin.copy:
+    dest: /etc/default/grub.d/theme.cfg
+    mode: "0644"
+    content: |
+      GRUB_THEME=/boot/grub/themes/{{ boottheme_name }}/theme.txt
+  notify: boottheme update grub
+
+# ---------------------------------------------------------------- Plymouth (boot splash)
+- name: Plymouth theme dir
+  ansible.builtin.file: { path: "/usr/share/plymouth/themes/{{ boottheme_name }}", state: directory, mode: "0755" }
+
+- name: Plymouth images (wallpaper, progress bar and track)
+  ansible.builtin.command: "{{ item.cmd }}"
+  args: { creates: "/usr/share/plymouth/themes/{{ boottheme_name }}/{{ item.file }}" }
+  loop:
+    - file: background.png
+      cmd: >-
+        magick {{ boottheme_wallpaper.stat.path }} -resize {{ boottheme_res }}^ -gravity center -extent {{ boottheme_res }}
+        /usr/share/plymouth/themes/{{ boottheme_name }}/background.png
+    - file: bar.png
+      cmd: magick -size 8x8 xc:"{{ boottheme_text }}" /usr/share/plymouth/themes/{{ boottheme_name }}/bar.png
+    - file: track.png
+      cmd: magick -size 8x8 xc:"{{ boottheme_accent }}66" /usr/share/plymouth/themes/{{ boottheme_name }}/track.png
+  loop_control: { label: "{{ item.file }}" }
+  notify: boottheme update initramfs
+
+- name: Plymouth script
+  ansible.builtin.copy:
+    src: astronaut.script
+    dest: "/usr/share/plymouth/themes/{{ boottheme_name }}/astronaut.script"
+    mode: "0644"
+  notify: boottheme update initramfs
+
+- name: Plymouth theme definition
+  ansible.builtin.copy:
+    dest: "/usr/share/plymouth/themes/{{ boottheme_name }}/{{ boottheme_name }}.plymouth"
+    mode: "0644"
+    content: |
+      [Plymouth Theme]
+      Name={{ boottheme_name }}
+      Description=sddm-astronaut {{ boottheme_preset }} wallpaper with a progress bar (dotfiles boottheme role)
+      ModuleName=script
+
+      [script]
+      ImageDir=/usr/share/plymouth/themes/{{ boottheme_name }}
+      ScriptFile=/usr/share/plymouth/themes/{{ boottheme_name }}/astronaut.script
+  notify: boottheme update initramfs
+
+- name: Plymouth default theme
+  ansible.builtin.shell: |
+    [ "$(plymouth-set-default-theme)" = "{{ boottheme_name }}" ] && exit 0
+    plymouth-set-default-theme {{ boottheme_name }} && echo CHANGED
+  register: boottheme_plymouth
+  changed_when: "'CHANGED' in boottheme_plymouth.stdout"
+  notify: boottheme update initramfs
+
+- name: Plymouth at 2x on Retina screens
+  community.general.ini_file:
+    path: /etc/plymouth/plymouthd.conf
+    section: Daemon
+    option: DeviceScale
+    value: "2"
+    no_extra_spaces: true
+    mode: "0644"
+  when: hidpi | default(false) | bool
+  notify: boottheme update initramfs
+
+- name: Show the splash at boot (kernel command line)
+  ansible.builtin.copy:
+    dest: /etc/default/grub.d/splash.cfg
+    mode: "0644"
+    content: |
+      GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT splash"
+  notify: boottheme update grub

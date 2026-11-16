@@ -35,6 +35,8 @@
       when: desktop | length > 0
     - role: macbook
       when: is_debian and ansible_product_name is search('MacBook')
+    - role: boottheme
+      when: is_debian and desktop | length > 0
     - role: lxqt
       when: is_debian and desktop | length > 0
     - role: nvidia

@@ -1,0 +1,49 @@
+# Managed by ansible (boottheme role): GRUB theme generated from the sddm-astronaut "{{ boottheme_preset }}" preset.
+# Layout mirrors the login screen: a translucent panel on the left over the same wallpaper.
+title-text: ""
+desktop-image: "background-{{ boottheme_res }}.jpg"
+desktop-image-scale-method: "crop"
+desktop-color: "{{ boottheme_dark }}"
+terminal-font: "DejaVu Sans Mono Regular {{ boottheme_font_small }}"
+terminal-box: "terminal_*.png"
+
++ boot_menu {
+    left = 6%
+    top = 28%
+    width = 36%
+    height = 44%
+    menu_pixmap_style = "menu_*.png"
+    item_font = "DejaVu Sans Regular {{ boottheme_font_item }}"
+    item_color = "{{ boottheme_text }}"
+    selected_item_font = "DejaVu Sans Bold {{ boottheme_font_item }}"
+    selected_item_color = "#ffffff"
+    selected_item_pixmap_style = "select_*.png"
+    item_height = {{ (boottheme_font_item | int * 1.8) | int }}
+    item_padding = {{ (boottheme_font_item | int * 0.6) | int }}
+    item_spacing = {{ (boottheme_font_item | int * 0.3) | int }}
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+    scrollbar = false
+}
+
++ label {
+    left = 6%
+    top = 74%
+    width = 36%
+    align = "center"
+    id = "__timeout__"
+    text = "Booting in %d seconds"
+    color = "{{ boottheme_accent }}"
+    font = "DejaVu Sans Regular {{ boottheme_font_small }}"
+}
+
++ label {
+    left = 6%
+    top = 78%
+    width = 36%
+    align = "center"
+    text = "Enter: boot   E: edit   C: command line"
+    color = "{{ boottheme_accent }}"
+    font = "DejaVu Sans Regular {{ boottheme_font_small }}"
+}

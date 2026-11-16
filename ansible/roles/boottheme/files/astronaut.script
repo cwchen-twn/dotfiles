@@ -1,0 +1,76 @@
+// Managed by ansible (boottheme role). Plymouth boot splash matching the sddm-astronaut preset:
+// the preset's wallpaper (cropped to fill), a thin accent progress bar, boot messages and password/question prompts.
+// Colors: text #b7cef1 (0.72, 0.81, 0.95); bar.png/track.png are generated in the preset's accent.
+
+Window.SetBackgroundTopColor(0.09, 0.08, 0.15);
+Window.SetBackgroundBottomColor(0.09, 0.08, 0.15);
+
+screen_x = Window.GetX();
+screen_y = Window.GetY();
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+
+// wallpaper, scaled to cover the screen
+bg = Image("background.png");
+ratio = Math.Max(screen_w / bg.GetWidth(), screen_h / bg.GetHeight());
+bg = bg.Scale(Math.Int(bg.GetWidth() * ratio), Math.Int(bg.GetHeight() * ratio));
+bg_sprite = Sprite(bg);
+bg_sprite.SetPosition(screen_x + (screen_w - bg.GetWidth()) / 2, screen_y + (screen_h - bg.GetHeight()) / 2, -100);
+
+// progress bar
+bar_w = Math.Int(screen_w * 0.25);
+bar_h = Math.Max(3, Math.Int(screen_h * 0.004));
+bar_x = screen_x + (screen_w - bar_w) / 2;
+bar_y = screen_y + Math.Int(screen_h * 0.85);
+track_sprite = Sprite(Image("track.png").Scale(bar_w, bar_h));
+track_sprite.SetPosition(bar_x, bar_y, 1);
+bar_image = Image("bar.png");
+bar_sprite = Sprite();
+bar_sprite.SetPosition(bar_x, bar_y, 2);
+
+fun progress_callback(duration, progress) {
+    width = Math.Int(bar_w * progress);
+    if (width >= 1)
+        bar_sprite.SetImage(bar_image.Scale(width, bar_h));
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+// boot messages (e.g. fsck), bottom left
+message_sprite = Sprite();
+message_sprite.SetPosition(screen_x + Math.Int(screen_w * 0.04), screen_y + Math.Int(screen_h * 0.93), 3);
+
+fun message_callback(text) {
+    message_sprite.SetImage(Image.Text(text, 0.72, 0.81, 0.95, 1, "Sans 12"));
+}
+Plymouth.SetMessageFunction(message_callback);
+
+// password / question prompts (disk encryption etc.), above the bar
+prompt_sprite = Sprite();
+prompt_sprite.SetPosition(bar_x, bar_y - Math.Int(screen_h * 0.08), 3);
+answer_sprite = Sprite();
+answer_sprite.SetPosition(bar_x, bar_y - Math.Int(screen_h * 0.045), 3);
+
+fun password_callback(prompt, bullets) {
+    stars = "";
+    for (i = 0; i < bullets; i++)
+        stars += "*";
+    prompt_sprite.SetImage(Image.Text(prompt, 0.72, 0.81, 0.95, 1, "Sans 14"));
+    answer_sprite.SetImage(Image.Text(stars + " ", 1, 1, 1, 1, "Sans 14"));
+    prompt_sprite.SetOpacity(1);
+    answer_sprite.SetOpacity(1);
+}
+Plymouth.SetDisplayPasswordFunction(password_callback);
+
+fun question_callback(prompt, entry) {
+    prompt_sprite.SetImage(Image.Text(prompt, 0.72, 0.81, 0.95, 1, "Sans 14"));
+    answer_sprite.SetImage(Image.Text(entry + " ", 1, 1, 1, 1, "Sans 14"));
+    prompt_sprite.SetOpacity(1);
+    answer_sprite.SetOpacity(1);
+}
+Plymouth.SetDisplayQuestionFunction(question_callback);
+
+fun normal_callback() {
+    prompt_sprite.SetOpacity(0);
+    answer_sprite.SetOpacity(0);
+}
+Plymouth.SetDisplayNormalFunction(normal_callback);

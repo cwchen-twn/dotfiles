@@ -67,10 +67,14 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   Alacritty all follow); system-wide dark mode (LXQt theme/palette, GTK, freedesktop color-scheme); Brave as default browser; Alacritty as terminal
   (Ctrl+Alt+T); panel quick launch + menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, as selected).
   Also 4 workspaces in a row for the gestures.
-- Retina boot and login (macbook role): GRUB font at 36 px, console in Terminus 16x32, SDDM greeter at 2x.
-  Themes: GRUB from gnome-look.org (GRUB Themes) or github.com/vinceliuice/grub2-themes (2k variants), set `GRUB_THEME`
-  in `/etc/default/grub.d/hidpi.cfg`; SDDM (Qt6 only) from store.kde.org (SDDM Login Themes), set `[Theme] Current=` in
-  `/etc/sddm.conf.d/`. Inspiration: r/unixporn.
+- Retina boot and login (macbook role): GRUB console font at 36 px, console in Terminus 16x32, SDDM greeter at 2x.
+- Boot look (`boottheme` role, desktop machines): GRUB menu, Plymouth splash and SDDM login share one
+  [sddm-astronaut](https://github.com/Keyitdev/sddm-astronaut-theme) preset (default `black_hole`, GPL-3.0, pinned
+  commit). The login uses the theme itself (preset selected via `Themes/astronaut.conf.user`); the GRUB and Plymouth
+  themes are generated from the preset's wallpaper and palette, sized for the screen. Switch with `boottheme_preset` and
+  the colors in `ansible/roles/boottheme/defaults/main.yml`. Preview the login without logging out:
+  `sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/sddm-astronaut-theme`. More themes: gnome-look.org (GRUB
+  Themes), store.kde.org (SDDM Login Themes, Qt6 only), r/unixporn.
 - fcitx5 (desktop app): US keyboard + Chewing (`~/.config/fcitx5/profile`, chezmoi; stop fcitx5 before editing it by
   hand, it saves its profile on exit). Ctrl+Space toggles, Shift_L switches temporarily. CJK font: `fonts-noto-cjk`.
 - Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,
