@@ -1,5 +1,5 @@
 {{- $ovpn  := and (eq .chezmoi.os "linux") (has "openvpn" .extras) -}}
-{{- $forti := and (eq .chezmoi.os "linux") (has "openfortivpn" .extras) (stat (joinPath .chezmoi.sourceDir "private_dot_config/private_openfortivpn/encrypted_private_mitic.conf.age")) -}}
+{{- $forti := and (eq .chezmoi.os "linux") (has "openfortivpn" .extras) (stat (joinPath .chezmoi.sourceDir "dot_config/private_openfortivpn/encrypted_private_mitic.conf.age")) -}}
 {{- if or $ovpn $forti -}}
 #!/usr/bin/env bash
 # Install the VPN profiles chezmoi decrypted into ~/.config as root-only files for the systemd template units:
@@ -7,11 +7,11 @@
 #   openfortivpn@mitic    (MITIC: /etc/openfortivpn/mitic.conf)                 -> miticvpn / miticvpnstop
 # Reruns when the encrypted sources change:
 {{- if $ovpn }}
-# dgtic.conf {{ include "private_dot_config/private_openvpn/encrypted_private_dgtic.conf.age" | sha256sum }}
-# dgtic.auth {{ include "private_dot_config/private_openvpn/encrypted_private_dgtic.auth.age" | sha256sum }}
+# dgtic.conf {{ include "dot_config/private_openvpn/encrypted_private_dgtic.conf.age" | sha256sum }}
+# dgtic.auth {{ include "dot_config/private_openvpn/encrypted_private_dgtic.auth.age" | sha256sum }}
 {{- end }}
 {{- if $forti }}
-# mitic.conf {{ include "private_dot_config/private_openfortivpn/encrypted_private_mitic.conf.age" | sha256sum }}
+# mitic.conf {{ include "dot_config/private_openfortivpn/encrypted_private_mitic.conf.age" | sha256sum }}
 {{- end }}
 set -euo pipefail
 {{- if $ovpn }}
