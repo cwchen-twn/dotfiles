@@ -1,0 +1,5 @@
+eclipse.preferences.version=1
+resultset.presentation.active=spreadsheet
+sql.format.keywordCase=UPPER
+tipOfTheDayInitializer.notFirstRun=true
+ui.show.tip.of.the.day.on.startup=false

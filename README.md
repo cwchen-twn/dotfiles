@@ -183,6 +183,18 @@ the encrypted profile; it forwards the rest upstream) via systemd-resolved, so p
 role makes `/etc/resolv.conf` the resolved stub (Tailscale then plugs MagicDNS into resolved instead of overwriting
 the file). Check with `resolvectl status tun0`.
 
+## DBeaver
+
+When `dbeaver` is selected, chezmoi ships the connections (`workspace6/General/.dbeaver/`): `data-sources.json`
+(connections, folders, SSH network profiles) and `credentials-config.json` (saved passwords; DBeaver's own encryption
+uses a public key, so it's age-encrypted here like plaintext), plus a few default preferences (`create_`: written once,
+then DBeaver owns them). SQL scripts stay local.
+
+- SSH tunnels log in with a password, or with **Agent** auth (the machine's ssh-agent key), never a key path, so the
+  files stay identical across machines. A new machine's public key must be added to those bastions once.
+- DBeaver rewrites these files itself. After changing connections: `chezmoi re-add`, commit, push; elsewhere
+  `chezmoi update` (with DBeaver closed). If both sides changed, re-add first, or `chezmoi apply` asks before overwriting.
+
 ## Daily use
 
 ```sh

@@ -17,6 +17,9 @@
 {{ if not (has "alacritty" .desktop) }}
 .config/alacritty
 {{ end }}
+{{ if not (has "dbeaver" .desktop) }}
+.local/share/DBeaverData
+{{ end }}
 {{ if not (stat "/sys/class/leds/smc::kbd_backlight") }}
 .local/bin/kbd-backlight-idle
 .config/autostart/kbd-backlight-idle.desktop
