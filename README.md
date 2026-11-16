@@ -20,7 +20,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
 | devops | kubernetes (kubectl, helm, kubectx), terraform, docker, tailscale |
 | runtimes | node (+pnpm), go, java (+maven, gradle), rust, bun, python (uv) |
 | desktop | brave, vscode, alacritty, libinput-gestures, shutter, libreoffice, balena-etcher, calibre, obsidian, dbeaver, fcitx5 |
-| extras | postgres, openvpn3, openfortivpn, nordvpn, nvidia-cuda, claude-code |
+| extras | postgres, openvpn (2.x), openfortivpn, nordvpn, nvidia-cuda, claude-code |
 
 Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age, gitleaks, rtk, codebase-memory-mcp and the Bitwarden CLI.
 System info / monitoring: fastfetch, btop, duf, gdu (mise); inxi (`sysinfo`), lm-sensors, smartmontools, iotop-c, nethogs,
@@ -121,7 +121,7 @@ Rule: nothing is copied into `/usr/local/bin` or `/opt` by hand. Anything not co
   (kills the heaviest browser tab before the machine freezes; never Xorg/SDDM/the session). Check: `zramctl`,
   `systemctl status earlyoom`.
 - On demand instead of at boot: Docker (`docker.socket`: the first `docker` command starts it; containers don't
-  auto-start at boot), NordVPN (`vpnstart` / `vpnstop`; its socket unit can't start it lazily), PostgreSQL (`pgstart` / `pgstop`). ModemManager, cups-browsed and
+  auto-start at boot), VPNs (see [VPNs](#vpns); NordVPN's socket unit can't start it lazily), PostgreSQL (`pgstart` / `pgstop`). ModemManager, cups-browsed and
   NetworkManager-wait-online are off; printing still works through `cups.socket`.
 - Brave: Memory Saver on (balanced), no background mode, Dark Reader installed by policy (`brave://policy`).
 - MacBook: turbo boost only on AC (`/etc/tlp.d/50-dotfiles.conf`).
@@ -149,6 +149,33 @@ The repo is public. Secrets are never committed in plain text:
 - SSH private keys are per machine and never synced. Each new key is registered with GitHub, GitLab and Gitea.
 - Git HTTPS credentials come from `gh`, `glab` and `tea` credential helpers, not from `~/.git-credentials`.
 - `pre-commit install` enables gitleaks and an internal-IP check.
+
+## Kubernetes access
+
+Each cluster has a `cwchen-admin` ServiceAccount (kube-system) bound to `cluster-admin`, with a manually created
+token Secret: it never expires and is revoked by deleting the Secret or the binding. No copied
+`admin.conf`/`k3s.yaml` certs (one-year expiry, shared identity, can't be revoked); those stay on the control nodes as break-glass.
+
+- `KUBECONFIG=~/.kube/config:~/.kube/clusters.yaml`. `clusters.yaml` is age-encrypted in chezmoi (clusters, CA, tokens);
+  `~/.kube/config` is unmanaged and only holds current-context (kubectx writes there), so `chezmoi diff` stays clean.
+- New cluster or rotation: `kube-admin-sa <context>` (applies the SA/Secret/binding using the context's current
+  credentials and writes the token user into `clusters.yaml`), then `chezmoi add --encrypt ~/.kube/clusters.yaml`.
+- Revoke: `kubectl -n kube-system delete secret cwchen-admin-token`.
+- Reaching the API servers: the work clusters over the HIS VPN (`hisvpn`), the personal one over Tailscale only.
+
+## VPNs
+
+All on demand (nothing connects at boot); profiles are age-encrypted in chezmoi and installed root-only to `/etc` by
+`run_onchange_after_55-vpn-configs` for the distro's systemd template units.
+
+| VPN | Client (extra) | Start / stop | Unit |
+|---|---|---|---|
+| HIS | OpenVPN 2.x (`openvpn`) | `hisvpn` / `hisvpnstop` | `openvpn-client@dgtic` (`/etc/openvpn/client/dgtic.{conf,auth}`) |
+| MITIC | openfortivpn (`openfortivpn`) | `miticvpn` / `miticvpnstop` | `openfortivpn@mitic` (`/etc/openfortivpn/mitic.conf`) |
+| NordVPN | nordvpn (`nordvpn`) | `nordvpnstart` / `nordvpnstop`, then `nordvpn connect` | `nordvpnd` |
+
+`vpns` shows the state of each (plus Tailscale). OpenVPN 2.x rather than OpenVPN 3: it reads the saved login file,
+handles the HIS server's CBC + comp-lzo, and runs as a plain systemd unit. On macOS, import the profile into Tunnelblick.
 
 ## Daily use
 

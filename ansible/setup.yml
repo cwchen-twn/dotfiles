@@ -44,6 +44,6 @@
     - role: postgres
       when: "'postgres' in extras"
     - role: vpn
-      when: extras | intersect(['openvpn3', 'openfortivpn', 'nordvpn']) | length > 0
+      when: extras | intersect(['openvpn', 'openfortivpn', 'nordvpn']) | length > 0
     - role: claude
       when: "'claude-code' in extras"

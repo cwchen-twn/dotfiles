@@ -1,18 +1,14 @@
 ---
-- name: OpenVPN 3
-  when: is_debian and 'openvpn3' in extras
+- name: OpenVPN 2.x
+  when: is_debian and 'openvpn' in extras
   block:
-    - name: OpenVPN 3 repo
-      ansible.builtin.deb822_repository:
-        name: openvpn3
-        types: deb
-        uris: "https://packages.openvpn.net/openvpn3/debian"
-        suites: "{{ ansible_distribution_release }}"
-        components: main
-        architectures: "{{ arch_deb }}"
-        signed_by: https://packages.openvpn.net/packages-repo.gpg
-    - name: openvpn3
-      ansible.builtin.apt: { name: openvpn3, update_cache: true }
+    # Profiles come from chezmoi (encrypted) into /etc/openvpn/client/<name>.conf; run as openvpn-client@<name>.
+    # update-systemd-resolved: the up/down script that hands pushed DNS to systemd-resolved.
+    - name: openvpn
+      ansible.builtin.apt: { name: [openvpn, openvpn-systemd-resolved] }
+    # Legacy umbrella unit for /etc/openvpn/*.conf; unused (template units only), nothing to start at boot.
+    - name: openvpn.service off at boot
+      ansible.builtin.systemd_service: { name: openvpn.service, enabled: false }
 
 - name: openfortivpn
   ansible.builtin.apt: { name: openfortivpn }
@@ -34,7 +30,7 @@
     - name: User in nordvpn group
       ansible.builtin.user: { name: "{{ user }}", groups: nordvpn, append: true }
     # Off until needed (~100 MB): its socket unit has BindsTo=nordvpnd.service, so even the socket starts the daemon
-    # at boot. `vpnstart` / `vpnstop` (fish) start and stop both; then `nordvpn connect` as usual.
+    # at boot. `nordvpnstart` / `nordvpnstop` (fish) start and stop both; then `nordvpn connect` as usual.
     - name: nordvpnd off at boot (service and socket)
       ansible.builtin.systemd_service: { name: "{{ item }}", enabled: false }
       loop: [nordvpnd.socket, nordvpnd.service]
@@ -42,4 +38,4 @@
 - name: VPN clients (macOS)
   when: is_mac
   community.general.homebrew_cask:
-    name: "{{ (['openvpn-connect'] if 'openvpn3' in extras else []) + (['nordvpn'] if 'nordvpn' in extras else []) }}"
+    name: "{{ (['tunnelblick'] if 'openvpn' in extras else []) + (['nordvpn'] if 'nordvpn' in extras else []) }}"

@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# kube-admin-sa <context> [out-file]
+#
+# Personal cluster-admin access that doesn't expire and can be revoked:
+# a `cwchen-admin` ServiceAccount in kube-system, bound to cluster-admin, with a manually created
+# long-lived token Secret (not subject to legacy-token auto-cleanup, which only purges auto-generated ones).
+#
+# Applies that to the cluster behind <context> (using whatever credentials the context has now),
+# then writes cluster + token user + context into <out-file> (default ~/.kube/clusters.yaml, the
+# chezmoi-managed file; KUBECONFIG=~/.kube/config:~/.kube/clusters.yaml).
+#
+# Rotate:  kubectl --context <ctx> -n kube-system delete secret cwchen-admin-token; kube-admin-sa <ctx>
+# Revoke:  kubectl --context <ctx> -n kube-system delete secret cwchen-admin-token   (or the ClusterRoleBinding)
+# Then re-encrypt: chezmoi add --encrypt ~/.kube/clusters.yaml
+set -euo pipefail
+
+ctx="${1:?usage: kube-admin-sa <context> [out-file]}"
+out="${2:-$HOME/.kube/clusters.yaml}"
+sa=cwchen-admin
+ns=kube-system
+
+kubectl --context "$ctx" apply -f - <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: $sa
+  namespace: $ns
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: $sa-token
+  namespace: $ns
+  annotations:
+    kubernetes.io/service-account.name: $sa
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: $sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: $sa
+    namespace: $ns
+EOF
+
+# The token controller fills the Secret asynchronously.
+token=
+for _ in $(seq 30); do
+    token="$(kubectl --context "$ctx" -n "$ns" get secret "$sa-token" -o jsonpath='{.data.token}' 2>/dev/null || true)"
+    [ -n "$token" ] && break
+    sleep 1
+done
+[ -n "$token" ] || { echo "token not populated in $ns/$sa-token" >&2; exit 1; }
+token="$(printf '%s' "$token" | base64 -d)"
+
+cluster="$(kubectl config view --raw -o jsonpath="{.contexts[?(@.name==\"$ctx\")].context.cluster}")"
+server="$(kubectl config view --raw -o jsonpath="{.clusters[?(@.name==\"$cluster\")].cluster.server}")"
+ca="$(kubectl config view --raw -o jsonpath="{.clusters[?(@.name==\"$cluster\")].cluster.certificate-authority-data}")"
+[ -n "$server" ] && [ -n "$ca" ] || { echo "no server/CA data for cluster '$cluster' of context '$ctx'" >&2; exit 1; }
+
+mkdir -p "$(dirname "$out")"
+[ -e "$out" ] || ( umask 077; printf 'apiVersion: v1\nkind: Config\n' > "$out" )
+chmod 600 "$out"
+k() { kubectl --kubeconfig "$out" config "$@" >/dev/null; }
+k set-cluster "$ctx" --server="$server"
+k set "clusters.$ctx.certificate-authority-data" "$ca"
+k set-credentials "$ctx-$sa" --token="$token"
+k set-context "$ctx" --cluster="$ctx" --user="$ctx-$sa"
+# kubectl adds `current-context: ""`; keep it out so context switches land in ~/.kube/config, not here
+sed -i '/^current-context: ""$/d' "$out"
+
+echo "$ctx: $sa token written to $out"
+KUBECONFIG="$out" kubectl --context "$ctx" auth whoami -o jsonpath='{.status.userInfo.username}{"\n"}'

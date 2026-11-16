@@ -10,10 +10,39 @@ command -q tlp-stat; and alias battery "sudo tlp-stat -b"   # health, cycles, ch
 alias pgstart "sudo systemctl start postgresql"
 alias pgstop "sudo systemctl stop postgresql"
 {{- end }}
-{{- if and (has "nordvpn" .extras) (eq .chezmoi.os "linux") }}
-# nordvpnd isn't started at boot (memory)
-alias vpnstart "sudo systemctl start nordvpnd.socket nordvpnd.service"
-alias vpnstop "sudo systemctl stop nordvpnd.service nordvpnd.socket"
+{{- if eq .chezmoi.os "linux" }}
+# VPNs, all on demand: <name>vpn starts, <name>vpnstop stops, `vpns` shows what's up.
+{{- if has "openvpn" .extras }}
+alias hisvpn "sudo systemctl start openvpn-client@dgtic"        # HIS
+alias hisvpnstop "sudo systemctl stop openvpn-client@dgtic"
+{{- end }}
+{{- if has "openfortivpn" .extras }}
+alias miticvpn "sudo systemctl start openfortivpn@mitic"        # MITIC
+alias miticvpnstop "sudo systemctl stop openfortivpn@mitic"
+{{- end }}
+{{- if has "nordvpn" .extras }}
+# nordvpnd isn't started at boot (memory). Not named `nordvpn`: that's the CLI (`nordvpn connect`).
+alias nordvpnstart "sudo systemctl start nordvpnd.socket nordvpnd.service"
+alias nordvpnstop "sudo systemctl stop nordvpnd.service nordvpnd.socket"
+{{- end }}
+function vpns --description "VPN status"
+    {{- if has "openvpn" .extras }}
+    printf '%-8s %s\n' his (systemctl is-active openvpn-client@dgtic)
+    {{- end }}
+    {{- if has "openfortivpn" .extras }}
+    printf '%-8s %s\n' mitic (systemctl is-active openfortivpn@mitic)
+    {{- end }}
+    {{- if has "nordvpn" .extras }}
+    if systemctl -q is-active nordvpnd.service
+        printf '%-8s %s\n' nord (nordvpn status | string match -r 'Status: .*' | string replace 'Status: ' '')
+    else
+        printf '%-8s %s\n' nord inactive
+    end
+    {{- end }}
+    {{- if has "tailscale" .devops }}
+    command -q tailscale; and printf '%-8s %s\n' tailnet (tailscale status --json 2>/dev/null | jq -r '.BackendState // "stopped"')
+    {{- end }}
+end
 {{- end }}
 {{- if has "nvidia-cuda" .extras }}
 alias gputop "watch -n 0.5 nvidia-smi"

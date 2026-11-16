@@ -1,0 +1,27 @@
+{{- $ovpn  := and (eq .chezmoi.os "linux") (has "openvpn" .extras) -}}
+{{- $forti := and (eq .chezmoi.os "linux") (has "openfortivpn" .extras) (stat (joinPath .chezmoi.sourceDir "private_dot_config/private_openfortivpn/encrypted_private_mitic.conf.age")) -}}
+{{- if or $ovpn $forti -}}
+#!/usr/bin/env bash
+# Install the VPN profiles chezmoi decrypted into ~/.config as root-only files for the systemd template units:
+#   openvpn-client@dgtic  (HIS: /etc/openvpn/client/dgtic.conf + dgtic.auth)   -> hisvpn / hisvpnstop
+#   openfortivpn@mitic    (MITIC: /etc/openfortivpn/mitic.conf)                 -> miticvpn / miticvpnstop
+# Reruns when the encrypted sources change:
+{{- if $ovpn }}
+# dgtic.conf {{ include "private_dot_config/private_openvpn/encrypted_private_dgtic.conf.age" | sha256sum }}
+# dgtic.auth {{ include "private_dot_config/private_openvpn/encrypted_private_dgtic.auth.age" | sha256sum }}
+{{- end }}
+{{- if $forti }}
+# mitic.conf {{ include "private_dot_config/private_openfortivpn/encrypted_private_mitic.conf.age" | sha256sum }}
+{{- end }}
+set -euo pipefail
+{{- if $ovpn }}
+sudo install -d -m 755 /etc/openvpn/client
+sudo install -o root -g root -m 600 "$HOME/.config/openvpn/dgtic.conf" "$HOME/.config/openvpn/dgtic.auth" /etc/openvpn/client/
+echo "installed /etc/openvpn/client/dgtic.{conf,auth}"
+{{- end }}
+{{- if $forti }}
+sudo install -d -m 755 /etc/openfortivpn
+sudo install -o root -g root -m 600 "$HOME/.config/openfortivpn/mitic.conf" /etc/openfortivpn/mitic.conf
+echo "installed /etc/openfortivpn/mitic.conf"
+{{- end }}
+{{- end }}

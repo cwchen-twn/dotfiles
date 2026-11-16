@@ -51,3 +51,14 @@
 {{ if ne .chezmoi.os "linux" }}
 .config/systemd
 {{ end }}
+
+{{ if not (has "kubernetes" .devops) }}
+.kube
+{{ end }}
+{{- /* VPN profiles: Linux only (installed to /etc by run_onchange_after_55-vpn-configs); on macOS import into Tunnelblick by hand */}}
+{{ if or (ne .chezmoi.os "linux") (not (has "openvpn" .extras)) }}
+.config/openvpn
+{{ end }}
+{{ if or (ne .chezmoi.os "linux") (not (has "openfortivpn" .extras)) }}
+.config/openfortivpn
+{{ end }}
