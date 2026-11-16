@@ -19,3 +19,5 @@
 .config/nvim/lua/cwchen/plugins/which-key.lua
 # picom: redundant with xfwm4/LXQt compositing (2026-11)
 .config/picom
+# camera: PipeWire attempt replaced by the v4l2loopback relay (2026-11)
+.config/wireplumber/wireplumber.conf.d/90-camera-only.conf

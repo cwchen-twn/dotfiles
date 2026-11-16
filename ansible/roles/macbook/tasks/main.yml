@@ -190,16 +190,10 @@
   changed_when: false
   failed_when: false
 
-# Browsers: facetimehd reports its frame sizes as a range (V4L2 "stepwise"), which Chromium's V4L2 code skips, so
-# Brave/Chrome see no camera. Two ways around it:
-# 1. PipeWire camera (browsers): PipeWire handles size ranges; Brave is started with WebRtcPipeWireCamera (desktop
-#    override below). Video only: no recommends (would pull pipewire-pulse and replace PulseAudio) and WirePlumber's
-#    audio/bluetooth monitors are off (~/.config/wireplumber, chezmoi). The camera only turns on when a site uses it.
-# 2. Relay (any app, e.g. Zoom/OBS): v4l2loopback /dev/video10 with fixed 1280x720, fed by `camera-on` (ffmpeg,
-#    systemd user unit camera-relay); `camera-off` stops it.
-- name: PipeWire for cameras (no pipewire-pulse)
-  ansible.builtin.apt: { name: [pipewire, wireplumber], install_recommends: false }
-
+# Browsers: facetimehd reports its frame sizes as a range (V4L2 "stepwise"), which Chromium's camera code skips, so
+# Brave/Chrome see no camera (PipeWire doesn't help: it passes the same range on). Fix: a v4l2loopback camera
+# /dev/video10 "FaceTime HD (relay)" with fixed 1280x720, fed by ffmpeg while `camera-on` runs (systemd user unit
+# camera-relay); pick it in Meet etc., `camera-off` afterwards.
 - name: Virtual camera relay (v4l2loopback via DKMS)
   ansible.builtin.apt: { name: [v4l2loopback-dkms, ffmpeg] }
 
@@ -222,20 +216,19 @@
   changed_when: true
   failed_when: false
 
-- name: Brave with the PipeWire camera (desktop entry override, regenerated from Brave's own on every run)
-  when: "'brave' in desktop"
+# Earlier attempt (PipeWire camera for browsers) didn't work for this camera: remove it, but only where PipeWire was
+# installed for video alone. Where it is the audio system (pipewire-pulse, e.g. Ubuntu) it stays.
+- name: Is PipeWire the audio system here?
+  ansible.builtin.stat: { path: /usr/bin/pipewire-pulse }
+  register: pipewire_pulse
+
+- name: Remove the PipeWire camera attempt
+  ansible.builtin.apt: { name: [pipewire, wireplumber], state: absent }
+  when: not pipewire_pulse.stat.exists
+
+- name: Remove the Brave camera-flag launcher override
   become: false
-  block:
-    - name: Read Brave's desktop entry
-      ansible.builtin.slurp: { src: /usr/share/applications/brave-browser.desktop }
-      register: brave_desktop
-    - name: Override with the camera flag
-      ansible.builtin.copy:
-        dest: "{{ home }}/.local/share/applications/brave-browser.desktop"
-        mode: "0644"
-        content: >-
-          {{ brave_desktop.content | b64decode
-             | regex_replace('(?m)^Exec=(\S+)', 'Exec=\1 --enable-features=WebRtcPipeWireCamera') }}
+  ansible.builtin.file: { path: "{{ home }}/.local/share/applications/brave-browser.desktop", state: absent }
 
 # Hibernation: resume from a swap partition >= RAM, or create a RAM + 2 GB /swapfile. Same script as the standalone one.
 - name: Hibernation (swap + resume device)

@@ -19,7 +19,6 @@
 .config/autostart/kbd-backlight-idle.desktop
 .config/systemd/user/three-finger-drag.service
 .config/linux-3-finger-drag
-.config/wireplumber
 .config/systemd/user/camera-relay.service
 .config/fish/functions/camera-on.fish
 .config/fish/functions/camera-off.fish

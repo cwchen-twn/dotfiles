@@ -75,10 +75,9 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   a quieter `mbpfan` curve, a macOS-like touchpad (tap to click, natural scrolling, two-finger right-click:
   `/etc/X11/xorg.conf.d/50-macbook-touchpad.conf`), and the keyboard backlight (Fn+F5/F6 via `brightnessctl`, off after
   60 s idle via `~/.local/bin/kbd-backlight-idle`, `KBD_IDLE_SECS` to change).
-- FaceTime camera in browsers: facetimehd reports its sizes as a range, which Chromium's V4L2 code skips, so
-  Brave/Chrome saw no camera. Brave now gets it through PipeWire (video only; audio stays on PulseAudio) via
-  `--enable-features=WebRtcPipeWireCamera` in a desktop-entry override the macbook role regenerates from Brave's own.
-  For other apps: `camera-on` relays it to `/dev/video10` "FaceTime HD (relay)" (v4l2loopback), `camera-off` stops it.
+- FaceTime camera in browsers/Meet: facetimehd reports its sizes as a range, which Chromium's camera code skips (also
+  through PipeWire), so Brave/Chrome see no camera. Before a call run `camera-on` and pick "FaceTime HD (relay)": a
+  v4l2loopback camera (`/dev/video10`, fixed 1280x720) fed by ffmpeg. `camera-off` afterwards (the LED goes off).
 - The build asks for the swap partition size (default 16 GB; >= RAM to hibernate).
 - The `lxqt` Ansible role sets only specific keys in `~/.config/lxqt/*.conf` (LXQt rewrites those files, so chezmoi doesn't
   own them): on Retina MacBooks 2x scaling (`Xft.dpi: 192` in `~/.Xresources`, which Qt, Brave, GTK via `GDK_SCALE` and
