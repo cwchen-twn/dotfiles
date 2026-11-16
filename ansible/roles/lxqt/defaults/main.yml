@@ -19,6 +19,14 @@ lxqt_favorites:
   - { app: vscode, files: [/usr/share/applications/com.microsoft.VSCode.desktop, /usr/share/applications/code.desktop] }
   - { app: obsidian, files: ["{{ home }}/.local/share/applications/obsidian.desktop"] }
   - { app: dbeaver, files: [/usr/share/applications/dbeaver-ce.desktop] }
+  - { app: shutter, files: [/usr/share/applications/shutter.desktop] }
+
+# Panel widgets, left to right: Debian's default minus `mount` (removable media), plus `cpuload` (CPU monitor).
+lxqt_panel_plugins: [mainmenu, showdesktop, desktopswitch, quicklaunch, taskbar, kbindicator, tray, statusnotifier,
+                     volume, worldclock, cpuload, quicklaunch2]
+# Sections for widgets the distro default doesn't define.
+lxqt_panel_plugin_sections:
+  cpuload: { type: cpuload, alignment: Right }
 
 lxqt_browser_mimetypes:
   - text/html

@@ -1,4 +1,4 @@
-# User-level LXQt settings: HiDPI, dark mode, default browser/terminal, favorites, keyboard-backlight keys.
+# User-level LXQt settings: HiDPI, dark mode, default browser/terminal, favorites, panel widgets, keyboard-backlight keys.
 # LXQt rewrites its own .conf files, so only the keys below are managed (community.general.ini_file);
 # everything else stays editable in the LXQt settings UI. Takes effect on the next login.
 - name: Detect LXQt and the MacBook keyboard backlight
@@ -38,8 +38,14 @@
             {%- if hits -%}{%- set _ = out.append(hits[0]) -%}{%- endif -%}
           {%- endfor -%}
           {{ out }}
-        lxqt_ini: "{{ hidpi_ini + dark_ini + browser_ini + terminal_ini + kbd_ini + screen_ini }}"
+        lxqt_ini: "{{ panel_ini + hidpi_ini + dark_ini + browser_ini + terminal_ini + kbd_ini + screen_ini }}"
       vars:
+        panel_ini: >-
+          {%- set out = [['lxqt/panel.conf', 'panel1', 'plugins', lxqt_panel_plugins | join(', ')]] -%}
+          {%- for name, keys in lxqt_panel_plugin_sections.items() -%}
+            {%- for k, v in keys.items() -%}{%- set _ = out.append(['lxqt/panel.conf', name, k, v]) -%}{%- endfor -%}
+          {%- endfor -%}
+          {{ out }}
         # Xft.dpi itself goes to ~/.Xresources (below); these keep LXQt's own settings consistent with it.
         hidpi_ini: "{{ [
             ['lxqt/session.conf', 'Font', 'dpi', lxqt_dpi],

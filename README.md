@@ -83,7 +83,8 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 - The `lxqt` Ansible role sets only specific keys in `~/.config/lxqt/*.conf` (LXQt rewrites those files, so chezmoi doesn't
   own them): on Retina MacBooks 2x scaling (`Xft.dpi: 192` in `~/.Xresources`, which Qt, Brave, GTK via `GDK_SCALE` and
   Alacritty all follow); system-wide dark mode (LXQt theme/palette, GTK, freedesktop color-scheme); Brave as default browser; Alacritty as terminal
-  (Ctrl+Alt+T); panel quick launch + menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, as selected).
+  (Ctrl+Alt+T); panel quick launch + menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, Shutter, as selected);
+  panel widgets (`lxqt_panel_plugins`: Debian default minus mount, plus the CPU monitor).
   Also 4 workspaces in a row for the gestures.
 - Retina boot and login (macbook role): GRUB console font at 36 px, console in Terminus 16x32, SDDM greeter at 2x.
 - Boot look (`boottheme` role, desktop machines): GRUB menu, Plymouth splash and SDDM login share one
