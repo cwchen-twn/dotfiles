@@ -5,7 +5,24 @@
     # Profiles come from chezmoi (encrypted) into /etc/openvpn/client/<name>.conf; run as openvpn-client@<name>.
     # update-systemd-resolved: the up/down script that hands pushed DNS to systemd-resolved.
     - name: openvpn
-      ansible.builtin.apt: { name: [openvpn, openvpn-systemd-resolved] }
+      ansible.builtin.apt: { name: [openvpn, openvpn-systemd-resolved, systemd-resolved] }
+      register: ovpn_pkgs
+    # Debian doesn't ship systemd-resolved by default; installing it switches /etc/resolv.conf to the 127.0.0.53 stub
+    # at once. Until dbus loads resolve1's policy and NetworkManager (started before resolved existed) hands it the
+    # uplink DNS, resolved has no upstream servers and name resolution is dead until a reboot.
+    - name: Bring up systemd-resolved after first install
+      when: ovpn_pkgs is changed
+      block:
+        - name: Reload dbus (resolve1 policy)
+          ansible.builtin.systemd_service: { name: dbus, state: reloaded }
+        - name: Restart systemd-resolved
+          ansible.builtin.systemd_service: { name: systemd-resolved, state: restarted, enabled: true }
+        - name: NetworkManager present?
+          ansible.builtin.stat: { path: /usr/sbin/NetworkManager }
+          register: nm_bin
+        - name: Restart NetworkManager (feeds DNS to resolved)
+          ansible.builtin.systemd_service: { name: NetworkManager, state: restarted }
+          when: nm_bin.stat.exists
     # Legacy umbrella unit for /etc/openvpn/*.conf; unused (template units only), nothing to start at boot.
     - name: openvpn.service off at boot
       ansible.builtin.systemd_service: { name: openvpn.service, enabled: false }
