@@ -10,6 +10,11 @@ command -q tlp-stat; and alias battery "sudo tlp-stat -b"   # health, cycles, ch
 alias pgstart "sudo systemctl start postgresql"
 alias pgstop "sudo systemctl stop postgresql"
 {{- end }}
+{{- if and (has "nordvpn" .extras) (eq .chezmoi.os "linux") }}
+# nordvpnd isn't started at boot (memory)
+alias vpnstart "sudo systemctl start nordvpnd.socket nordvpnd.service"
+alias vpnstop "sudo systemctl stop nordvpnd.service nordvpnd.socket"
+{{- end }}
 {{- if has "nvidia-cuda" .extras }}
 alias gputop "watch -n 0.5 nvidia-smi"
 {{- end }}

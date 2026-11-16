@@ -33,11 +33,11 @@
       ansible.builtin.apt: { name: nordvpn, update_cache: true }
     - name: User in nordvpn group
       ansible.builtin.user: { name: "{{ user }}", groups: nordvpn, append: true }
-    # On demand: nordvpnd.socket starts the daemon on the first `nordvpn` command (~100 MB saved while unused).
-    - name: nordvpnd not started at boot
-      ansible.builtin.systemd_service: { name: nordvpnd.service, enabled: false }
-    - name: nordvpnd socket activation
-      ansible.builtin.systemd_service: { name: nordvpnd.socket, enabled: true, state: started }
+    # Off until needed (~100 MB): its socket unit has BindsTo=nordvpnd.service, so even the socket starts the daemon
+    # at boot. `vpnstart` / `vpnstop` (fish) start and stop both; then `nordvpn connect` as usual.
+    - name: nordvpnd off at boot (service and socket)
+      ansible.builtin.systemd_service: { name: "{{ item }}", enabled: false }
+      loop: [nordvpnd.socket, nordvpnd.service]
 
 - name: VPN clients (macOS)
   when: is_mac
