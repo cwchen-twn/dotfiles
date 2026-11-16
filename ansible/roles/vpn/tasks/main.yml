@@ -23,6 +23,18 @@
         - name: Restart NetworkManager (feeds DNS to resolved)
           ansible.builtin.systemd_service: { name: NetworkManager, state: restarted }
           when: nm_bin.stat.exists
+    # resolved only gets VPN DNS (update-systemd-resolved) if it owns /etc/resolv.conf. Tailscale, started before
+    # resolved existed, writes the file directly and so bypasses it; after the stub is back it registers MagicDNS
+    # with resolved instead (a per-link routing domain) once tailscaled restarts.
+    - name: /etc/resolv.conf is the systemd-resolved stub
+      ansible.builtin.file: { src: /run/systemd/resolve/stub-resolv.conf, dest: /etc/resolv.conf, state: link, force: true }
+      register: resolv_link
+    - name: tailscaled present?
+      ansible.builtin.stat: { path: /usr/sbin/tailscaled }
+      register: tailscaled_bin
+    - name: Restart tailscaled (DNS through resolved)
+      ansible.builtin.systemd_service: { name: tailscaled, state: restarted }
+      when: resolv_link is changed and tailscaled_bin.stat.exists
     # Legacy umbrella unit for /etc/openvpn/*.conf; unused (template units only), nothing to start at boot.
     - name: openvpn.service off at boot
       ansible.builtin.systemd_service: { name: openvpn.service, enabled: false }

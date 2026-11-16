@@ -177,6 +177,11 @@ All on demand (nothing connects at boot); profiles are age-encrypted in chezmoi 
 `vpns` shows the state of each (plus Tailscale). OpenVPN 2.x rather than OpenVPN 3: it reads the saved login file,
 handles the HIS server's CBC + comp-lzo, and runs as a plain systemd unit. On macOS, import the profile into Tunnelblick.
 
+DNS on HIS: the profile ignores the DNS the server pushes and sends every lookup to our own DNS server (set in
+the encrypted profile; it forwards the rest upstream) via systemd-resolved, so private names are added there. The vpn
+role makes `/etc/resolv.conf` the resolved stub (Tailscale then plugs MagicDNS into resolved instead of overwriting
+the file). Check with `resolvectl status tun0`.
+
 ## Daily use
 
 ```sh
