@@ -69,6 +69,7 @@
               BackgroundModeEnabled: false    # fully exit when the last window closes
               ExtensionInstallForcelist:
                 - nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx   # Bitwarden
+                - eimadpbcbfnmbkopoojfekhnkhdbieeh;https://clients2.google.com/service/update2/crx   # Dark Reader
 
     # Laptops/desktops without a modem, network-printer auto-discovery or boot-time network dependencies.
     # Printing still works: cups.socket starts CUPS on demand.
