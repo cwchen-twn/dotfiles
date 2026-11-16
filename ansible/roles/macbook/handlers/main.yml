@@ -8,3 +8,7 @@
 
 - name: Restart mbpfan
   ansible.builtin.systemd_service: { name: mbpfan, state: restarted }
+
+- name: Restart tlp
+  ansible.builtin.command: tlp start
+  changed_when: true

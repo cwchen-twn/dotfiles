@@ -33,6 +33,18 @@
     mbpfan_conf: { low_temp: 68, high_temp: 76, max_temp: 90 }
   notify: Restart mbpfan
 
+# Turbo only on AC: on battery the dual-core stays cooler, the fan quieter and the battery lasts noticeably longer.
+# Everything else is TLP's defaults (runtime PM, USB/SATA autosuspend, Wi-Fi power save).
+- name: TLP settings
+  ansible.builtin.copy:
+    dest: /etc/tlp.d/50-dotfiles.conf
+    mode: "0644"
+    content: |
+      # Managed by ansible (macbook role)
+      CPU_BOOST_ON_AC=1
+      CPU_BOOST_ON_BAT=0
+  notify: Restart tlp
+
 - name: Fan control and power management
   ansible.builtin.systemd_service: { name: "{{ item }}", enabled: true, state: started }
   loop: [mbpfan, tlp]

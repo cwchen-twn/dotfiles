@@ -98,6 +98,17 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 
 Rule: nothing is copied into `/usr/local/bin` or `/opt` by hand. Anything not covered above goes in `~/.local/bin`.
 
+## Performance (8 GB machines)
+
+- Memory: zram swap (zstd, half of RAM up to 4 GB, priority over the disk swap), `vm.swappiness=180`, and `earlyoom`
+  (kills the heaviest browser tab before the machine freezes; never Xorg/SDDM/the session). Check: `zramctl`,
+  `systemctl status earlyoom`.
+- On demand instead of at boot: Docker (`docker.socket`: the first `docker` command starts it; containers don't
+  auto-start at boot), NordVPN (`nordvpnd.socket`), PostgreSQL (`pgstart` / `pgstop`). ModemManager, cups-browsed and
+  NetworkManager-wait-online are off; printing still works through `cups.socket`.
+- Brave: Memory Saver on (balanced), no background mode, Dark Reader installed by policy (`brave://policy`).
+- MacBook: turbo boost only on AC (`/etc/tlp.d/50-dotfiles.conf`).
+
 ## What this repo manages, and how to list it
 
 | What | Command |

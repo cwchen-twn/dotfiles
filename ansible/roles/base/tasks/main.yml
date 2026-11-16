@@ -53,6 +53,59 @@
           - s-tui           # CPU frequency/temperature + stress
           - acpi            # acpi -b: battery
           - speedtest-cli   # speedtest
+# Memory: compressed swap in RAM (zram, ~3x on typical pages) used before the disk swap, and earlyoom so a runaway
+# browser tab gets killed instead of the whole machine freezing. Disk swap (hibernation) stays as the fallback.
+- name: Memory (zram + earlyoom)
+  when: is_debian
+  block:
+    - name: zram and earlyoom packages
+      ansible.builtin.apt: { name: [systemd-zram-generator, earlyoom] }
+
+    - name: zram swap device
+      ansible.builtin.copy:
+        dest: /etc/systemd/zram-generator.conf
+        mode: "0644"
+        content: |
+          [zram0]
+          zram-size = min(ram / 2, 4096)
+          compression-algorithm = zstd
+          swap-priority = 100
+      register: zram_conf
+
+    - name: Start zram swap
+      ansible.builtin.systemd_service: { name: systemd-zram-setup@zram0, state: restarted, daemon_reload: true }
+      when: zram_conf.changed
+
+    # zram makes swapping cheap: swap cold pages early, one page at a time (no readahead)
+    - name: VM tuning for zram
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/90-zram.conf
+        mode: "0644"
+        content: |
+          vm.swappiness = 180
+          vm.page-cluster = 0
+      register: zram_sysctl
+
+    - name: Apply sysctl
+      ansible.builtin.command: sysctl --system
+      when: zram_sysctl.changed
+      changed_when: true
+
+    # Debian defaults: act below 10% free RAM and 10% free swap. Chromium/Electron renderers already have a high
+    # oom_score_adj, so a heavy tab goes first; never the display server or the session.
+    - name: earlyoom options
+      ansible.builtin.copy:
+        dest: /etc/default/earlyoom
+        mode: "0644"
+        content: |
+          EARLYOOM_ARGS="-r 0 --avoid (^|/)(Xorg|sddm|sddm-helper|lxqt-session|xfwm4|systemd|sshd)$"
+      register: earlyoom_conf
+
+    - name: earlyoom running
+      ansible.builtin.systemd_service:
+        name: earlyoom
+        enabled: true
+        state: "{{ 'restarted' if earlyoom_conf.changed else 'started' }}"
 
 - name: macOS base
   when: is_mac

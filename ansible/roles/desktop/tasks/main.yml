@@ -63,8 +63,21 @@
               BraveNewsDisabled: true
               BraveAIChatEnabled: false
               PasswordManagerEnabled: false   # Bitwarden instead
+              # Memory Saver: unload background tabs (0 moderate, 1 balanced, 2 maximum); they reload on click
+              HighEfficiencyModeEnabled: true
+              MemorySaverModeSavings: 1
+              BackgroundModeEnabled: false    # fully exit when the last window closes
               ExtensionInstallForcelist:
                 - nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx   # Bitwarden
+
+    # Laptops/desktops without a modem, network-printer auto-discovery or boot-time network dependencies.
+    # Printing still works: cups.socket starts CUPS on demand.
+    - name: Find unused system services
+      ansible.builtin.service_facts:
+    - name: Unused system services off
+      ansible.builtin.systemd_service: { name: "{{ item }}", enabled: false, state: stopped }
+      loop: [ModemManager.service, cups-browsed.service, NetworkManager-wait-online.service]
+      when: item in ansible_facts.services
 
     - name: alacritty via cargo on older releases (jammy/bookworm lack it)
       become: false

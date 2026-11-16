@@ -4,6 +4,11 @@ alias batinfo "upower -i (upower -e | grep BAT)"
 alias sysinfo "inxi -Fxz"
 command -q tlp-stat; and alias battery "sudo tlp-stat -b"   # health, cycles, charge thresholds
 {{- end }}
+{{- if and (has "postgres" .extras) (eq .chezmoi.os "linux") }}
+# postgres isn't started at boot (memory): start/stop it when needed
+alias pgstart "sudo systemctl start postgresql"
+alias pgstop "sudo systemctl stop postgresql"
+{{- end }}
 {{- if has "nvidia-cuda" .extras }}
 alias gputop "watch -n 0.5 nvidia-smi"
 {{- end }}

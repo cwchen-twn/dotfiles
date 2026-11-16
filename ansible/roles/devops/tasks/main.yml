@@ -18,6 +18,13 @@
         name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
     - name: User in docker group
       ansible.builtin.user: { name: "{{ user }}", groups: docker, append: true }
+    # On demand: docker.socket starts the daemon on the first `docker` command (~140 MB saved while unused).
+    # Containers with a restart policy therefore don't come up at boot.
+    - name: Docker not started at boot
+      ansible.builtin.systemd_service: { name: "{{ item }}", enabled: false }
+      loop: [docker.service, containerd.service]
+    - name: Docker socket activation
+      ansible.builtin.systemd_service: { name: docker.socket, enabled: true, state: started }
 
 - name: Tailscale (Debian/Ubuntu)
   when: is_debian and 'tailscale' in devops

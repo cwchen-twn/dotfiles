@@ -13,6 +13,11 @@
   ansible.builtin.apt: { name: [postgresql, postgresql-client, pg-activity], update_cache: true }
   when: is_debian
 
+# Not at boot (~100 MB, 9 processes): `pgstart` / `pgstop` (fish) when needed.
+- name: Postgres not started at boot
+  ansible.builtin.systemd_service: { name: postgresql, enabled: false }
+  when: is_debian
+
 - name: Postgres (macOS)
   community.general.homebrew: { name: [postgresql@17, pg_activity] }
   when: is_mac
