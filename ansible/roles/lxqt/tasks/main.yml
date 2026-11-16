@@ -30,7 +30,14 @@
 
     - name: Build the managed key list
       ansible.builtin.set_fact:
-        lxqt_favs: "{{ lxqt_fav_stat.results | selectattr('stat.exists') | map(attribute='item') | list }}"
+        lxqt_favs: >-
+          {%- set found = lxqt_fav_stat.results | selectattr('stat.exists') | map(attribute='item') | list -%}
+          {%- set out = [] -%}
+          {%- for fav in lxqt_favorites | selectattr('app', 'in', desktop + ['']) -%}
+            {%- set hits = fav.files | select('in', found) | list -%}
+            {%- if hits -%}{%- set _ = out.append(hits[0]) -%}{%- endif -%}
+          {%- endfor -%}
+          {{ out }}
         lxqt_ini: "{{ hidpi_ini + dark_ini + browser_ini + terminal_ini + kbd_ini + screen_ini }}"
       vars:
         # Xft.dpi itself goes to ~/.Xresources (below); these keep LXQt's own settings consistent with it.

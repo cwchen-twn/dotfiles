@@ -190,6 +190,53 @@
   changed_when: false
   failed_when: false
 
+# Browsers: facetimehd reports its frame sizes as a range (V4L2 "stepwise"), which Chromium's V4L2 code skips, so
+# Brave/Chrome see no camera. Two ways around it:
+# 1. PipeWire camera (browsers): PipeWire handles size ranges; Brave is started with WebRtcPipeWireCamera (desktop
+#    override below). Video only: no recommends (would pull pipewire-pulse and replace PulseAudio) and WirePlumber's
+#    audio/bluetooth monitors are off (~/.config/wireplumber, chezmoi). The camera only turns on when a site uses it.
+# 2. Relay (any app, e.g. Zoom/OBS): v4l2loopback /dev/video10 with fixed 1280x720, fed by `camera-on` (ffmpeg,
+#    systemd user unit camera-relay); `camera-off` stops it.
+- name: PipeWire for cameras (no pipewire-pulse)
+  ansible.builtin.apt: { name: [pipewire, wireplumber], install_recommends: false }
+
+- name: Virtual camera relay (v4l2loopback via DKMS)
+  ansible.builtin.apt: { name: [v4l2loopback-dkms, ffmpeg] }
+
+- name: v4l2loopback device for the relay
+  ansible.builtin.copy:
+    dest: "{{ item.dest }}"
+    content: "{{ item.content }}"
+    mode: "0644"
+  loop:
+    - { dest: /etc/modules-load.d/v4l2loopback.conf, content: "v4l2loopback\n" }
+    - dest: /etc/modprobe.d/v4l2loopback.conf
+      content: |
+        # exclusive_caps: browsers only accept it as a camera while something feeds it (camera-on)
+        options v4l2loopback video_nr=10 card_label="FaceTime HD (relay)" exclusive_caps=1
+  register: v4l2loopback_conf
+
+- name: Load v4l2loopback now
+  ansible.builtin.shell: modprobe -r v4l2loopback 2>/dev/null; modprobe v4l2loopback
+  when: v4l2loopback_conf.changed
+  changed_when: true
+  failed_when: false
+
+- name: Brave with the PipeWire camera (desktop entry override, regenerated from Brave's own on every run)
+  when: "'brave' in desktop"
+  become: false
+  block:
+    - name: Read Brave's desktop entry
+      ansible.builtin.slurp: { src: /usr/share/applications/brave-browser.desktop }
+      register: brave_desktop
+    - name: Override with the camera flag
+      ansible.builtin.copy:
+        dest: "{{ home }}/.local/share/applications/brave-browser.desktop"
+        mode: "0644"
+        content: >-
+          {{ brave_desktop.content | b64decode
+             | regex_replace('(?m)^Exec=(\S+)', 'Exec=\1 --enable-features=WebRtcPipeWireCamera') }}
+
 # Hibernation: resume from a swap partition >= RAM, or create a RAM + 2 GB /swapfile. Same script as the standalone one.
 - name: Hibernation (swap + resume device)
   ansible.builtin.script: "{{ playbook_dir }}/../install/debian/hibernate.sh"

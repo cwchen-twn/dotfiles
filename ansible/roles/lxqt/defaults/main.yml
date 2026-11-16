@@ -11,10 +11,10 @@ lxqt_dark: true
 lxqt_dark_palette: Kvantum   # /usr/share/lxqt/palettes/<name>
 
 # Panel quick launch + main menu favorites, in order. `app` must be in the chezmoi desktop selection ('' = always);
-# missing .desktop files are skipped.
+# the first existing .desktop file of each entry is used (user overrides first), apps with none are skipped.
 lxqt_favorites:
   - { app: "", files: [/usr/share/applications/pcmanfm-qt.desktop] }
-  - { app: brave, files: [/usr/share/applications/brave-browser.desktop] }
+  - { app: brave, files: ["{{ home }}/.local/share/applications/brave-browser.desktop", /usr/share/applications/brave-browser.desktop] }
   - { app: alacritty, files: [/usr/share/applications/Alacritty.desktop] }
   - { app: vscode, files: [/usr/share/applications/com.microsoft.VSCode.desktop, /usr/share/applications/code.desktop] }
   - { app: obsidian, files: ["{{ home }}/.local/share/applications/obsidian.desktop"] }
