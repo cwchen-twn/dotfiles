@@ -21,6 +21,13 @@
         codename: "{{ ansible_distribution_release }}"
       when: ansible_distribution == 'Ubuntu'
 
+    - name: tshark installs without asking about non-root capture (no)
+      ansible.builtin.debconf:
+        name: wireshark-common
+        question: wireshark-common/install-setuid
+        value: "false"
+        vtype: boolean
+
     - name: Core packages
       ansible.builtin.apt:
         update_cache: true
@@ -53,6 +60,28 @@
           - s-tui           # CPU frequency/temperature + stress
           - acpi            # acpi -b: battery
           - speedtest-cli   # speedtest
+          # network (more in mise: doggo, xh, gping, grpcurl, websocat; fish: myip, ports)
+          - bind9-dnsutils  # dig, nslookup, host
+          - whois
+          - mtr-tiny        # live traceroute + ping
+          - traceroute
+          - iputils-arping
+          - nmap            # + ncat
+          - arp-scan        # sudo arp-scan -l: who's on this LAN
+          - netcat-openbsd
+          - socat
+          - testssl.sh      # TLS config check
+          - sslscan
+          - swaks           # SMTP test
+          - tcpdump         # capture needs sudo (no setuid wireshark group)
+          - tshark
+          - ngrep
+          - iperf3          # throughput between two hosts
+          - iftop           # per-connection bandwidth
+          - nload           # per-interface bandwidth
+          - wavemon         # Wi-Fi signal/channel
+          - ipcalc
+
 # Memory: compressed swap in RAM (zram, ~3x on typical pages) used before the disk swap, and earlyoom so a runaway
 # browser tab gets killed instead of the whole machine freezing. Disk swap (hibernation) stays as the fallback.
 - name: Memory (zram + earlyoom)
@@ -110,7 +139,7 @@
 - name: macOS base
   when: is_mac
   community.general.homebrew:
-    name: [git, gh, fish, tmux, vim, ripgrep, fd, jq, tree, smartmontools, wget, p7zip, zstd, shellcheck, mise]
+    name: [git, gh, fish, tmux, vim, ripgrep, fd, jq, tree, smartmontools, nmap, mtr, swaks, iperf3, whois, testssl, sslscan, ipcalc, wget, p7zip, zstd, shellcheck, mise]
 
 - name: Register fish as a login shell
   ansible.builtin.lineinfile:

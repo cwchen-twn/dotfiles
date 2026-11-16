@@ -27,6 +27,20 @@ System info / monitoring: fastfetch, btop, duf, gdu (mise); inxi (`sysinfo`), lm
 nvtop, s-tui, acpi, speedtest-cli (apt); `batinfo`, `battery` (TLP health) and `sudo intel_gpu_top` on MacBooks.
 The JetBrainsMono Nerd Font is installed when any desktop app is selected.
 
+Network toolbox (apt unless noted; `myip` and `ports` are fish functions):
+
+| Area | Tools |
+|---|---|
+| DNS | dig, nslookup, host (bind9-dnsutils), whois, doggo (mise) |
+| Reachability / path | mtr, traceroute, arping, gping (mise) |
+| Scanning / discovery | nmap (+ ncat), arp-scan (`sudo arp-scan -l`), netcat |
+| HTTP / TLS / APIs | xh, grpcurl, websocat (mise), testssl.sh, sslscan |
+| Mail | swaks |
+| Capture | tcpdump, tshark, ngrep (with sudo) |
+| Bandwidth | iperf3, iftop, nload, nethogs, speedtest-cli |
+| Wi-Fi / links | wavemon, iw, ethtool, nmcli |
+| Addressing / sockets | ipcalc, socat, `myip` (public IPv4/IPv6 + local), `ports` (listeners + processes) |
+
 Change the selection later with `chezmoi init --prompt` (or `chezmoi edit-config`), then `chezmoi apply`.
 Deselecting something stops managing it; it does not uninstall it.
 

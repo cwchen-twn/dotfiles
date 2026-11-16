@@ -20,6 +20,12 @@ fastfetch = "latest"     # neofetch successor
 btop = "latest"
 duf = "latest"           # df
 gdu = "latest"           # du, interactive
+# network (system-level ones come from apt, ansible base role)
+doggo = "latest"         # readable dig
+xh = "latest"            # HTTPie-style HTTP client
+gping = "latest"         # ping with a graph
+grpcurl = "latest"
+websocat = "latest"
 {{- if has "kubernetes" .devops }}
 kubectl = "latest"
 helm = "latest"
