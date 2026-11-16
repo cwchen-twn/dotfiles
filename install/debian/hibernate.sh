@@ -22,6 +22,13 @@ if [ -n "$part" ]; then
     uuid=$(blkid -s UUID -o value "$part")
     cmdline=
     where="swap partition $part"
+    # A /swapfile from an older setup is no longer needed for resume (zram + the partition cover swap): retire it.
+    if [ -f /swapfile ] || grep -qE '^/swapfile\s' /etc/fstab; then
+        swapoff /swapfile 2>/dev/null || true
+        sed -i '\|^/swapfile[[:space:]]|d' /etc/fstab
+        rm -f /swapfile
+        changed=1
+    fi
 else
     want=$((ram_mb + 2048))
     if [ ! -f /swapfile ] || [ $(($(stat -c %s /swapfile) / 1048576)) -lt "$want" ]; then
