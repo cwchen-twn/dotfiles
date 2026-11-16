@@ -5,6 +5,7 @@
 .config/autostart
 .config/fish/functions/printers.fish
 .config/fish/functions/printer-add.fish
+.config/fish/functions/printer-rm.fish
 {{ end }}
 {{ if not (has "libinput-gestures" .desktop) }}
 .config/libinput-gestures.conf

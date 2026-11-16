@@ -25,5 +25,5 @@ function printer-add --description 'Add printer N from `printers` (driverless IP
         /usr/sbin/lpadmin -d $name; or sudo /usr/sbin/lpadmin -d $name
     end
     lpstat -p $name
-    echo "Print from any app's print dialog, or: lp -d $name FILE   (remove: /usr/sbin/lpadmin -x $name)"
+    echo "Print from any app's print dialog, or: lp -d $name FILE   (remove: printer-rm $name)"
 end

@@ -24,7 +24,7 @@ function printers --description 'Find printers on this network (IPP/AirPrint, dr
             printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", unescape($4), t["ty"], $7, $9, (t["rp"] ? t["rp"] : "ipp/print"),
                 (t["Color"] in yn ? yn[t["Color"]] : "?"), (t["Duplex"] in yn ? yn[t["Duplex"]] : "?"),
                 (t["Scan"] in yn ? yn[t["Scan"]] : "?"), $8
-        }' >$list
+        }' | sort -f >$list # by name, so N stays the same between runs (avahi's order varies)
 
     if not test -s $list
         echo "No printers found on this network (they must advertise IPP/AirPrint; check you're on the same LAN/Wi-Fi)."

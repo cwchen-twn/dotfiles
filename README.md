@@ -158,10 +158,10 @@ Driverless: any printer that speaks IPP Everywhere / AirPrint (almost every netw
 without a vendor driver; the same goes for its scanner (eSCL, via `sane-airscan`).
 
 ```sh
-printers                     # printers on this network: model, host, color, duplex, scan, already added?
+printers                     # printers on this network, sorted by name: model, host, color, duplex, scan, added?
 printer-add 2 --default      # add #2 from that list (queue named after the model); no sudo (lpadmin group)
 lp FILE                      # or any app's print dialog; lpstat -p shows queues
-/usr/sbin/lpadmin -x QUEUE   # remove one
+printer-rm 2                 # remove #2's queue (or printer-rm QUEUE; no argument lists the queues)
 simple-scan                  # scan (scanimage -L lists scanners)
 ```
 
