@@ -75,6 +75,21 @@
           - simple-scan
           - libnotify-bin  # notify-send: the volume popup of ~/.local/bin/vol (volume keys)
           - pasystray      # tray volume icon that follows the default output (~/.config/autostart/pasystray.desktop)
+          - mpv            # video player; YouTube via yt-dlp from mise and VA-API (~/.config/mpv/mpv.conf)
+    # yt-dlp comes from mise (YouTube breaks old versions within weeks; Debian stable's is months old). mpv only
+    # Recommends Debian's, so remove it and pin it out so a later mpv install does not bring it back.
+    - name: No Debian yt-dlp (mise provides it)
+      ansible.builtin.copy:
+        dest: /etc/apt/preferences.d/no-debian-yt-dlp
+        mode: "0644"
+        content: |
+          # Managed by ansible (dotfiles desktop role): yt-dlp comes from mise.
+          Package: yt-dlp
+          Pin: release *
+          Pin-Priority: -1
+    - name: Debian yt-dlp removed
+      ansible.builtin.apt: { name: yt-dlp, state: absent }
+
     - name: Manage printers and scanners without sudo
       ansible.builtin.user: { name: "{{ user }}", groups: [lpadmin, scanner, bluetooth], append: true }
     - name: Bluetooth on

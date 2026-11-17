@@ -11,6 +11,8 @@
 .local/bin/media-check
 .local/bin/cpu-stat
 .local/bin/vol
+.config/fish/functions/yt.fish
+.config/mpv
 .config/autostart/pasystray.desktop
 .config/pulse
 {{ end }}
