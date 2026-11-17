@@ -26,6 +26,7 @@ lxqt_favorites:
   - { app: obsidian, files: ["{{ home }}/.local/share/applications/obsidian.desktop"] }
   - { app: dbeaver, files: [/usr/share/applications/dbeaver-ce.desktop] }
   - { app: shutter, files: [/usr/share/applications/shutter.desktop] }
+  - { app: supersonic, files: ["{{ home }}/.local/share/applications/supersonic.desktop"] }
 
 # Panel widgets, left to right: Debian's default minus `mount` (removable media), plus `cpuload` (CPU monitor).
 lxqt_panel_plugins: [mainmenu, showdesktop, desktopswitch, quicklaunch, taskbar, kbindicator, tray, statusnotifier,

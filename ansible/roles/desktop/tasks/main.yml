@@ -42,6 +42,7 @@
           libreoffice: [libreoffice]
           calibre: [calibre]
           fcitx5: [fcitx5, fcitx5-chewing, fcitx5-chinese-addons, fonts-noto-cjk]  # input methods: ~/.config/fcitx5/profile
+          supersonic: [libmpv2, playerctl]  # the player itself comes from mise; playerctl drives the media keys
 
     # Bluetooth audio (pair with the blueman tray or bluetoothctl) and driverless printing/scanning anywhere: fish
     # `printers` lists the IPP/AirPrint printers on the network, `printer-add N` adds one (lpadmin group, no sudo).

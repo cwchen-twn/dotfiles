@@ -1,0 +1,11 @@
+{{- /* chezmoi:modify-template (this whole line is removed by chezmoi) */ -}}
+{{- /* Supersonic rewrites its whole config on exit and keeps the server entry in it, so chezmoi only enforces the keys
+below and leaves the rest as the app wrote it. Opus at 192 kbps instead of the raw FLAC: about 5x less traffic, and
+Navidrome transcodes on the server (its image ships ffmpeg). Raw files again: RequestTranscode = false. */ -}}
+{{- $c := dict -}}
+{{- if .chezmoi.stdin | trim -}}{{- $c = fromToml .chezmoi.stdin -}}{{- end -}}
+{{- $c = setValueAtPath "Transcoding.RequestTranscode" true $c -}}
+{{- $c = setValueAtPath "Transcoding.ForceRawFile" false $c -}}
+{{- $c = setValueAtPath "Transcoding.Codec" "opus" $c -}}
+{{- $c = setValueAtPath "Transcoding.MaxBitRateKBPS" 192 $c -}}
+{{- toToml $c -}}

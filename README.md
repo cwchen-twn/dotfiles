@@ -192,6 +192,21 @@ joining a Meet, and back to A2DP music quality afterwards (`~/.config/pulse/defa
 voice quality, pick the MacBook's mic in the meeting instead and the headphones stay in A2DP. Pick the output in
 the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you need the mic).
 
+## Music (Navidrome)
+
+- **Supersonic** (desktop app `supersonic`): a native Navidrome/Subsonic player, Go + libmpv, a few % CPU where the
+  Navidrome web UI in a Brave tab took most of a core. From the Supersonic GitHub release via mise, libmpv2 and
+  playerctl from apt, menu entry + panel favorite. Log in to the server once in the app (the password goes to the
+  keyring, never to the repo).
+- **Opus streaming:** `~/.config/supersonic/config.toml` is a chezmoi *modify* template that only enforces
+  `[Transcoding]`: Opus at 192 kbps, transcoded by Navidrome on the server, about 5x less Wi-Fi traffic than the raw
+  FLAC. Raw files again: `RequestTranscode = false` in `home/dot_config/supersonic/modify_config.toml`.
+- **Media keys:** Fn+F7 / Fn+F8 / Fn+F9 = previous / play-pause / next for whichever player is active (MPRIS via
+  playerctl: Supersonic, Brave, ...). The F-row is function keys on the MacBook, hence Fn.
+- **Bluetooth codec:** PulseAudio picks LDAC for headphones that offer it, about half a core to encode on a 2015
+  dual-core. The `bt-codec` user service switches them to SBC XQ 552 kbps whenever they connect or come back from a
+  call (`journalctl --user -u bt-codec` shows each switch); `BT_CODEC=` in the unit keeps PulseAudio's choice.
+
 ## Kubernetes access
 
 Each cluster has a `cwchen-admin` ServiceAccount (kube-system) bound to `cluster-admin`, with a manually created
