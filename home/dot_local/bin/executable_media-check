@@ -12,6 +12,7 @@ SUPERSONIC_TRANSCODE=(RequestTranscode=true Codec=opus MaxBitRateKBPS=192)   # O
 MEDIA_KEYS=(XF86AudioPlay=playerctl XF86AudioNext=playerctl XF86AudioPrev=playerctl   # key=command it must run,
             XF86AudioRaiseVolume=vol XF86AudioLowerVolume=vol XF86AudioMute=vol)      # as its only enabled binding
 VAAPI_NEED="VideoProc"   # Chromium's VA-API decoder on older Intel needs the driver's post-processing (non-free iHD)
+BRAVE_VULKAN="Vulkan,DefaultANGLEVulkan,VulkanFromANGLE"   # Brave composites with Vulkan: GL conversion corrupted frames
 BRAVE_H264IFY="omkfmpieigblcllmkgbflkikinpkodlk"                              # enhanced-h264ify
 # --------------------------------------------------------------------------------------------------------------
 
@@ -108,9 +109,18 @@ if command -v vainfo >/dev/null 2>&1; then
     if grep -q "VAEntrypoint$VAAPI_NEED" <<<"$v"; then ok "VA-API post-processing" "$VAAPI_NEED (Brave can decode on the GPU)"
     else bad "VA-API post-processing" "no $VAAPI_NEED: Brave falls back to CPU decoding" "Intel: apt install intel-media-va-driver-non-free (desktop role)"; fi
 fi
-if [ -e "$HOME/.local/share/applications/brave-browser.desktop" ]; then
-    bad "Brave menu entry" "a user override exists (not needed any more)" "chezmoi apply (desktop role removes it)"
-else ok "Brave menu entry" "the packaged one"; fi
+launcher=$HOME/.local/share/applications/brave-browser.desktop
+if grep -q "^Exec=.*--enable-features=$BRAVE_VULKAN" "$launcher" 2>/dev/null; then ok "Brave menu entry" "Vulkan flags"
+else bad "Brave menu entry" "no Vulkan flags in $launcher" "chezmoi apply (desktop role generates it on Intel graphics)"; fi
+main=$(pgrep -u "$(id -u)" -xo brave)
+if [ -z "$main" ]; then na "running Brave" "not running"
+else
+    if tr '\0' ' ' </proc/"$main"/cmdline | grep -q -- "--enable-features=$BRAVE_VULKAN"; then ok "running Brave" "started with the Vulkan flags"
+    else bad "running Brave" "started without the Vulkan flags (hardware video shows corrupted squares)" "quit Brave (menu > Exit) and start it from the menu/panel"; fi
+    gpu=$(pgrep -u "$(id -u)" -f -- '--type=gpu-process' | head -1)
+    if [ -n "$gpu" ] && grep -q 'libvulkan_intel' /proc/"$gpu"/maps 2>/dev/null; then ok "Brave GPU process" "Vulkan ($(grep -oE 'libvulkan_intel[a-z_]*' /proc/"$gpu"/maps | head -1))"
+    elif [ -n "$gpu" ]; then bad "Brave GPU process" "not using Vulkan" "brave://gpu: check Vulkan / ANGLE backend"; fi
+fi
 if [ "${1:-}" = --decode ]; then
     if command -v brave-decode-test >/dev/null 2>&1; then
         r=$(brave-decode-test 2>&1); rc=$?

@@ -123,26 +123,46 @@
                 - nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx   # Bitwarden
                 - eimadpbcbfnmbkopoojfekhnkhdbieeh;https://clients2.google.com/service/update2/crx   # Dark Reader
                 # enhanced-h264ify: YouTube serves H.264 (up to 1080p), which older Intel GPUs decode in hardware
-                # (VA-API, non-free media driver below); VP9/AV1 would be decoded on the CPU. Check: media-check
+                # (VA-API + Vulkan, see "Hardware video decoding in Brave" below); VP9/AV1 would be decoded on the CPU
                 - omkfmpieigblcllmkgbflkikinpkodlk;https://clients2.google.com/service/update2/crx   # enhanced-h264ify
 
-    # Hardware video decoding in Brave on Intel graphics. Chromium (>= 143) uses VA-API on Linux without flags, but on
-    # older Intel GPUs (here Broadwell) its decoder hands frames to an image processor that needs the driver's video
-    # post-processing (VAEntrypointVideoProc). Debian's free intel-media-va-driver leaves those GPU kernels out (7
-    # entrypoints on Broadwell, no VideoProc), so every video fell back to CPU decoding (FFmpegVideoDecoder) while
-    # brave://gpu still said "Hardware accelerated". The non-free build has them (20 entrypoints): measured with
-    # brave-decode-test, 1080p60 H.264 went from renderer 119% to 15% of a core. Needs Debian's non-free component.
+    # Hardware video decoding in Brave on Intel graphics (found on the 2015 MacBook Pro, Broadwell / Iris 6100, X11,
+    # Brave 157; README "YouTube (Brave)" has the whole story). Three parts, all needed:
+    #   1. enhanced-h264ify (policy above): YouTube sends H.264, which Broadwell decodes in hardware (no VP9/AV1).
+    #   2. intel-media-va-driver-non-free: Chromium's VA-API decoder needs the driver's video post-processing
+    #      (VAEntrypointVideoProc), which Debian's free build leaves out -> every video fell back to CPU decoding
+    #      (renderer ~120% of a core) while brave://gpu still said "Hardware accelerated".
+    #   3. Vulkan for Brave's compositing (ANGLE on Vulkan, Mesa hasvk on Broadwell): on X11 Chromium can't hand decoded
+    #      frames over zero-copy (that needs EGL, blocked for Intel on X11), and its GL format conversion corrupted
+    #      frames: coloured squares with the iHD driver, black areas/squares with the patched i965 fork. Not the
+    #      compositor's sync mode, not the X driver (intel SNA + TearFree changed nothing). With Vulkan: clean picture,
+    #      YouTube tab ~5% of a core. Suggested by the i965 fork's maintainer (issue #26).
+    # Check: media-check (--decode). Debian's Brave launcher reads no flags file, so the flags go into a user copy of
+    # Brave's menu entry, regenerated from the packaged one each run (menu, panel, links via mimeapps; a bare
+    # `brave-browser` in a terminal gets none).
     - name: Intel graphics?
       ansible.builtin.shell: grep -qx 0x8086 /sys/class/drm/card*/device/vendor 2>/dev/null && echo yes || true
       register: intel_gpu
       changed_when: false
-    - name: Intel media driver with the non-free GPU kernels (replaces the free build)
-      ansible.builtin.apt: { name: intel-media-va-driver-non-free }
+    - name: Intel video decoding with post-processing, and Vulkan for Brave
+      ansible.builtin.apt: { name: [intel-media-va-driver-non-free, mesa-vulkan-drivers] }
       when: "'yes' in intel_gpu.stdout"
-    # An earlier version generated a Brave menu entry with VA-API flags; not needed (see above), so it goes.
-    - name: No generated Brave launcher override
+    - name: Brave launcher with Vulkan (Intel graphics)
+      when: "'brave' in desktop and 'yes' in intel_gpu.stdout"
       become: false
-      ansible.builtin.file: { path: "{{ home }}/.local/share/applications/brave-browser.desktop", state: absent }
+      block:
+        - name: Read Brave's packaged menu entry
+          ansible.builtin.slurp: { src: /usr/share/applications/brave-browser.desktop }
+          register: brave_desktop
+        - name: User menu entry with the Vulkan flags
+          ansible.builtin.copy:
+            dest: "{{ home }}/.local/share/applications/brave-browser.desktop"
+            mode: "0644"
+            content: >-
+              {{ brave_desktop.content | b64decode
+                 | regex_replace('(?m)^(Exec=[^ \n]*brave-browser[^ \n]*)', '\1 ' ~ brave_flags) }}
+          vars:
+            brave_flags: --enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE
 
     # Laptops/desktops without a modem or boot-time network dependencies. cups-browsed would add every printer on
     # every network as a queue; `printers` / `printer-add` add only the ones you pick.

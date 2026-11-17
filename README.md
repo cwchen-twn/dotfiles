@@ -212,15 +212,30 @@ the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you 
   device). Its icon follows the default output; scroll = volume, middle-click = mute, left-click = pick the output
   or input and move an app's sound to another device. Same 100% cap and 5% steps as the keys
   (`~/.config/autostart/pasystray.desktop`).
-- **YouTube (Brave):** this GPU (Intel Iris 6100, Broadwell) decodes H.264 in hardware but not the VP9/AV1 YouTube
-  serves by default, so the enhanced-h264ify extension (Brave policy) makes YouTube send H.264 (up to 1080p).
-  Brave (Chromium >= 143) then uses VA-API without any flags, **but only with the non-free Intel driver**: Chromium's
-  decoder on older Intel GPUs needs the driver's video post-processing (`VAEntrypointVideoProc`), which Debian's free
-  `intel-media-va-driver` leaves out. Without it every video fell back to CPU decoding (`FFmpegVideoDecoder`, renderer
-  ~120% of a core for 1080p60) while `brave://gpu` still said "Hardware accelerated"; with
-  `intel-media-va-driver-non-free` (desktop role, Intel GPUs) the same clip decodes on the GPU (renderer ~15%).
-  Background: [Arch forum, VA-API on older Intel](https://bbs.archlinux.org/viewtopic.php?id=244031&p=45),
-  [patched i965 fork for Chromium](https://github.com/irql-notlessorequal/intel-vaapi-driver) (plan B, not needed).
+- **YouTube (Brave) on Intel graphics:** hardware video decoding needs three things on this 2015 MacBook Pro
+  (Broadwell / Iris 6100, X11, Brave 157), all set up by the desktop role:
+  1. **enhanced-h264ify** (Brave policy): YouTube sends H.264 (up to 1080p). Broadwell decodes H.264 and VP8 in
+     hardware but not the VP9/AV1 YouTube prefers.
+  2. **`intel-media-va-driver-non-free`**: Chromium's VA-API decoder needs the driver's video post-processing
+     (`VAEntrypointVideoProc`). Debian's free build leaves those GPU kernels out (7 entrypoints instead of 20), so
+     every video fell back to CPU decoding (`FFmpegVideoDecoder`, renderer ~120% of a core for 1080p60) while
+     `brave://gpu` still said "Hardware accelerated".
+  3. **Vulkan for Brave** (`--enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE`, in a generated copy of
+     Brave's menu entry; Debian's launcher reads no flags file): with hardware decoding on, the picture showed
+     coloured squares (iHD) or black areas and squares (patched i965). On X11 Chromium can't pass decoded frames
+     zero-copy (that needs EGL, which Chrome blocks for Intel on X11), and its OpenGL format conversion corrupts them
+     on this GPU. With ANGLE on Vulkan (Mesa `hasvk`) the picture is clean and the 1080p60 test clip costs GPU
+     process ~19% + renderer ~8% of a core.
+
+  Ruled out along the way (none helped): Chromium VA-API flags (`AcceleratedVideoDecodeLinuxGL`,
+  `...ZeroCopyGL`, `VaapiIgnoreDriverChecks`), xfwm4 sync modes (`glx`, `xpresent`), the Intel X driver (SNA +
+  TearFree), and the [patched i965 driver](https://github.com/irql-notlessorequal/intel-vaapi-driver) (decodes fine
+  but corrupts the same way). Turning the compositor off also hides the corruption, but loses shadows and
+  transparency. Sources: the i965 fork's [Chromium artefacts issue](https://github.com/irql-notlessorequal/intel-vaapi-driver/issues/26)
+  (the Vulkan suggestion) and [known issues](https://github.com/irql-notlessorequal/intel-vaapi-driver/issues/12),
+  [Arch forum VA-API thread](https://bbs.archlinux.org/viewtopic.php?id=244031&p=45), and
+  [brave://gpu false positives](https://forum.manjaro.org/t/hardware-video-acceleration-working-for-firefox-but-not-on-google-chrome-or-brave-or-chromium-browser/189629).
+  A `brave-browser` started from a terminal runs without the flags; start Brave from the menu or panel.
 - **`brave-decode-test`** is the real proof: it plays a 1080p60 H.264 clip in a throwaway Brave (temporary profile,
   DevTools) and reports the decoder Chromium actually used, its media log and the CPU per process type.
 - **mpv for long videos:** `yt URL` (or `yt` with a link on the clipboard) plays it in mpv, H.264 up to 1080p with
