@@ -90,7 +90,8 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 - Boot look (`boottheme` role, desktop machines): GRUB menu, Plymouth splash and SDDM login share one
   [sddm-astronaut](https://github.com/Keyitdev/sddm-astronaut-theme) preset (default `black_hole`, GPL-3.0, pinned
   commit). The login uses the theme itself (preset selected via `Themes/astronaut.conf.user`); the GRUB and Plymouth
-  themes are generated from the preset's wallpaper and palette, sized for the screen. Switch with `boottheme_preset` and
+  themes are generated from the preset's wallpaper and palette, sized for the screen, and the lxqt role uses the same
+  image as the desktop wallpaper (`lxqt_wallpaper`). Switch with `boottheme_preset` and
   the colors in `ansible/roles/boottheme/defaults/main.yml`. Preview the login without logging out:
   `sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/sddm-astronaut-theme`. More themes: gnome-look.org (GRUB
   Themes), store.kde.org (SDDM Login Themes, Qt6 only), r/unixporn.

@@ -153,6 +153,32 @@
         {{ out }}
       loop_control: { label: "[{{ item[0] }}] {{ item[1] }}" }
 
+    # Desktop wallpaper = the boot theme's preset image (boottheme role puts it there), so GRUB, Plymouth, the login
+    # and the desktop match. Machines without that role keep their wallpaper.
+    - name: Boot theme wallpaper present?
+      ansible.builtin.stat: { path: "{{ lxqt_wallpaper }}" }
+      register: lxqt_wallpaper_stat
+
+    - name: Desktop wallpaper (pcmanfm-qt)
+      community.general.ini_file:
+        path: "{{ cfg }}/pcmanfm-qt/lxqt/settings.conf"
+        section: Desktop
+        option: "{{ item.key }}"
+        value: "{{ item.value }}"
+        no_extra_spaces: true
+        mode: "0644"
+      loop: "{{ {'Wallpaper': lxqt_wallpaper, 'WallpaperMode': 'zoom'} | dict2items }}"
+      register: lxqt_wallpaper_ini
+      when: lxqt_wallpaper_stat.stat.exists
+
+    # A running pcmanfm-qt keeps the old wallpaper in memory and saves it back over the file; tell it directly.
+    # Only inside the desktop session (like the xfwm4 task below); otherwise the next login reads the file.
+    - name: Show the new wallpaper now
+      ansible.builtin.shell: |
+        [ -n "${DISPLAY:-}" ] && pgrep -u "$(id -u)" -x pcmanfm-qt >/dev/null || exit 0
+        pcmanfm-qt --set-wallpaper '{{ lxqt_wallpaper }}' --wallpaper-mode zoom
+      when: lxqt_wallpaper_ini is changed
+
     # xfwm4 keeps this in xfconf (needs the running session's D-Bus); skipped when run outside the desktop.
     - name: Workspaces (xfwm4), one row like macOS Spaces; 3-finger swipes switch between them
       ansible.builtin.shell: |
