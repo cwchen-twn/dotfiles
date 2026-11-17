@@ -1,11 +1,19 @@
 {{- /* chezmoi:modify-template (this whole line is removed by chezmoi) */ -}}
 {{- /* Supersonic rewrites its whole config on exit and keeps the server entry in it, so chezmoi only enforces the keys
-below and leaves the rest as the app wrote it. Opus at 192 kbps instead of the raw FLAC: about 5x less traffic, and
-Navidrome transcodes on the server (its image ships ffmpeg). Raw files again: RequestTranscode = false. */ -}}
+below and leaves the rest as the app wrote it; when they already match, the file passes through byte for byte (no
+reformatting, no diff). Opus at 192 kbps instead of the raw FLAC: about 5x less traffic, and Navidrome transcodes on
+the server (its image ships ffmpeg). Raw files again: RequestTranscode = false. */ -}}
+{{- $want := dict "RequestTranscode" true "ForceRawFile" false "Codec" "opus" "MaxBitRateKBPS" 192 -}}
 {{- $c := dict -}}
 {{- if .chezmoi.stdin | trim -}}{{- $c = fromToml .chezmoi.stdin -}}{{- end -}}
-{{- $c = setValueAtPath "Transcoding.RequestTranscode" true $c -}}
-{{- $c = setValueAtPath "Transcoding.ForceRawFile" false $c -}}
-{{- $c = setValueAtPath "Transcoding.Codec" "opus" $c -}}
-{{- $c = setValueAtPath "Transcoding.MaxBitRateKBPS" 192 $c -}}
+{{- $have := dig "Transcoding" dict $c -}}
+{{- $same := true -}}
+{{- range $k, $v := $want -}}
+{{-   if ne (toString (index $have $k)) (toString $v) -}}{{- $same = false -}}{{- end -}}
+{{- end -}}
+{{- if $same -}}
+{{- .chezmoi.stdin -}}
+{{- else -}}
+{{-   range $k, $v := $want -}}{{- $c = setValueAtPath (printf "Transcoding.%s" $k) $v $c -}}{{- end -}}
 {{- toToml $c -}}
+{{- end -}}
