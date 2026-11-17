@@ -226,10 +226,6 @@
   ansible.builtin.apt: { name: [pipewire, wireplumber], state: absent }
   when: not pipewire_pulse.stat.exists
 
-- name: Remove the Brave camera-flag launcher override
-  become: false
-  ansible.builtin.file: { path: "{{ home }}/.local/share/applications/brave-browser.desktop", state: absent }
-
 # Hibernation: resume from a swap partition >= RAM, or create a RAM + 2 GB /swapfile. Same script as the standalone one.
 - name: Hibernation (swap + resume device)
   ansible.builtin.script: "{{ playbook_dir }}/../install/debian/hibernate.sh"

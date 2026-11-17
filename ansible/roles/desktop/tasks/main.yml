@@ -44,7 +44,7 @@
         name: "{{ query('ansible.builtin.dict', apt_map) | selectattr('key', 'in', desktop) | map(attribute='value') | flatten }}"
       vars:
         apt_map:
-          brave: [brave-browser]
+          brave: [brave-browser, vainfo]   # vainfo: which codecs the GPU decodes (media-check)
           vscode: [code]
           alacritty: "{{ ['alacritty'] if ansible_distribution_release not in ['jammy', 'bookworm'] else [] }}"
           libinput-gestures: [wmctrl, xdotool, libinput-tools]
@@ -105,6 +105,30 @@
               ExtensionInstallForcelist:
                 - nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx   # Bitwarden
                 - eimadpbcbfnmbkopoojfekhnkhdbieeh;https://clients2.google.com/service/update2/crx   # Dark Reader
+                # enhanced-h264ify: YouTube serves H.264 (up to 1080p), which older Intel GPUs decode in hardware
+                # (VA-API, the launcher override below); VP9/AV1 would be decoded on the CPU. Check: media-check
+                - omkfmpieigblcllmkgbflkikinpkodlk;https://clients2.google.com/service/update2/crx   # enhanced-h264ify
+
+    # Hardware video decoding (VA-API on X11), which Chromium leaves off on Linux. Debian's Brave launcher reads no
+    # flags file, so the menu entry gets them: a user copy of Brave's own .desktop with the flags on every Exec line,
+    # regenerated from the packaged one on each run (menu, panel, and links opened via mimeapps all use it; a bare
+    # `brave-browser` in a terminal does not). Check: media-check.
+    - name: Brave launcher with hardware video decoding
+      when: "'brave' in desktop"
+      become: false
+      block:
+        - name: Read Brave's packaged menu entry
+          ansible.builtin.slurp: { src: /usr/share/applications/brave-browser.desktop }
+          register: brave_desktop
+        - name: User menu entry with the decode flags
+          ansible.builtin.copy:
+            dest: "{{ home }}/.local/share/applications/brave-browser.desktop"
+            mode: "0644"
+            content: >-
+              {{ brave_desktop.content | b64decode
+                 | regex_replace('(?m)^(Exec=[^ \n]*brave-browser[^ \n]*)', '\1 ' ~ brave_video_flags) }}
+          vars:
+            brave_video_flags: --enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL
 
     # Laptops/desktops without a modem or boot-time network dependencies. cups-browsed would add every printer on
     # every network as a queue; `printers` / `printer-add` add only the ones you pick.
