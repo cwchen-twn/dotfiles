@@ -183,8 +183,10 @@ simple-scan                  # scan (scanimage -L lists scanners)
 Queues point at the printer's `.local` name, so they survive DHCP changes. `cups-browsed` stays off: it would add
 every printer on every network you join.
 
-Bluetooth: `bluez` + `blueman` (tray icon, "Bluetooth Manager") + `pulseaudio-module-bluetooth` for headphones. Pair
-from the tray, or `bluetoothctl` → `power on`, `scan on`, `pair MAC`, `trust MAC`, `connect MAC`. Pick the output in
+Bluetooth: `bluez` + `blueman` (tray icon, "Bluetooth Manager") + `pulseaudio-module-bluetooth` for headphones.
+`bt-pair` scans classic Bluetooth only (12 s, almost no CPU, unlike Bluetooth Manager's search in a crowded room) and
+lists what it hears; `bt-pair N` (or a name/address) pairs, trusts, connects and switches the sound to it. Headphones
+must be in pairing mode, not just on; ignore `LE_<name>` entries (Fast Pair beacons, no audio). Pick the output in
 the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you need the mic).
 
 ## Kubernetes access
