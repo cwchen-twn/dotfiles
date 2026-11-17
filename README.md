@@ -87,14 +87,21 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   panel widgets (`lxqt_panel_plugins`: Debian default minus mount, plus the CPU monitor).
   Also 4 workspaces in a row for the gestures.
 - Retina boot and login (macbook role): GRUB console font at 36 px, console in Terminus 16x32, SDDM greeter at 2x.
-- Boot look (`boottheme` role, desktop machines): GRUB menu, Plymouth splash and SDDM login share one
-  [sddm-astronaut](https://github.com/Keyitdev/sddm-astronaut-theme) preset (default `black_hole`, GPL-3.0, pinned
-  commit). The login uses the theme itself (preset selected via `Themes/astronaut.conf.user`); the GRUB and Plymouth
-  themes are generated from the preset's wallpaper and palette, sized for the screen, and the lxqt role uses the same
-  image as the desktop wallpaper (`lxqt_wallpaper`). Switch with `boottheme_preset` and
-  the colors in `ansible/roles/boottheme/defaults/main.yml`. Preview the login without logging out:
-  `sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/sddm-astronaut-theme`. More themes: gnome-look.org (GRUB
-  Themes), store.kde.org (SDDM Login Themes, Qt6 only), r/unixporn.
+- Look (`boottheme` role, desktop machines), Catppuccin Mocha throughout:
+  - GRUB: [AstronautGrub](https://github.com/Flava-Clown/AstronautGrub) (pinned; `boottheme_grub_variant` astronaut
+    or astronaut_orange). Drawn for 1920x1080, so on Retina its fonts and rows are scaled ×1.6
+    (`files/scale-grub-theme.py`) and JetBrains Mono is regenerated at those sizes.
+  - Boot splash and SDDM login: AstronautGrub's astronaut image; the login is the
+    [sddm-astronaut](https://github.com/Keyitdev/sddm-astronaut-theme) `black_hole` layout (GPL-3.0, pinned),
+    recolored key by key in `Themes/astronaut.conf.user`.
+  - Desktop wallpaper (lxqt role): `jellyfish` from
+    [walls-catppuccin-mocha](https://github.com/orangci/walls-catppuccin-mocha).
+  - None of this art has a license, so nothing is committed: images are fetched from pinned commits with sha256 checks
+    and cropped to the screen in `/usr/local/share/backgrounds/dotfiles/`. Change one in `boottheme_images`
+    (`ansible/roles/boottheme/defaults/main.yml`: name, url, sha256); drop an entry and that screen uses the login
+    preset's own wallpaper. Preview the login without logging out:
+    `sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/sddm-astronaut-theme`. More: gnome-look.org (GRUB
+    Themes), store.kde.org (SDDM Login Themes, Qt6 only), r/unixporn.
 - fcitx5 (desktop app): US keyboard + Chewing (`~/.config/fcitx5/profile`, chezmoi; stop fcitx5 before editing it by
   hand, it saves its profile on exit). Ctrl+Space toggles, Shift_L switches temporarily. CJK font: `fonts-noto-cjk`.
 - Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,

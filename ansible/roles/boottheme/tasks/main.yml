@@ -1,4 +1,4 @@
-# GRUB menu -> Plymouth splash -> SDDM login in one look, from an sddm-astronaut preset (see defaults/main.yml).
+# GRUB menu -> Plymouth splash -> SDDM login (-> desktop wallpaper, lxqt role) in one look; see defaults/main.yml.
 - name: Packages (SDDM theme runtime, image/font tools, Plymouth)
   ansible.builtin.apt:
     name:
@@ -13,6 +13,7 @@
       - rsync
       - plymouth
       - plymouth-themes
+      - fonts-jetbrains-mono   # GRUB theme font, regenerated at the scaled sizes
 
 - name: sddm-astronaut source (pinned)
   ansible.builtin.git:
@@ -27,10 +28,47 @@
   register: boottheme_wallpaper
   failed_when: not boottheme_wallpaper.stat.exists
 
+# ---------------------------------------------------------------- images (one per screen)
+- name: Backgrounds dir
+  ansible.builtin.file: { path: "{{ boottheme_bg_dir }}/src", state: directory, mode: "0755" }
+
+- name: Download the images (pinned, checksummed)
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ boottheme_bg_dir }}/src/{{ item.name }}{{ item.url | splitext | last }}"
+    checksum: "sha256:{{ item.sha256 }}"
+    mode: "0644"
+  loop: "{{ boottheme_images.values() | unique }}"
+  loop_control: { label: "{{ item.name }}" }
+
+# Cropped to the screen once: the originals are up to 34 megapixels, which every login would otherwise decode.
+- name: Crop the images to the screen
+  ansible.builtin.command: >-
+    magick {{ boottheme_bg_dir }}/src/{{ item.name }}{{ item.url | splitext | last }} -resize {{ boottheme_res }}^
+    -gravity center -extent {{ boottheme_res }} -quality 92 {{ boottheme_bg_dir }}/{{ item.name }}-{{ boottheme_res }}.jpg
+  args: { creates: "{{ boottheme_bg_dir }}/{{ item.name }}-{{ boottheme_res }}.jpg" }
+  loop: "{{ boottheme_images.values() | unique }}"
+  loop_control: { label: "{{ item.name }}" }
+
+# Image per screen; a screen without an entry in boottheme_images uses the preset's wallpaper. The lxqt role reads
+# boottheme_bg.wallpaper.
+- name: Image per screen
+  ansible.builtin.set_fact:
+    boottheme_bg: >-
+      {%- set out = {} -%}
+      {%- for screen in ['splash', 'login', 'wallpaper'] -%}
+        {%- if screen in boottheme_images -%}
+          {%- set _ = out.update({screen: boottheme_bg_dir ~ '/' ~ boottheme_images[screen].name ~ '-' ~ boottheme_res ~ '.jpg'}) -%}
+        {%- else -%}
+          {%- set _ = out.update({screen: boottheme_wallpaper.stat.path}) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ out }}
+
 # ---------------------------------------------------------------- login (SDDM)
 - name: SDDM theme files
   ansible.builtin.command: >-
-    rsync -a --delete --itemize-changes --exclude .git --exclude Themes/astronaut.conf.user
+    rsync -a --delete --itemize-changes --exclude .git --exclude Themes/astronaut.conf.user --exclude 'Backgrounds/dotfiles-*'
     {{ boottheme_src }}/ /usr/share/sddm/themes/sddm-astronaut-theme/
   register: boottheme_rsync
   changed_when: boottheme_rsync.stdout | length > 0
@@ -45,14 +83,62 @@
   ansible.builtin.command: fc-cache -f /usr/share/fonts/sddm-astronaut
   when: boottheme_fonts.changed
 
-# SDDM loads <ConfigFile>.user on top of metadata.desktop's ConfigFile (Themes/astronaut.conf): the preset is
-# selected without editing upstream files.
-- name: Select the preset
+- name: Login background
   ansible.builtin.copy:
-    src: "{{ boottheme_src }}/Themes/{{ boottheme_preset }}.conf"
-    dest: /usr/share/sddm/themes/sddm-astronaut-theme/Themes/astronaut.conf.user
+    src: "{{ boottheme_bg.login }}"
+    dest: /usr/share/sddm/themes/sddm-astronaut-theme/Backgrounds/dotfiles-login.jpg
     remote_src: true
     mode: "0644"
+
+- name: Read the preset
+  ansible.builtin.slurp: { src: "{{ boottheme_src }}/Themes/{{ boottheme_preset }}.conf" }
+  register: boottheme_preset_conf
+
+# SDDM loads <ConfigFile>.user on top of metadata.desktop's ConfigFile (Themes/astronaut.conf), so upstream files stay
+# untouched: the preset's layout, with our background and palette swapped in key by key.
+- name: Login config (preset layout, our image and palette)
+  ansible.builtin.copy:
+    dest: /usr/share/sddm/themes/sddm-astronaut-theme/Themes/astronaut.conf.user
+    mode: "0644"
+    content: >-
+      {%- set ns = namespace(conf=boottheme_preset_conf.content | b64decode) -%}
+      {%- for key, value in boottheme_login_keys.items() -%}
+        {%- set ns.conf = ns.conf | regex_replace('(?m)^' ~ key ~ '=.*$', key ~ '="' ~ value ~ '"') -%}
+      {%- endfor -%}
+      {{ ns.conf }}
+  vars:
+    boottheme_login_keys:
+      Background: Backgrounds/dotfiles-login.jpg
+      BackgroundColor: "{{ boottheme_dark }}"
+      DimBackgroundColor: "{{ boottheme_dark }}"
+      HeaderTextColor: "{{ boottheme_accent }}"
+      DateTextColor: "{{ boottheme_accent }}"
+      TimeTextColor: "{{ boottheme_text }}"
+      FormBackgroundColor: "{{ boottheme_dark }}"
+      LoginFieldBackgroundColor: "{{ boottheme_field }}"
+      PasswordFieldBackgroundColor: "{{ boottheme_field }}"
+      LoginFieldTextColor: "{{ boottheme_text }}"
+      PasswordFieldTextColor: "{{ boottheme_text }}"
+      UserIconColor: "{{ boottheme_text }}"
+      PasswordIconColor: "{{ boottheme_text }}"
+      PlaceholderTextColor: "{{ boottheme_subtext }}"
+      WarningColor: "{{ boottheme_warning }}"
+      LoginButtonTextColor: "{{ boottheme_dark }}"
+      LoginButtonBackgroundColor: "{{ boottheme_accent }}"
+      SystemButtonsIconsColor: "{{ boottheme_text }}"
+      SessionButtonTextColor: "{{ boottheme_text }}"
+      VirtualKeyboardButtonTextColor: "{{ boottheme_text }}"
+      DropdownTextColor: "{{ boottheme_text }}"
+      DropdownSelectedBackgroundColor: "{{ boottheme_field }}"
+      DropdownBackgroundColor: "{{ boottheme_dark }}"
+      HighlightTextColor: "{{ boottheme_dark }}"
+      HighlightBackgroundColor: "{{ boottheme_accent }}"
+      HighlightBorderColor: "{{ boottheme_accent }}"
+      HoverUserIconColor: "{{ boottheme_accent }}"
+      HoverPasswordIconColor: "{{ boottheme_accent }}"
+      HoverSystemButtonsIconsColor: "{{ boottheme_accent }}"
+      HoverSessionButtonTextColor: "{{ boottheme_accent }}"
+      HoverVirtualKeyboardButtonTextColor: "{{ boottheme_accent }}"
 
 - name: SDDM uses the theme
   ansible.builtin.copy:
@@ -62,44 +148,44 @@
       [Theme]
       Current=sddm-astronaut-theme
 
-# ---------------------------------------------------------------- GRUB
+# ---------------------------------------------------------------- GRUB (AstronautGrub, scaled)
+- name: GRUB theme source (pinned)
+  ansible.builtin.git:
+    repo: "{{ boottheme_grub_repo }}"
+    dest: "{{ boottheme_grub_src }}"
+    version: "{{ boottheme_grub_commit }}"
+    depth: 1
+    force: true
+
 - name: GRUB theme dir
-  ansible.builtin.file: { path: "/boot/grub/themes/{{ boottheme_name }}", state: directory, mode: "0755" }
+  ansible.builtin.file: { path: "{{ boottheme_grub_dir }}", state: directory, mode: "0755" }
 
-- name: GRUB background (wallpaper cropped to the screen)
+# Everything but theme.txt and the fonts, which are rebuilt for the screen below.
+- name: GRUB theme files
   ansible.builtin.command: >-
-    magick {{ boottheme_wallpaper.stat.path }} -resize {{ boottheme_res }}^ -gravity center -extent {{ boottheme_res }}
-    -quality 92 /boot/grub/themes/{{ boottheme_name }}/background-{{ boottheme_res }}.jpg
-  args: { creates: "/boot/grub/themes/{{ boottheme_name }}/background-{{ boottheme_res }}.jpg" }
+    rsync -a --delete --itemize-changes --exclude theme.txt --exclude '*.pf2'
+    {{ boottheme_grub_src }}/{{ boottheme_grub_variant }}/ {{ boottheme_grub_dir }}/
+  register: boottheme_grub_rsync
+  changed_when: boottheme_grub_rsync.stdout | length > 0
   notify: boottheme update grub
 
-- name: GRUB panel and selection images
-  ansible.builtin.command: >-
-    magick -size 8x8 xc:"{{ item.color }}" /boot/grub/themes/{{ boottheme_name }}/{{ item.file }}
-  args: { creates: "/boot/grub/themes/{{ boottheme_name }}/{{ item.file }}" }
-  loop:
-    - { file: menu_c.png, color: "{{ boottheme_panel }}cc" }
-    - { file: select_c.png, color: "{{ boottheme_accent }}b3" }
-    - { file: terminal_c.png, color: "{{ boottheme_dark }}e6" }
+- name: GRUB theme.txt, scaled for the screen
+  ansible.builtin.script:
+    cmd: >-
+      scale-grub-theme.py {{ boottheme_grub_src }}/{{ boottheme_grub_variant }}/theme.txt
+      {{ boottheme_grub_dir }}/theme.txt {{ boottheme_grub_scale }}
+    executable: python3
+  register: boottheme_grub_txt
+  changed_when: "'CHANGED' in boottheme_grub_txt.stderr"
   notify: boottheme update grub
 
-- name: GRUB fonts
+# The script prints the font sizes the scaled theme names ("JetBrains Mono Regular <size>").
+- name: GRUB fonts at the scaled sizes
   ansible.builtin.command: >-
-    grub-mkfont -s {{ item.size }} -o /boot/grub/themes/{{ boottheme_name }}/{{ item.font }}-{{ item.size }}.pf2
-    /usr/share/fonts/truetype/dejavu/{{ item.font }}.ttf
-  args: { creates: "/boot/grub/themes/{{ boottheme_name }}/{{ item.font }}-{{ item.size }}.pf2" }
-  loop:
-    - { font: DejaVuSans, size: "{{ boottheme_font_item }}" }
-    - { font: DejaVuSans-Bold, size: "{{ boottheme_font_item }}" }
-    - { font: DejaVuSans, size: "{{ boottheme_font_small }}" }
-    - { font: DejaVuSansMono, size: "{{ boottheme_font_small }}" }
-  notify: boottheme update grub
-
-- name: GRUB theme.txt
-  ansible.builtin.template:
-    src: theme.txt.j2
-    dest: "/boot/grub/themes/{{ boottheme_name }}/theme.txt"
-    mode: "0644"
+    grub-mkfont -s {{ item }} -o {{ boottheme_grub_dir }}/JetBrainsMono-{{ item }}.pf2
+    /usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Regular.ttf
+  args: { creates: "{{ boottheme_grub_dir }}/JetBrainsMono-{{ item }}.pf2" }
+  loop: "{{ boottheme_grub_txt.stdout_lines }}"
   notify: boottheme update grub
 
 - name: grub drop-in directory
@@ -110,7 +196,7 @@
     dest: /etc/default/grub.d/theme.cfg
     mode: "0644"
     content: |
-      GRUB_THEME=/boot/grub/themes/{{ boottheme_name }}/theme.txt
+      GRUB_THEME={{ boottheme_grub_dir }}/theme.txt
   notify: boottheme update grub
 
 # ---------------------------------------------------------------- Plymouth (boot splash)
@@ -123,7 +209,7 @@
   loop:
     - file: background.png
       cmd: >-
-        magick {{ boottheme_wallpaper.stat.path }} -resize {{ boottheme_res }}^ -gravity center -extent {{ boottheme_res }}
+        magick {{ boottheme_bg.splash }} -resize {{ boottheme_res }}^ -gravity center -extent {{ boottheme_res }}
         /usr/share/plymouth/themes/{{ boottheme_name }}/background.png
     - file: bar.png
       cmd: magick -size 8x8 xc:"{{ boottheme_text }}" /usr/share/plymouth/themes/{{ boottheme_name }}/bar.png
@@ -133,8 +219,8 @@
   notify: boottheme update initramfs
 
 - name: Plymouth script
-  ansible.builtin.copy:
-    src: astronaut.script
+  ansible.builtin.template:
+    src: astronaut.script.j2
     dest: "/usr/share/plymouth/themes/{{ boottheme_name }}/astronaut.script"
     mode: "0644"
   notify: boottheme update initramfs
@@ -146,7 +232,7 @@
     content: |
       [Plymouth Theme]
       Name={{ boottheme_name }}
-      Description=sddm-astronaut {{ boottheme_preset }} wallpaper with a progress bar (dotfiles boottheme role)
+      Description=The splash image with a progress bar (dotfiles boottheme role)
       ModuleName=script
 
       [script]
@@ -180,3 +266,22 @@
     content: |
       GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT splash"
   notify: boottheme update grub
+
+# ---------------------------------------------------------------- cleanup
+# update-grub / update-initramfs first, so nothing still points at a theme that is about to go.
+- name: Apply the new themes before removing old ones
+  ansible.builtin.meta: flush_handlers
+
+# Themes generated by earlier versions of this role (astronaut-<preset>, look-<image>), now unused.
+- name: Find old generated themes
+  ansible.builtin.find:
+    paths: [/boot/grub/themes, /usr/share/plymouth/themes]
+    file_type: directory
+    patterns: ["astronaut-*", "look-*"]
+  register: boottheme_old
+
+- name: Remove old generated themes
+  ansible.builtin.file: { path: "{{ item }}", state: absent }
+  loop: >-
+    {{ boottheme_old.files | map(attribute='path')
+       | reject('equalto', '/usr/share/plymouth/themes/' ~ boottheme_name) | list }}

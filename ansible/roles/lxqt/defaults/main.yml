@@ -5,8 +5,9 @@ lxqt_dpi: 192
 lxqt_cursor_size: 48
 lxqt_xfwm4_theme: Default-xhdpi   # xfwm4 title bars don't scale with Xft.dpi
 lxqt_workspaces: 4  # keep in sync with --cols in ~/.config/libinput-gestures.conf
-# Desktop wallpaper: the boot theme preset's image (boottheme role), zoomed to fill the screen.
-lxqt_wallpaper: "/usr/share/sddm/themes/sddm-astronaut-theme/Backgrounds/{{ boottheme_preset | default('black_hole') }}.png"
+# Desktop wallpaper: the boottheme role's wallpaper image (boottheme_images.wallpaper, cropped to the screen), else the
+# login preset's own image; zoomed to fill.
+lxqt_wallpaper: "{{ boottheme_bg.wallpaper | default('/usr/share/sddm/themes/sddm-astronaut-theme/Backgrounds/' ~ (boottheme_preset | default('black_hole')) ~ '.png') }}"
 
 # System-wide dark mode: LXQt theme + palette, GTK 3/4, and the freedesktop color-scheme (Brave, VS Code, Electron).
 lxqt_dark: true

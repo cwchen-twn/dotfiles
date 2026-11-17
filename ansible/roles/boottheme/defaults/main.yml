@@ -1,21 +1,48 @@
-# One look from power-on to desktop: GRUB menu, Plymouth boot splash and SDDM login, all from an sddm-astronaut
-# preset (https://github.com/Keyitdev/sddm-astronaut-theme, GPL-3.0). The login screen uses the theme as-is; the GRUB
-# and Plymouth themes are generated here from the preset's wallpaper and palette.
-# Switch presets: set boottheme_preset (Themes/<name>.conf upstream) and its colors below, then `chezmoi apply`.
-# Generated images/fonts are only created once per theme dir: after changing colors or sizes, delete
-# /boot/grub/themes/astronaut-<preset> and /usr/share/plymouth/themes/astronaut-<preset> to regenerate.
+# One look from power-on to desktop: GRUB menu, Plymouth boot splash, SDDM login and the desktop wallpaper.
+# - GRUB: the AstronautGrub theme (https://github.com/Flava-Clown/AstronautGrub), pinned, scaled for the screen.
+# - Login: an sddm-astronaut preset's layout (https://github.com/Keyitdev/sddm-astronaut-theme, GPL-3.0), with the
+#   login image and the palette below swapped in.
+# - Images: one per screen from boottheme_images. Remove an entry (or set boottheme_images: {}) and that screen
+#   falls back to the login preset's own wallpaper (black_hole).
+# Neither upstream has a license for its art, so nothing is committed: everything is fetched at install time from
+# pinned commits (images also sha256-checked).
 boottheme_preset: black_hole
 boottheme_commit: abb3163c724935af888ba5ea9ac0c4f22afd8048   # 2026-09-18
 boottheme_src: /usr/local/src/sddm-astronaut-theme
-boottheme_name: "astronaut-{{ boottheme_preset }}"
 
-# Palette (from Themes/black_hole.conf)
-boottheme_accent: "#5c729d"
-boottheme_text: "#b7cef1"
-boottheme_panel: "#22162f"
-boottheme_dark: "#171426"
+# GRUB theme. AstronautGrub is drawn for 1920x1080; GRUB on a Retina MacBook runs at 2560x1600, so its fonts and
+# rows are scaled (files/scale-grub-theme.py). 1.6 keeps the longest Debian entry inside the menu box.
+boottheme_grub_repo: https://github.com/Flava-Clown/AstronautGrub.git
+boottheme_grub_commit: a39546d72fe8ecab3411b27a42c9951542ade531   # 2026-05-27
+boottheme_grub_variant: astronaut      # or astronaut_orange
+boottheme_grub_src: /usr/local/src/AstronautGrub
+boottheme_grub_dir: "/boot/grub/themes/AstronautGrub-{{ boottheme_grub_variant }}"
+boottheme_grub_scale: "{{ 1.6 if hidpi | default(false) | bool else 1 }}"
 
-# Screen size and font sizes (`hidpi` comes from setup.yml: Retina MacBooks)
+# Images: the boot splash and the login continue the GRUB theme's astronaut; the wallpaper is from
+# https://github.com/orangci/walls-catppuccin-mocha (a collection, artists unknown). Cropped to the screen once
+# into boottheme_bg_dir; the lxqt role takes the wallpaper.
+boottheme_images:
+  splash: &astronaut
+    name: astronaut
+    url: https://raw.githubusercontent.com/Flava-Clown/AstronautGrub/a39546d72fe8ecab3411b27a42c9951542ade531/astronaut/background.png
+    sha256: 2d04935853c8238dee899c10f73f8fc8a109571836b5f4128cdfc3751ac7ec4b
+  login: *astronaut
+  wallpaper:
+    name: jellyfish
+    url: https://raw.githubusercontent.com/orangci/walls-catppuccin-mocha/7bfdf10d16ad3a689f9f0cf3a0930da3d1a245a8/jellyfish.jpg
+    sha256: 3eef6c5d4bef0a4d8f06cc42675160a1db26b773ab0681c8aac5b6fa2e2ce70f
+boottheme_bg_dir: /usr/local/share/backgrounds/dotfiles
+boottheme_name: "look-{{ boottheme_images.splash.name if 'splash' in boottheme_images else boottheme_preset }}"   # Plymouth theme
+
+# Palette (login and splash): Catppuccin Mocha (https://catppuccin.com/palette), as AstronautGrub uses; pink accent
+boottheme_accent: "#f5c2e7"   # pink
+boottheme_text: "#cdd6f4"     # text
+boottheme_subtext: "#a6adc8"  # subtext0
+boottheme_panel: "#313244"    # surface0
+boottheme_field: "#45475a"    # surface1
+boottheme_dark: "#1e1e2e"     # base
+boottheme_warning: "#f38ba8"  # red
+
+# Screen size (`hidpi` comes from setup.yml: Retina MacBooks)
 boottheme_res: "{{ '2560x1600' if hidpi | default(false) | bool else '1920x1080' }}"
-boottheme_font_item: "{{ 36 if hidpi | default(false) | bool else 20 }}"
-boottheme_font_small: "{{ 24 if hidpi | default(false) | bool else 16 }}"

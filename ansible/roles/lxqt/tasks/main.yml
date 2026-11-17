@@ -153,8 +153,8 @@
         {{ out }}
       loop_control: { label: "[{{ item[0] }}] {{ item[1] }}" }
 
-    # Desktop wallpaper = the boot theme's preset image (boottheme role puts it there), so GRUB, Plymouth, the login
-    # and the desktop match. Machines without that role keep their wallpaper.
+    # Desktop wallpaper from the boottheme role (lxqt_wallpaper), so it belongs to the same look as GRUB, Plymouth
+    # and the login. Machines without that role keep their wallpaper.
     - name: Boot theme wallpaper present?
       ansible.builtin.stat: { path: "{{ lxqt_wallpaper }}" }
       register: lxqt_wallpaper_stat
