@@ -17,10 +17,10 @@ fails=0
 ok()   { printf '  \e[32m✔\e[0m %-38s %s\n' "$1" "$2"; }
 bad()  { printf '  \e[31m✘\e[0m %-38s %s\n' "$1" "$2"; [ -n "${3:-}" ] && printf '      \e[2m→ %s\e[0m\n' "$3"; fails=$((fails + 1)); }
 na()   { printf '  \e[2m– %-38s %s\e[0m\n' "$1" "$2"; }
-head() { printf '\n\e[1m%s\e[0m\n' "$1"; }
+section() { printf '\n\e[1m%s\e[0m\n' "$1"; }
 
 # ---------------------------------------------------------------- audio
-head "Audio"
+section "Audio"
 if pactl info >/dev/null 2>&1; then
     ok "sound server" "$(pactl info | sed -n 's/^Server Name: //p') $(pactl info | sed -n 's/^Server Version: //p')"
     arg=$(pactl list modules 2>/dev/null | awk '/Name: module-bluetooth-policy/ {f=1} f && /Argument:/ {sub(/^[^:]*: */, ""); print; exit}')
@@ -46,7 +46,7 @@ for card in $cards; do
 done
 
 # ---------------------------------------------------------------- music
-head "Music (Supersonic)"
+section "Music (Supersonic)"
 if command -v supersonic >/dev/null 2>&1 || [ -x "$HOME/.local/share/mise/shims/supersonic" ]; then
     ok "supersonic" "$(mise ls --current github:dweymouth/supersonic 2>/dev/null | awk 'NR==1 {print $2}')"
 else bad "supersonic" "not installed" "mise install (supersonic in the chezmoi desktop list)"; fi
@@ -75,7 +75,7 @@ for k in "${MEDIA_KEYS[@]}"; do
 done
 
 # ---------------------------------------------------------------- video
-head "Video (Brave / YouTube)"
+section "Video (Brave / YouTube)"
 if command -v vainfo >/dev/null 2>&1; then
     v=$(vainfo 2>/dev/null)
     drv=$(sed -n 's/.*Driver version: //p' <<<"$v" | head -1)
