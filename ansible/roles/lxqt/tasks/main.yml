@@ -39,7 +39,8 @@
             {%- if hits -%}{%- set _ = out.append(hits[0]) -%}{%- endif -%}
           {%- endfor -%}
           {{ out }}
-        lxqt_ini: "{{ panel_ini + hidpi_ini + dark_ini + browser_ini + terminal_ini + kbd_ini + screen_ini + media_ini }}"
+        lxqt_ini: "{{ panel_ini + hidpi_ini + dark_ini + browser_ini + terminal_ini }}"
+        lxqt_keys: "{{ kbd_ini + screen_ini + media_ini }}"
       vars:
         panel_ini: >-
           {%- set out = [['lxqt/panel.conf', 'panel1', 'plugins', lxqt_panel_plugins | join(', ')]] -%}
@@ -139,7 +140,7 @@
       loop: "{{ {'Xft.dpi': lxqt_dpi, 'Xcursor.size': lxqt_cursor_size} | dict2items }}"
       when: lxqt_hidpi | bool
 
-    - name: LXQt and GTK settings (HiDPI, dark mode, default apps, shortcuts)
+    - name: LXQt and GTK settings (HiDPI, dark mode, default apps, panel)
       community.general.ini_file:
         path: "{{ cfg }}/{{ item[0] }}"
         section: "{{ item[1] }}"
@@ -149,6 +150,44 @@
         mode: "0644"
       loop: "{{ lxqt_ini }}"
       loop_control: { label: "{{ item[0] }} [{{ item[1] }}] {{ item[2] }}" }
+
+    # Global shortcuts: like the panel, a running lxqt-globalkeysd saves its in-memory list over
+    # globalkeyshortcuts.conf, which dropped the media keys once. Dry run; only on a change stop it, write, start it.
+    - name: Shortcuts changed? (dry run)
+      community.general.ini_file:
+        path: "{{ cfg }}/{{ item[0] }}"
+        section: "{{ item[1] }}"
+        option: "{{ item[2] }}"
+        value: "{{ item[3] }}"
+        no_extra_spaces: true
+        mode: "0644"
+      loop: "{{ lxqt_keys }}"
+      loop_control: { label: "[{{ item[1] }}] {{ item[2] }}" }
+      check_mode: true
+      register: lxqt_keys_check
+
+    - name: Stop the shortcut daemon (inside the session only)
+      ansible.builtin.shell: |
+        # -f with a full match: the name is 16 characters, and -x alone only sees the first 15
+        [ -n "${DISPLAY:-}" ] && pgrep -u "$(id -u)" -fx '(/usr/bin/)?lxqt-globalkeysd' >/dev/null || exit 0
+        pkill -u "$(id -u)" -fx '(/usr/bin/)?lxqt-globalkeysd' && sleep 1 && echo RUNNING
+      register: lxqt_keys_stop
+      when: lxqt_keys_check is changed
+
+    - name: Global shortcuts (keyboard and screen brightness, media keys)
+      community.general.ini_file:
+        path: "{{ cfg }}/{{ item[0] }}"
+        section: "{{ item[1] }}"
+        option: "{{ item[2] }}"
+        value: "{{ item[3] }}"
+        no_extra_spaces: true
+        mode: "0644"
+      loop: "{{ lxqt_keys }}"
+      loop_control: { label: "[{{ item[1] }}] {{ item[2] }}" }
+
+    - name: Start the shortcut daemon again
+      ansible.builtin.shell: setsid -f lxqt-globalkeysd >/dev/null 2>&1
+      when: lxqt_keys_stop is not skipped and 'RUNNING' in lxqt_keys_stop.stdout
 
     # A running lxqt-panel saves its in-memory favorites over panel.conf, which once left the menu at the old count
     # while the quick launch had the new one. So: dry run first; only on a change stop the panel, write, start it.
