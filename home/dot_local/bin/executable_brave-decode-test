@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# brave-decode-test [brave flags...]: does Brave decode H.264 video on the GPU right now?
+#
+# brave://gpu says "Video Decode: Hardware accelerated" even when every video falls back to software (seen on this
+# MacBook's Broadwell GPU with Chromium 157), so this plays a real clip and asks the player which decoder it used:
+#   - a 1080p60 H.264 clip (made once with ffmpeg, cached), served on 127.0.0.1
+#   - a throwaway Brave (temporary profile, muted; your own profile is not touched), driven over DevTools (websocat)
+#   - the DevTools Media domain's kVideoDecoderName + media log, and CPU per Brave process type over 10 s
+# With no arguments it uses the flags of your Brave menu entry (~/.local/share/applications/brave-browser.desktop),
+# i.e. what you actually run. Environment passes through (e.g. LIBVA_DRIVER_NAME=i965 brave-decode-test).
+# Exit 0 = hardware decoding, 1 = software, 2 = could not test. Takes about a minute; a Brave window shows meanwhile.
+set -u
+port=${BRAVE_TEST_PORT:-9361}
+brave=/opt/brave.com/brave/brave
+[ -x "$brave" ] || brave=$(command -v brave-browser) || { echo "brave not found" >&2; exit 2; }
+for t in ffmpeg websocat python3 curl; do command -v $t >/dev/null || { echo "missing: $t" >&2; exit 2; }; done
+
+if [ $# -eq 0 ]; then
+    launcher=$HOME/.local/share/applications/brave-browser.desktop
+    read -ra flags <<<"$(sed -n 's/^Exec=[^ ]*brave-browser[^ ]* *//p' "$launcher" 2>/dev/null | head -1 | sed 's/%[A-Za-z]//g')"
+else
+    flags=("$@")
+fi
+echo "flags: ${flags[*]:-(none)}${LIBVA_DRIVER_NAME:+   LIBVA_DRIVER_NAME=$LIBVA_DRIVER_NAME}"
+
+cache=${XDG_CACHE_HOME:-$HOME/.cache}/brave-decode-test
+mkdir -p "$cache"
+if [ ! -s "$cache/clip.mp4" ]; then
+    echo "making the test clip (once)..."
+    ffmpeg -v error -y -f lavfi -i testsrc2=size=1920x1080:rate=60 -t 30 -c:v libx264 -preset veryfast \
+        -profile:v high -pix_fmt yuv420p -movflags +faststart "$cache/clip.mp4" || exit 2
+fi
+printf '<!doctype html><video src="clip.mp4" muted autoplay loop width=960></video>\n' >"$cache/index.html"
+
+work=$(mktemp -d)
+cleanup() {
+    [ -n "${bpid:-}" ] && kill "$bpid" 2>/dev/null
+    sleep 1
+    pkill -9 -f -- "--user-data-dir=$work/profile" 2>/dev/null
+    [ -n "${spid:-}" ] && kill "$spid" 2>/dev/null
+    rm -rf "$work"
+}
+trap cleanup EXIT
+(cd "$cache" && exec python3 -u -m http.server 0 --bind 127.0.0.1 >"$work/http.log" 2>&1) &
+spid=$!
+for _ in $(seq 20); do hport=$(grep -oE 'port [0-9]+' "$work/http.log" | awk '{print $2}'); [ -n "$hport" ] && break; sleep 0.3; done
+[ -n "${hport:-}" ] || { echo "could not start the local web server" >&2; exit 2; }
+
+"$brave" --user-data-dir="$work/profile" --remote-debugging-port="$port" --no-first-run --no-default-browser-check \
+    --mute-audio --autoplay-policy=no-user-gesture-required --window-size=1100,700 "${flags[@]}" \
+    >/dev/null 2>&1 &
+bpid=$!
+for _ in $(seq 40); do curl -s "localhost:$port/json" >/dev/null 2>&1 && break; sleep 0.5; done
+sleep 3
+ws=$(curl -s "localhost:$port/json" | python3 -c "import sys,json; print([t for t in json.load(sys.stdin) if t['type']=='page'][-1]['webSocketDebuggerUrl'])" 2>/dev/null)
+[ -n "$ws" ] || { echo "could not reach the test Brave over DevTools" >&2; exit 2; }
+cdp() { printf '%s\n' "$1" | timeout 15 websocat -n1 "$ws"; }
+cdp "{\"id\":1,\"method\":\"Page.navigate\",\"params\":{\"url\":\"http://127.0.0.1:$hport/\"}}" >/dev/null
+sleep 12
+
+state=$(cdp '{"id":2,"method":"Runtime.evaluate","params":{"expression":"(()=>{const v=document.querySelector(\"video\");const q=v.getVideoPlaybackQuality();return v.videoWidth+\"x\"+v.videoHeight+\", \"+q.totalVideoFrames+\" frames, \"+q.droppedVideoFrames+\" dropped\"})()","returnByValue":true}}' \
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['result'].get('value','?'))" 2>/dev/null)
+(printf '%s\n' '{"id":3,"method":"Media.enable"}'; sleep 4) | timeout 8 websocat "$ws" >"$work/media.json" 2>/dev/null
+read -r decoder platform < <(python3 - "$work/media.json" <<'PY'
+import json, sys
+props = {}
+for line in open(sys.argv[1]):
+    try:
+        m = json.loads(line)
+    except ValueError:
+        continue
+    for p in m.get("params", {}).get("properties", []):
+        props[p["name"]] = p["value"]
+print(props.get("kVideoDecoderName", "?"), props.get("kIsPlatformVideoDecoder", "?"))
+PY
+)
+log=$(python3 - "$work/media.json" <<'PY'
+import json, sys
+for line in open(sys.argv[1]):
+    try:
+        m = json.loads(line)
+    except ValueError:
+        continue
+    for x in m.get("params", {}).get("messages", []):
+        t = x.get("message", "")
+        if any(k in t for k in ("Selected", "fallback", "error", "Error", "Cannot initialize")):
+            print("    " + t[:150])
+PY
+)
+
+snap() {
+    for p in $(pgrep -f -- "--user-data-dir=$work/profile"); do
+        ty=$(tr '\0' ' ' </proc/"$p"/cmdline 2>/dev/null | grep -oE -- '--type=[a-z-]+' | head -1)
+        r=$(cut -d')' -f2- /proc/"$p"/stat 2>/dev/null) || continue
+        # shellcheck disable=SC2086
+        set -- $r
+        echo "$p ${ty#--type=} $((${12} + ${13}))"
+    done
+}
+a=$(snap); sleep 10; b=$(snap)
+cpu=$(awk 'NR==FNR {t0[$1]=$3; next} ($1 in t0) {n=($2==""?"browser":$2); d[n]+=$3-t0[$1]} END {for (k in d) if (d[k] > 0) printf "%s %.0f%%, ", k, d[k]/10}' <(echo "$a") <(echo "$b"))
+
+echo "video:   $state"
+echo "decoder: $decoder (platform/hardware: $platform)"
+[ -n "$log" ] && echo "media log:" && echo "$log"
+echo "cpu:     ${cpu%, } (% of one core)"
+if [ "$platform" = true ]; then echo "=> HARDWARE decoding"; exit 0
+elif [ "$decoder" = "?" ]; then echo "=> could not determine (did the clip play?)"; exit 2
+else echo "=> SOFTWARE decoding"; exit 1; fi
