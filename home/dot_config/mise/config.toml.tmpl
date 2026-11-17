@@ -55,6 +55,6 @@ gradle = "latest"
 
 [settings]
 experimental = true
-# Project mise.toml files can load SOPS-encrypted env (`[env] _.file = "secrets.enc.env"`, e.g. hcloud) with this key
+# Project mise.toml files can load SOPS-encrypted env (`[env] _.file = "secrets.enc.yaml"`, e.g. hcloud) with this key
 sops.age_key_file = "~/.config/sops/age/keys.txt"
 idiomatic_version_file_enable_tools = ["node", "go", "java"]
