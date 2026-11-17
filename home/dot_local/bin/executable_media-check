@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# media-check: the audio/video decisions of this setup, checked against the running system.
+# ✔ as decided, ✘ drifted (with a hint), – not applicable right now. Exit code = number of ✘.
+# Brave, PulseAudio and the OS change interfaces over time; this is the quick way to notice. Cost: cpu-stat.
+set -u
+
+# ---------------------------------------------------------------- the decisions (change here when they change)
+BT_POLICY_ARG="auto_switch=2"          # headphones switch to the headset profile (mic) when any app records
+BT_AVOID_CODEC="ldac"                  # LDAC costs about half a core to encode on a 2015 dual-core: bt-codec moves off it
+SUPERSONIC_TRANSCODE=(RequestTranscode=true Codec=opus MaxBitRateKBPS=192)   # Opus instead of raw FLAC
+MEDIA_KEYS=(XF86AudioPlay XF86AudioNext XF86AudioPrev)                       # -> playerctl
+BRAVE_DECODE_FEATURE="AcceleratedVideoDecodeLinuxGL"                          # VA-API on X11
+BRAVE_H264IFY="omkfmpieigblcllmkgbflkikinpkodlk"                              # enhanced-h264ify
+# --------------------------------------------------------------------------------------------------------------
+
+fails=0
+ok()   { printf '  \e[32m✔\e[0m %-38s %s\n' "$1" "$2"; }
+bad()  { printf '  \e[31m✘\e[0m %-38s %s\n' "$1" "$2"; [ -n "${3:-}" ] && printf '      \e[2m→ %s\e[0m\n' "$3"; fails=$((fails + 1)); }
+na()   { printf '  \e[2m– %-38s %s\e[0m\n' "$1" "$2"; }
+head() { printf '\n\e[1m%s\e[0m\n' "$1"; }
+
+# ---------------------------------------------------------------- audio
+head "Audio"
+if pactl info >/dev/null 2>&1; then
+    ok "sound server" "$(pactl info | sed -n 's/^Server Name: //p') $(pactl info | sed -n 's/^Server Version: //p')"
+    arg=$(pactl list modules 2>/dev/null | awk '/Name: module-bluetooth-policy/ {f=1} f && /Argument:/ {sub(/^[^:]*: */, ""); print; exit}')
+    if [ "$arg" = "$BT_POLICY_ARG" ]; then ok "headset profile when recording" "$arg"
+    else bad "headset profile when recording" "module-bluetooth-policy: '${arg:-not loaded}'" "$HOME/.config/pulse/default.pa (chezmoi); pulseaudio -k to reload"; fi
+    ok "default output" "$(pactl get-default-sink)"
+    ok "default input" "$(pactl get-default-source)"
+else
+    bad "sound server" "pactl cannot reach it" "systemctl --user status pulseaudio"
+fi
+if systemctl --user is-active -q bt-codec.service; then ok "bt-codec service" "active"
+else bad "bt-codec service" "$(systemctl --user is-active bt-codec.service)" "systemctl --user enable --now bt-codec.service"; fi
+cards=$(pactl list short cards 2>/dev/null | awk '$2 ~ /^bluez_card\./ {print $2}')
+if [ -z "$cards" ]; then na "Bluetooth audio device" "none connected"; fi
+for card in $cards; do
+    name=$(bluetoothctl info "$(echo "${card#bluez_card.}" | tr _ :)" 2>/dev/null | sed -n 's/^\s*Name: //p')
+    profile=$(pactl list cards | awk -v c="$card" '$0 ~ "Name: "c {f=1} f && /Active Profile:/ {print $3; exit}')
+    codec=$(pactl send-message "/card/$card/bluez" get-codec 2>/dev/null | tr -d '"')
+    case $codec in
+        "$BT_AVOID_CODEC"*) bad "${name:-$card}" "$profile, codec $codec" "bt-codec should have switched it: journalctl --user -u bt-codec" ;;
+        *) ok "${name:-$card}" "$profile, codec ${codec:-?}" ;;
+    esac
+done
+
+# ---------------------------------------------------------------- music
+head "Music (Supersonic)"
+if command -v supersonic >/dev/null 2>&1 || [ -x "$HOME/.local/share/mise/shims/supersonic" ]; then
+    ok "supersonic" "$(mise ls --current github:dweymouth/supersonic 2>/dev/null | awk 'NR==1 {print $2}')"
+else bad "supersonic" "not installed" "mise install (supersonic in the chezmoi desktop list)"; fi
+if { ldconfig -p 2>/dev/null || /usr/sbin/ldconfig -p 2>/dev/null || /sbin/ldconfig -p 2>/dev/null; } | grep -q 'libmpv.so.2'; then ok "libmpv" "libmpv.so.2"
+else bad "libmpv" "missing" "chezmoi apply (apt libmpv2, desktop role)"; fi
+conf=$HOME/.config/supersonic/config.toml
+if [ -r "$conf" ]; then
+    for kv in "${SUPERSONIC_TRANSCODE[@]}"; do
+        k=${kv%%=*} want=${kv#*=}
+        have=$(awk -v k="$k" '/^\[/ {s=$0} s=="[Transcoding]" && $1==k {print $3; exit}' "$conf" | tr -d "\"'")
+        if [ "$have" = "$want" ]; then ok "stream $k" "$have"
+        else bad "stream $k" "'${have:-unset}' (want $want)" "chezmoi apply ~/.config/supersonic (modify template)"; fi
+    done
+else na "stream settings" "no ~/.config/supersonic/config.toml yet"; fi
+if command -v playerctl >/dev/null 2>&1; then
+    players=$(playerctl -l 2>/dev/null | paste -sd, -)
+    ok "playerctl" "players: ${players:-none running}"
+else bad "playerctl" "missing" "chezmoi apply (apt playerctl, desktop role)"; fi
+keys=$HOME/.config/lxqt/globalkeyshortcuts.conf
+for k in "${MEDIA_KEYS[@]}"; do
+    exec_=$(awk -v k="$k" '/^\[/ {s=($0 ~ "^\\[" k "\\.")} s && /^Exec=/ {sub(/^Exec=/, ""); print; exit}' "$keys" 2>/dev/null)
+    case $exec_ in
+        playerctl*) ok "key $k" "$exec_" ;;
+        *) bad "key $k" "'${exec_:-unbound}'" "chezmoi apply (lxqt role), then log in again" ;;
+    esac
+done
+
+# ---------------------------------------------------------------- video
+head "Video (Brave / YouTube)"
+if command -v vainfo >/dev/null 2>&1; then
+    v=$(vainfo 2>/dev/null)
+    drv=$(sed -n 's/.*Driver version: //p' <<<"$v" | head -1)
+    profiles=$(grep -E 'VAEntrypointVLD' <<<"$v" | grep -oE 'VAProfile(H264|VP8|VP9|AV1|HEVC)[A-Za-z0-9]*' | sed 's/VAProfile//' | sort -u | paste -sd' ' -)
+    if grep -q 'H264' <<<"$profiles"; then ok "GPU hardware decode" "$profiles"
+    else bad "GPU hardware decode" "no H.264 decode (${profiles:-none})" "vainfo; drivers: intel-media-va-driver / i965-va-driver"; fi
+    [ -n "$drv" ] && ok "VA-API driver" "$drv"
+else bad "vainfo" "missing" "chezmoi apply (apt vainfo, desktop role)"; fi
+pol=/etc/brave/policies/managed/dotfiles.json
+if grep -q "$BRAVE_H264IFY" "$pol" 2>/dev/null; then ok "enhanced-h264ify (policy)" "force-installed"
+else bad "enhanced-h264ify (policy)" "not in $pol" "chezmoi apply (desktop role)"; fi
+launcher=$HOME/.local/share/applications/brave-browser.desktop
+if grep -q "^Exec=.*$BRAVE_DECODE_FEATURE" "$launcher" 2>/dev/null; then ok "Brave launcher flags" "$BRAVE_DECODE_FEATURE"
+else bad "Brave launcher flags" "missing in $launcher" "chezmoi apply (desktop role)"; fi
+main=$(pgrep -u "$(id -u)" -xo brave 2>/dev/null)
+if [ -z "$main" ]; then
+    na "running Brave" "not running"
+else
+    if tr '\0' ' ' </proc/"$main"/cmdline | grep -q "$BRAVE_DECODE_FEATURE"; then ok "running Brave started with flags" "pid $main"
+    else bad "running Brave started with flags" "no (started before the change, or from a terminal)" "quit Brave fully and start it from the menu/panel"; fi
+    gpu=$(pgrep -u "$(id -u)" -f -- '--type=gpu-process' | head -1)
+    if [ -n "$gpu" ] && grep -qE '(iHD|i965)_drv_video\.so' /proc/"$gpu"/maps 2>/dev/null; then
+        ok "VA-API loaded in Brave's GPU process" "$(grep -oE '(iHD|i965)_drv_video\.so' /proc/"$gpu"/maps | head -1)"
+    elif [ -n "$gpu" ]; then
+        bad "VA-API loaded in Brave's GPU process" "no" "flags missing, or Chromium renamed them: check brave://gpu (Video Decode)"
+    else na "Brave GPU process" "none"; fi
+fi
+
+echo
+if [ "$fails" -eq 0 ]; then printf '\e[32mAll as decided.\e[0m  Cost per app: cpu-stat\n'
+else printf '\e[31m%d check(s) drifted.\e[0m  Cost per app: cpu-stat\n' "$fails"; fi
+exit "$fails"

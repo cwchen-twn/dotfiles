@@ -203,6 +203,15 @@ the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you 
   FLAC. Raw files again: `RequestTranscode = false` in `home/dot_config/supersonic/modify_config.toml`.
 - **Media keys:** Fn+F7 / Fn+F8 / Fn+F9 = previous / play-pause / next for whichever player is active (MPRIS via
   playerctl: Supersonic, Brave, ...). The F-row is function keys on the MacBook, hence Fn.
+- **YouTube (Brave):** this GPU (Intel Iris 6100) decodes H.264 in hardware but not VP9/AV1, which YouTube serves by
+  default. The enhanced-h264ify extension (Brave policy) makes YouTube send H.264 (up to 1080p), and Brave's menu
+  entry is a generated user copy whose `Exec` lines add `--enable-features=AcceleratedVideoDecodeLinuxGL,...`
+  (VA-API; Debian's launcher reads no flags file). A `brave-browser` started from a terminal runs without them.
+- **`media-check`** lists every decision above against the running system (✔ / ✘ with a hint / – n/a), including
+  whether the running Brave was started with the flags and has a VA-API driver loaded in its GPU process: the quick
+  way to notice when Brave, PulseAudio or the OS changed something. The expected values sit at the top of the script.
+- **`cpu-stat [SECONDS] [N]`** shows where the CPU goes right now: per app in % of one core over a few seconds
+  (Brave split into renderer / gpu / network / ...), total busy %, Wi-Fi interrupts/s and the battery draw.
 - **Bluetooth codec:** PulseAudio picks LDAC for headphones that offer it, about half a core to encode on a 2015
   dual-core. The `bt-codec` user service switches them to SBC XQ 552 kbps whenever they connect or come back from a
   call (`journalctl --user -u bt-codec` shows each switch); `BT_CODEC=` in the unit keeps PulseAudio's choice.

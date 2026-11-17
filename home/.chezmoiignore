@@ -8,6 +8,8 @@
 .config/fish/functions/printer-rm.fish
 .config/fish/functions/mem-stat.fish
 .config/fish/functions/bt-pair.fish
+.local/bin/media-check
+.local/bin/cpu-stat
 .config/pulse
 {{ end }}
 {{ if not (has "libinput-gestures" .desktop) }}
