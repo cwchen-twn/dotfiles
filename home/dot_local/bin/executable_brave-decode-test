@@ -52,13 +52,17 @@ for _ in $(seq 20); do hport=$(grep -oE 'port [0-9]+' "$work/http.log" | awk '{p
 bpid=$!
 for _ in $(seq 40); do curl -s "localhost:$port/json" >/dev/null 2>&1 && break; sleep 0.5; done
 sleep 3
-ws=$(curl -s "localhost:$port/json" | python3 -c "import sys,json; print([t for t in json.load(sys.stdin) if t['type']=='page'][-1]['webSocketDebuggerUrl'])" 2>/dev/null)
+# Our own NEW tab, in front: Chromium defers media loading in background tabs, and on a fresh profile an extension
+# (Dark Reader) opens its welcome page in front of whatever tab was there.
+sleep 3
+ws=$(curl -s -X PUT "localhost:$port/json/new?http://127.0.0.1:$hport/" \
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['webSocketDebuggerUrl'])" 2>/dev/null)
 [ -n "$ws" ] || { echo "could not reach the test Brave over DevTools" >&2; exit 2; }
 cdp() { printf '%s\n' "$1" | timeout 15 websocat -n1 "$ws"; }
-cdp "{\"id\":1,\"method\":\"Page.navigate\",\"params\":{\"url\":\"http://127.0.0.1:$hport/\"}}" >/dev/null
+cdp '{"id":1,"method":"Page.bringToFront"}' >/dev/null
 sleep 12
 
-state=$(cdp '{"id":2,"method":"Runtime.evaluate","params":{"expression":"(()=>{const v=document.querySelector(\"video\");const q=v.getVideoPlaybackQuality();return v.videoWidth+\"x\"+v.videoHeight+\", \"+q.totalVideoFrames+\" frames, \"+q.droppedVideoFrames+\" dropped\"})()","returnByValue":true}}' \
+state=$(cdp '{"id":2,"method":"Runtime.evaluate","params":{"expression":"(()=>{const v=document.querySelector(\"video\");const q=v.getVideoPlaybackQuality();return v.videoWidth+\"x\"+v.videoHeight+\", \"+q.totalVideoFrames+\" frames, \"+q.droppedVideoFrames+\" dropped (ready=\"+v.readyState+\" net=\"+v.networkState+\" url=\"+location.href+\")\"})()","returnByValue":true}}' \
     | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['result'].get('value','?'))" 2>/dev/null)
 (printf '%s\n' '{"id":3,"method":"Media.enable"}'; sleep 4) | timeout 8 websocat "$ws" >"$work/media.json" 2>/dev/null
 read -r decoder platform < <(python3 - "$work/media.json" <<'PY'
@@ -74,7 +78,7 @@ for line in open(sys.argv[1]):
 print(props.get("kVideoDecoderName", "?"), props.get("kIsPlatformVideoDecoder", "?"))
 PY
 )
-log=$(python3 - "$work/media.json" <<'PY'
+log=$(ALL=${BRAVE_TEST_DEBUG:-} python3 - "$work/media.json" <<'PY'
 import json, sys
 for line in open(sys.argv[1]):
     try:
@@ -83,7 +87,8 @@ for line in open(sys.argv[1]):
         continue
     for x in m.get("params", {}).get("messages", []):
         t = x.get("message", "")
-        if any(k in t for k in ("Selected", "fallback", "error", "Error", "Cannot initialize")):
+        import os
+        if os.environ.get("ALL") or any(k in t for k in ("Selected", "fallback", "error", "Error", "Cannot initialize")):
             print("    " + t[:150])
 PY
 )

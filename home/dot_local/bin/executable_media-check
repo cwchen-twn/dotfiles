@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# media-check: the audio/video decisions of this setup, checked against the running system.
+# media-check [--decode]: the audio/video decisions of this setup, checked against the running system.
+# --decode also runs brave-decode-test (plays a clip in a throwaway Brave: the only real proof of GPU decoding).
 # ✔ as decided, ✘ drifted (with a hint), – not applicable right now. Exit code = number of ✘.
 # Brave, PulseAudio and the OS change interfaces over time; this is the quick way to notice. Cost: cpu-stat.
 set -u
@@ -10,7 +11,7 @@ BT_AVOID_CODEC="ldac"                  # LDAC costs about half a core to encode 
 SUPERSONIC_TRANSCODE=(RequestTranscode=true Codec=opus MaxBitRateKBPS=192)   # Opus instead of raw FLAC
 MEDIA_KEYS=(XF86AudioPlay=playerctl XF86AudioNext=playerctl XF86AudioPrev=playerctl   # key=command it must run,
             XF86AudioRaiseVolume=vol XF86AudioLowerVolume=vol XF86AudioMute=vol)      # as its only enabled binding
-BRAVE_DECODE_FEATURE="AcceleratedVideoDecodeLinuxGL"                          # VA-API on X11
+VAAPI_NEED="VideoProc"   # Chromium's VA-API decoder on older Intel needs the driver's post-processing (non-free iHD)
 BRAVE_H264IFY="omkfmpieigblcllmkgbflkikinpkodlk"                              # enhanced-h264ify
 # --------------------------------------------------------------------------------------------------------------
 
@@ -103,22 +104,37 @@ else bad "vainfo" "missing" "chezmoi apply (apt vainfo, desktop role)"; fi
 pol=/etc/brave/policies/managed/dotfiles.json
 if grep -q "$BRAVE_H264IFY" "$pol" 2>/dev/null; then ok "enhanced-h264ify (policy)" "force-installed"
 else bad "enhanced-h264ify (policy)" "not in $pol" "chezmoi apply (desktop role)"; fi
-launcher=$HOME/.local/share/applications/brave-browser.desktop
-if grep -q "^Exec=.*$BRAVE_DECODE_FEATURE" "$launcher" 2>/dev/null; then ok "Brave launcher flags" "$BRAVE_DECODE_FEATURE"
-else bad "Brave launcher flags" "missing in $launcher" "chezmoi apply (desktop role)"; fi
-main=$(pgrep -u "$(id -u)" -xo brave 2>/dev/null)
-if [ -z "$main" ]; then
-    na "running Brave" "not running"
-else
-    if tr '\0' ' ' </proc/"$main"/cmdline | grep -q "$BRAVE_DECODE_FEATURE"; then ok "running Brave started with flags" "pid $main"
-    else bad "running Brave started with flags" "no (started before the change, or from a terminal)" "quit Brave fully and start it from the menu/panel"; fi
-    gpu=$(pgrep -u "$(id -u)" -f -- '--type=gpu-process' | head -1)
-    if [ -n "$gpu" ] && grep -qE '(iHD|i965)_drv_video\.so' /proc/"$gpu"/maps 2>/dev/null; then
-        ok "VA-API loaded in Brave's GPU process" "$(grep -oE '(iHD|i965)_drv_video\.so' /proc/"$gpu"/maps | head -1)"
-    elif [ -n "$gpu" ]; then
-        bad "VA-API loaded in Brave's GPU process" "no" "flags missing, or Chromium renamed them: check brave://gpu (Video Decode)"
-    else na "Brave GPU process" "none"; fi
+if command -v vainfo >/dev/null 2>&1; then
+    if grep -q "VAEntrypoint$VAAPI_NEED" <<<"$v"; then ok "VA-API post-processing" "$VAAPI_NEED (Brave can decode on the GPU)"
+    else bad "VA-API post-processing" "no $VAAPI_NEED: Brave falls back to CPU decoding" "Intel: apt install intel-media-va-driver-non-free (desktop role)"; fi
 fi
+if [ -e "$HOME/.local/share/applications/brave-browser.desktop" ]; then
+    bad "Brave menu entry" "a user override exists (not needed any more)" "chezmoi apply (desktop role removes it)"
+else ok "Brave menu entry" "the packaged one"; fi
+if [ "${1:-}" = --decode ]; then
+    if command -v brave-decode-test >/dev/null 2>&1; then
+        r=$(brave-decode-test 2>&1); rc=$?
+        d=$(sed -n 's/^decoder: //p' <<<"$r"); c=$(sed -n 's/^cpu: *//p' <<<"$r")
+        case $rc in
+            0) ok "Brave decodes on the GPU (test)" "$d; $c" ;;
+            1) bad "Brave decodes on the GPU (test)" "$d; $c" "brave-decode-test shows the media log" ;;
+            *) na "Brave decode test" "could not run: $(tail -1 <<<"$r")" ;;
+        esac
+    fi
+else na "Brave decode test" "media-check --decode (about 30 s; plays a clip in a throwaway Brave)"; fi
+
+# ---------------------------------------------------------------- tools
+section "Tools"
+yd=$(command -v yt-dlp)
+case $yd in
+    "$HOME"/.local/share/mise/*) ok "yt-dlp" "$("$yd" --version) (mise)" ;;
+    "") bad "yt-dlp" "missing" "mise install (yt-dlp in the mise config)" ;;
+    *) bad "yt-dlp" "$yd ($("$yd" --version 2>/dev/null)): not from mise" "chezmoi apply (desktop role removes Debian's)" ;;
+esac
+if dpkg -s yt-dlp >/dev/null 2>&1; then bad "Debian yt-dlp" "installed (too old for YouTube)" "chezmoi apply (desktop role removes and pins it out)"
+else ok "Debian yt-dlp" "absent"; fi
+if grep -q '^hwdec=vaapi' "$HOME/.config/mpv/mpv.conf" 2>/dev/null; then ok "mpv" "hwdec=vaapi, H.264 from yt-dlp (yt URL)"
+else bad "mpv" "no hwdec=vaapi in ~/.config/mpv/mpv.conf" "chezmoi apply"; fi
 
 echo
 if [ "$fails" -eq 0 ]; then printf '\e[32mAll as decided.\e[0m  Cost per app: cpu-stat\n'
