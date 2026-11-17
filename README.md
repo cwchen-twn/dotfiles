@@ -112,7 +112,7 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 | Source | Tools |
 |---|---|
 | apt / Homebrew (Ansible) | shell + base CLI, docker, tailscale, GUI apps, postgres, VPNs, CUDA |
-| mise (`~/.config/mise/config.toml`) | node, pnpm, go, java, maven, gradle, kubectl, helm, kubectx, terraform, lazygit, neovim, glab, tea, sops, age, rtk, ... |
+| mise (`~/.config/mise/config.toml`) | node, pnpm, go, java, maven, gradle, kubectl, helm, kubectx, terraform, tflint, hcloud (Hetzner), wrangler (Cloudflare), lazygit, neovim, glab, tea, sops, age, rtk, ... |
 | own installers | rustup (`~/.cargo`), bun (`~/.bun`), uv and claude (`~/.local/bin`) |
 
 Rule: nothing is copied into `/usr/local/bin` or `/opt` by hand. Anything not covered above goes in `~/.local/bin`.
@@ -148,6 +148,13 @@ The repo is public. Secrets are never committed in plain text:
 - Whole files (e.g. `~/.ssh/config.d/work`) are age-encrypted chezmoi files (`encrypted_*.age`).
 - The age identity lives in the personal Vaultwarden (`vw.chenantunez.com`, item `chezmoi-age-key`). It is fetched once to
   `~/.config/chezmoi/key.txt`; use `bwp` (fish function) for the personal vault.
+- The SOPS age key for the infra repo (hcloud: k3s Secrets, Terraform/CLI secrets, `RESTIC_PASSWORD`) is a chezmoi
+  encrypted file, `~/.config/sops/age/keys.txt`, on machines with the `terraform` or `kubernetes` devops group. mise
+  uses it for project `[env]` SOPS files (`sops.age_key_file`), so inside hcloud the CLIs and Terraform are authenticated.
+  **This makes the chezmoi key a master key for the infra too. Keep an offline copy of it, outside Vaultwarden:
+  Vaultwarden runs in the cluster that these secrets restore.**
+- Project tool versions belong in the project's `mise.toml` (hcloud pins terraform/helm to its CI versions); the
+  global config here is `latest`.
 - SSH private keys are per machine and never synced. Each new key is registered with GitHub, GitLab and Gitea.
 - Git HTTPS credentials come from `gh`, `glab` and `tea` credential helpers, not from `~/.git-credentials`.
 - `pre-commit install` enables gitleaks and an internal-IP check.

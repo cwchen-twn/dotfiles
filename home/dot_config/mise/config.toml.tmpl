@@ -33,6 +33,11 @@ kubectx = "latest"
 {{- end }}
 {{- if has "terraform" .devops }}
 terraform = "latest"
+tflint = "latest"
+hcloud = "latest"        # Hetzner Cloud; token from HCLOUD_TOKEN (hcloud repo's mise env) or `hcloud context create`
+{{- if has "node" .runtimes }}
+wrangler = "latest"      # Cloudflare (npm): Workers, R2, DNS; token from CLOUDFLARE_API_TOKEN
+{{- end }}
 {{- end }}
 {{- if has "node" .runtimes }}
 node = "lts"
@@ -50,4 +55,6 @@ gradle = "latest"
 
 [settings]
 experimental = true
+# Project mise.toml files can load SOPS-encrypted env (`[env] _.file = "secrets.enc.env"`, e.g. hcloud) with this key
+sops.age_key_file = "~/.config/sops/age/keys.txt"
 idiomatic_version_file_enable_tools = ["node", "go", "java"]

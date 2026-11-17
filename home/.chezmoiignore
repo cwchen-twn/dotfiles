@@ -64,6 +64,10 @@
 {{ if not (has "kubernetes" .devops) }}
 .kube
 {{ end }}
+{{- /* SOPS age key (decrypts the hcloud repo secrets): only where infra is worked on */}}
+{{ if not (or (has "terraform" .devops) (has "kubernetes" .devops)) }}
+.config/sops
+{{ end }}
 {{- /* VPN profiles: Linux only (installed to /etc by run_onchange_after_55-vpn-configs); on macOS import into Tunnelblick by hand */}}
 {{ if or (ne .chezmoi.os "linux") (not (has "openvpn" .extras)) }}
 .config/openvpn
