@@ -8,7 +8,8 @@ set -u
 BT_POLICY_ARG="auto_switch=2"          # headphones switch to the headset profile (mic) when any app records
 BT_AVOID_CODEC="ldac"                  # LDAC costs about half a core to encode on a 2015 dual-core: bt-codec moves off it
 SUPERSONIC_TRANSCODE=(RequestTranscode=true Codec=opus MaxBitRateKBPS=192)   # Opus instead of raw FLAC
-MEDIA_KEYS=(XF86AudioPlay XF86AudioNext XF86AudioPrev)                       # -> playerctl
+MEDIA_KEYS=(XF86AudioPlay=playerctl XF86AudioNext=playerctl XF86AudioPrev=playerctl   # key=command it must run,
+            XF86AudioRaiseVolume=vol XF86AudioLowerVolume=vol XF86AudioMute=vol)      # as its only enabled binding
 BRAVE_DECODE_FEATURE="AcceleratedVideoDecodeLinuxGL"                          # VA-API on X11
 BRAVE_H264IFY="omkfmpieigblcllmkgbflkikinpkodlk"                              # enhanced-h264ify
 # --------------------------------------------------------------------------------------------------------------
@@ -66,11 +67,20 @@ if command -v playerctl >/dev/null 2>&1; then
     ok "playerctl" "players: ${players:-none running}"
 else bad "playerctl" "missing" "chezmoi apply (apt playerctl, desktop role)"; fi
 keys=$HOME/.config/lxqt/globalkeyshortcuts.conf
-for k in "${MEDIA_KEYS[@]}"; do
-    exec_=$(awk -v k="$k" '/^\[/ {s=($0 ~ "^\\[" k "\\.")} s && /^Exec=/ {sub(/^Exec=/, ""); print; exit}' "$keys" 2>/dev/null)
-    case $exec_ in
-        playerctl*) ok "key $k" "$exec_" ;;
-        *) bad "key $k" "'${exec_:-unbound}'" "chezmoi apply (lxqt role), then log in again" ;;
+for kv in "${MEDIA_KEYS[@]}"; do
+    k=${kv%%=*} want=${kv#*=}
+    # every ENABLED binding of this key, as "Exec ..." or "path ..." (the panel volume widget registers its own)
+    bound=$(awk -v k="$k" '
+        /^\[/ { flush(); s = ($0 ~ "^\\[" k "\\."); en = 1; act = ""; next }
+        s && /^Enabled=false/ { en = 0 }
+        s && /^(Exec|path)=/ { act = $0 }
+        function flush() { if (s && en && act != "") print act }
+        END { flush() }' "$keys" 2>/dev/null)
+    n=$(grep -c . <<<"$bound")
+    case "$n:$bound" in
+        "1:Exec="*"$want"*) ok "key $k" "${bound#Exec=}" ;;
+        0:*) bad "key $k" "unbound" "chezmoi apply (lxqt role), then log in again" ;;
+        *) bad "key $k" "$n binding(s): $(tr '\n' ';' <<<"$bound")" "chezmoi apply (lxqt role: one enabled binding per key)" ;;
     esac
 done
 

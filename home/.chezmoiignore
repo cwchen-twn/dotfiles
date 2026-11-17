@@ -10,6 +10,7 @@
 .config/fish/functions/bt-pair.fish
 .local/bin/media-check
 .local/bin/cpu-stat
+.local/bin/vol
 .config/pulse
 {{ end }}
 {{ if not (has "libinput-gestures" .desktop) }}

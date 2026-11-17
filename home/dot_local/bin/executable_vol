@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# vol up|down|mute: volume for the CURRENT default output (Bluetooth headphones when connected, else the speakers).
+# Bound to the volume keys (Fn+F10/F11/F12) by the lxqt role. LXQt's panel volume widget controls one fixed device
+# (the first one, the laptop speakers), so its own key actions muted and turned up the speakers while the sound
+# played on headphones. 5% steps, capped at 100%; a notification shows the device and level.
+set -u
+step=5
+s=@DEFAULT_SINK@
+
+level() { pactl get-sink-volume "$s" | grep -oE '[0-9]+%' | head -n1 | tr -d %; }
+case ${1:-} in
+    up)
+        pactl set-sink-mute "$s" 0
+        new=$(( $(level) + step )); [ "$new" -gt 100 ] && new=100
+        pactl set-sink-volume "$s" "${new}%" ;;
+    down) pactl set-sink-volume "$s" "-${step}%" ;;
+    mute) pactl set-sink-mute "$s" toggle ;;
+    *) echo "usage: vol up|down|mute" >&2; exit 2 ;;
+esac
+
+command -v notify-send >/dev/null 2>&1 || exit 0
+name=$(pactl list sinks | awk -v n="$(pactl get-default-sink)" '$0 ~ "Name: " n {f=1} f && /Description:/ {sub(/^[^:]*: /, ""); print; exit}')
+v=$(level)
+if pactl get-sink-mute "$s" | grep -q yes; then msg="Muted"; icon=audio-volume-muted
+else msg="Volume ${v}%"; icon=audio-volume-high; [ "$v" -lt 34 ] && icon=audio-volume-low; fi
+# Replace the previous popup instead of stacking a new one per key press.
+idf=${XDG_RUNTIME_DIR:-/tmp}/vol.notify-id
+id=$(cat "$idf" 2>/dev/null || echo 0)
+notify-send -a vol -i "$icon" -t 1500 -h "int:value:$v" -r "$id" -p "$msg" "${name:-default output}" >"$idf" 2>/dev/null \
+    || notify-send -a vol -i "$icon" -t 1500 "$msg" "${name:-default output}"

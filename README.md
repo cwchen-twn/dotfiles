@@ -203,6 +203,11 @@ the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you 
   FLAC. Raw files again: `RequestTranscode = false` in `home/dot_config/supersonic/modify_config.toml`.
 - **Media keys:** Fn+F7 / Fn+F8 / Fn+F9 = previous / play-pause / next for whichever player is active (MPRIS via
   playerctl: Supersonic, Brave, ...). The F-row is function keys on the MacBook, hence Fn.
+- **Volume keys:** Fn+F10 / F11 / F12 = mute / down / up on the *current default output* (`~/.local/bin/vol`, 5% steps,
+  max 100%, with a popup naming the device). LXQt's panel volume widget controls one fixed device (the speakers), so
+  its own bindings changed the speakers while sound played on Bluetooth headphones. The panel re-registers those
+  bindings on every start; the lxqt role keeps them disabled (`files/globalkeys.py`: one enabled binding per key,
+  matched by key since lxqt-globalkeysd renumbers sections). `media-check` verifies all six keys.
 - **YouTube (Brave):** this GPU (Intel Iris 6100) decodes H.264 in hardware but not VP9/AV1, which YouTube serves by
   default. The enhanced-h264ify extension (Brave policy) makes YouTube send H.264 (up to 1080p), and Brave's menu
   entry is a generated user copy whose `Exec` lines add `--enable-features=AcceleratedVideoDecodeLinuxGL,...`

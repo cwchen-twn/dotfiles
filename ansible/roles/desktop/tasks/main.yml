@@ -73,6 +73,7 @@
           - sane-utils
           - ipp-usb        # USB printers as driverless IPP
           - simple-scan
+          - libnotify-bin  # notify-send: the volume popup of ~/.local/bin/vol (volume keys)
     - name: Manage printers and scanners without sudo
       ansible.builtin.user: { name: "{{ user }}", groups: [lpadmin, scanner, bluetooth], append: true }
     - name: Bluetooth on

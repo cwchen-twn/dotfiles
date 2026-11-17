@@ -40,7 +40,7 @@
           {%- endfor -%}
           {{ out }}
         lxqt_ini: "{{ panel_ini + hidpi_ini + dark_ini + browser_ini + terminal_ini }}"
-        lxqt_keys: "{{ kbd_ini + screen_ini + media_ini }}"
+        lxqt_keys: "{{ kbd_ini + screen_ini + media_ini + volume_ini }}"
       vars:
         panel_ini: >-
           {%- set out = [['lxqt/panel.conf', 'panel1', 'plugins', lxqt_panel_plugins | join(', ')]] -%}
@@ -116,6 +116,20 @@
             ['lxqt/globalkeyshortcuts.conf', 'XF86AudioPrev.107', 'Enabled', 'true'],
             ['lxqt/globalkeyshortcuts.conf', 'XF86AudioPrev.107', 'Exec', 'playerctl, previous'],
           ] if playerctl | bool else [] }}"
+        # Volume keys (Fn+F10/F11/F12) for the CURRENT default output via ~/.local/bin/vol (chezmoi): LXQt's own
+        # bindings go to the panel volume widget, which controls one fixed device (the laptop speakers), so with
+        # Bluetooth headphones they muted and raised the speakers instead.
+        volume_ini: "{{ [
+            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioRaiseVolume.108', 'Comment', 'Volume up (default output)'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioRaiseVolume.108', 'Enabled', 'true'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioRaiseVolume.108', 'Exec', home ~ '/.local/bin/vol, up'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioLowerVolume.109', 'Comment', 'Volume down (default output)'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioLowerVolume.109', 'Enabled', 'true'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioLowerVolume.109', 'Exec', home ~ '/.local/bin/vol, down'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioMute.110', 'Comment', 'Mute (default output)'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioMute.110', 'Enabled', 'true'],
+            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioMute.110', 'Exec', home ~ '/.local/bin/vol, mute'],
+          ] }}"
         # Fn+F6 / Fn+F5 (XF86KbdBrightnessUp/Down); brightnessctl is installed by the macbook role.
         kbd_ini: "{{ [
             ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessUp.101', 'Comment', 'Keyboard backlight up'],
@@ -153,18 +167,14 @@
 
     # Global shortcuts: like the panel, a running lxqt-globalkeysd saves its in-memory list over
     # globalkeyshortcuts.conf, which dropped the media keys once. Dry run; only on a change stop it, write, start it.
+    # files/globalkeys.py sets each shortcut by key name: other sections for the same key (LXQt renumbers them, and its
+    # defaults bind the volume keys to the panel widget) are removed, so every key is bound exactly once.
     - name: Shortcuts changed? (dry run)
-      community.general.ini_file:
-        path: "{{ cfg }}/{{ item[0] }}"
-        section: "{{ item[1] }}"
-        option: "{{ item[2] }}"
-        value: "{{ item[3] }}"
-        no_extra_spaces: true
-        mode: "0644"
-      loop: "{{ lxqt_keys }}"
-      loop_control: { label: "[{{ item[1] }}] {{ item[2] }}" }
-      check_mode: true
+      ansible.builtin.script:
+        cmd: globalkeys.py --check {{ (cfg ~ '/lxqt/globalkeyshortcuts.conf') | quote }} {{ lxqt_keys | to_json | quote }}
+        executable: python3
       register: lxqt_keys_check
+      changed_when: "'CHANGED' in lxqt_keys_check.stdout"
 
     - name: Stop the shortcut daemon (inside the session only)
       ansible.builtin.shell: |
@@ -174,16 +184,13 @@
       register: lxqt_keys_stop
       when: lxqt_keys_check is changed
 
-    - name: Global shortcuts (keyboard and screen brightness, media keys)
-      community.general.ini_file:
-        path: "{{ cfg }}/{{ item[0] }}"
-        section: "{{ item[1] }}"
-        option: "{{ item[2] }}"
-        value: "{{ item[3] }}"
-        no_extra_spaces: true
-        mode: "0644"
-      loop: "{{ lxqt_keys }}"
-      loop_control: { label: "[{{ item[1] }}] {{ item[2] }}" }
+    - name: Global shortcuts (brightness, media and volume keys)
+      ansible.builtin.script:
+        cmd: globalkeys.py {{ (cfg ~ '/lxqt/globalkeyshortcuts.conf') | quote }} {{ lxqt_keys | to_json | quote }}
+        executable: python3
+      register: lxqt_keys_write
+      changed_when: "'CHANGED' in lxqt_keys_write.stdout"
+      when: lxqt_keys_check is changed
 
     - name: Start the shortcut daemon again
       ansible.builtin.shell: setsid -f lxqt-globalkeysd >/dev/null 2>&1
