@@ -186,7 +186,10 @@ every printer on every network you join.
 Bluetooth: `bluez` + `blueman` (tray icon, "Bluetooth Manager") + `pulseaudio-module-bluetooth` for headphones.
 `bt-pair` scans classic Bluetooth only (12 s, almost no CPU, unlike Bluetooth Manager's search in a crowded room) and
 lists what it hears; `bt-pair N` (or a name/address) pairs, trusts, connects and switches the sound to it. Headphones
-must be in pairing mode, not just on; ignore `LE_<name>` entries (Fast Pair beacons, no audio). Pick the output in
+must be in pairing mode, not just on; ignore `LE_<name>` entries (Fast Pair beacons, no audio).
+Calls: headphones switch to the headset profile (HFP: mic on, phone-call quality) whenever an app records, e.g.
+joining a Meet, and back to A2DP music quality afterwards (`~/.config/pulse/default.pa`, `auto_switch=2`). For better
+voice quality, pick the MacBook's mic in the meeting instead and the headphones stay in A2DP. Pick the output in
 the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you need the mic).
 
 ## Kubernetes access

@@ -1,0 +1,11 @@
+# Managed by chezmoi. PulseAudio reads this instead of /etc/pulse/default.pa, so it starts from the system file and
+# changes only what follows.
+.include /etc/pulse/default.pa
+
+# Bluetooth headphones switch to the headset profile (HFP: mic on, phone-call quality) whenever any app records,
+# e.g. joining a Meet in Brave, and back to A2DP (music quality) when it stops. The default auto_switch=1 only
+# reacts to streams tagged media.role=phone, which browsers do not set.
+.ifexists module-bluetooth-policy.so
+unload-module module-bluetooth-policy
+load-module module-bluetooth-policy auto_switch=2
+.endif
