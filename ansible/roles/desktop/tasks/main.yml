@@ -11,6 +11,11 @@
         components: main
         architectures: "{{ arch_deb }}"
         signed_by: https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+      # key servers time out now and then, and the module re-fetches the key on every run
+      register: repo_key
+      until: repo_key is succeeded
+      retries: 3
+      delay: 10
       when: "'brave' in desktop"
 
     - name: VS Code repo
@@ -22,6 +27,11 @@
         components: main
         architectures: "{{ arch_deb }}"
         signed_by: https://packages.microsoft.com/keys/microsoft.asc
+      # key servers time out now and then, and the module re-fetches the key on every run
+      register: repo_key
+      until: repo_key is succeeded
+      retries: 3
+      delay: 10
       when: "'vscode' in desktop"
 
     - name: Shutter PPA (Ubuntu)
@@ -165,8 +175,10 @@
             headers: "{{ github_api_headers }}"
             return_content: true
           register: obsidian_rel
+        # No mode: chezmoi also manages ~/.local/share/applications (umask 0775); forcing 0755 here made the two
+        # flip it back and forth and chezmoi ask "has changed since chezmoi last wrote it".
         - name: Applications dirs
-          ansible.builtin.file: { path: "{{ item }}", state: directory, mode: "0755" }
+          ansible.builtin.file: { path: "{{ item }}", state: directory }
           loop: ["{{ home }}/Applications", "{{ home }}/.local/share/applications"]
         - name: Download AppImage
           ansible.builtin.get_url:

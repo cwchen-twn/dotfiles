@@ -12,6 +12,11 @@
         components: stable
         architectures: "{{ arch_deb }}"
         signed_by: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+      # key servers time out now and then, and the module re-fetches the key on every run
+      register: repo_key
+      until: repo_key is succeeded
+      retries: 3
+      delay: 10
     - name: Docker packages
       ansible.builtin.apt:
         update_cache: true
@@ -37,6 +42,11 @@
         suites: "{{ ansible_distribution_release }}"
         components: main
         signed_by: "https://pkgs.tailscale.com/stable/{{ ansible_distribution | lower }}/{{ ansible_distribution_release }}.noarmor.gpg"
+      # key servers time out now and then, and the module re-fetches the key on every run
+      register: repo_key
+      until: repo_key is succeeded
+      retries: 3
+      delay: 10
     - name: Tailscale package
       ansible.builtin.apt: { name: tailscale, update_cache: true }
 
