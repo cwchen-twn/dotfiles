@@ -150,6 +150,34 @@
       loop: "{{ lxqt_ini }}"
       loop_control: { label: "{{ item[0] }} [{{ item[1] }}] {{ item[2] }}" }
 
+    # A running lxqt-panel saves its in-memory favorites over panel.conf, which once left the menu at the old count
+    # while the quick launch had the new one. So: dry run first; only on a change stop the panel, write, start it.
+    - name: Favorites changed? (dry run)
+      community.general.ini_file:
+        path: "{{ cfg }}/lxqt/panel.conf"
+        section: "{{ item[0] }}"
+        option: "{{ item[1] }}"
+        value: "{{ item[2] }}"
+        no_extra_spaces: true
+        mode: "0644"
+      loop: >-
+        {%- set out = [['quicklaunch', 'apps\\size', lxqt_favs | length], ['mainmenu', 'favorites\\size', lxqt_favs | length]] -%}
+        {%- for f in lxqt_favs -%}
+          {%- set _ = out.append(['quicklaunch', 'apps\\' ~ loop.index ~ '\\desktop', f]) -%}
+          {%- set _ = out.append(['mainmenu', 'favorites\\' ~ loop.index ~ '\\desktopFile', f]) -%}
+        {%- endfor -%}
+        {{ out }}
+      check_mode: true
+      register: lxqt_fav_check
+      loop_control: { label: "[{{ item[0] }}] {{ item[1] }}" }
+
+    - name: Stop the panel (inside the session only)
+      ansible.builtin.shell: |
+        [ -n "${DISPLAY:-}" ] && pgrep -u "$(id -u)" -x lxqt-panel >/dev/null || exit 0
+        pkill -u "$(id -u)" -x lxqt-panel && sleep 1 && echo RUNNING
+      register: lxqt_panel_stop
+      when: lxqt_fav_check is changed
+
     - name: Favorites in the panel quick launch and the main menu
       community.general.ini_file:
         path: "{{ cfg }}/lxqt/panel.conf"
@@ -166,6 +194,10 @@
         {%- endfor -%}
         {{ out }}
       loop_control: { label: "[{{ item[0] }}] {{ item[1] }}" }
+
+    - name: Start the panel again
+      ansible.builtin.shell: setsid -f lxqt-panel >/dev/null 2>&1
+      when: lxqt_panel_stop is not skipped and 'RUNNING' in lxqt_panel_stop.stdout
 
     # Desktop wallpaper from the boottheme role (lxqt_wallpaper), so it belongs to the same look as GRUB, Plymouth
     # and the login. Machines without that role keep their wallpaper.
