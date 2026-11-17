@@ -74,6 +74,7 @@
           - ipp-usb        # USB printers as driverless IPP
           - simple-scan
           - libnotify-bin  # notify-send: the volume popup of ~/.local/bin/vol (volume keys)
+          - pasystray      # tray volume icon that follows the default output (~/.config/autostart/pasystray.desktop)
     - name: Manage printers and scanners without sudo
       ansible.builtin.user: { name: "{{ user }}", groups: [lpadmin, scanner, bluetooth], append: true }
     - name: Bluetooth on

@@ -32,6 +32,12 @@ if pactl info >/dev/null 2>&1; then
 else
     bad "sound server" "pactl cannot reach it" "systemctl --user status pulseaudio"
 fi
+if pgrep -u "$(id -u)" -x pasystray >/dev/null; then ok "volume tray (pasystray)" "running"
+elif command -v pasystray >/dev/null 2>&1; then bad "volume tray (pasystray)" "not running" "setsid -f pasystray --volume-max=100 --volume-inc=5 (autostarts at login)"
+else bad "volume tray (pasystray)" "not installed" "chezmoi apply (apt pasystray, desktop role)"; fi
+if grep -qE '^plugins=.*\bvolume\b' "$HOME/.config/lxqt/panel.conf" 2>/dev/null; then
+    bad "panel volume widget" "still in the panel (shows a fixed device)" "chezmoi apply (lxqt role removes it)"
+else ok "panel volume widget" "removed (pasystray instead)"; fi
 if systemctl --user is-active -q bt-codec.service; then ok "bt-codec service" "active"
 else bad "bt-codec service" "$(systemctl --user is-active bt-codec.service)" "systemctl --user enable --now bt-codec.service"; fi
 cards=$(pactl list short cards 2>/dev/null | awk '$2 ~ /^bluez_card\./ {print $2}')

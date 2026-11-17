@@ -11,6 +11,7 @@
 .local/bin/media-check
 .local/bin/cpu-stat
 .local/bin/vol
+.config/autostart/pasystray.desktop
 .config/pulse
 {{ end }}
 {{ if not (has "libinput-gestures" .desktop) }}

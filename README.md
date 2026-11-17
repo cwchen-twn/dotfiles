@@ -208,6 +208,10 @@ the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you 
   its own bindings changed the speakers while sound played on Bluetooth headphones. The panel re-registers those
   bindings on every start; the lxqt role keeps them disabled (`files/globalkeys.py`: one enabled binding per key,
   matched by key since lxqt-globalkeysd renumbers sections). `media-check` verifies all six keys.
+- **Volume icon:** `pasystray` in the tray instead of the panel's volume widget (removed: it controls one fixed
+  device). Its icon follows the default output; scroll = volume, middle-click = mute, left-click = pick the output
+  or input and move an app's sound to another device. Same 100% cap and 5% steps as the keys
+  (`~/.config/autostart/pasystray.desktop`).
 - **YouTube (Brave):** this GPU (Intel Iris 6100) decodes H.264 in hardware but not VP9/AV1, which YouTube serves by
   default. The enhanced-h264ify extension (Brave policy) makes YouTube send H.264 (up to 1080p), and Brave's menu
   entry is a generated user copy whose `Exec` lines add `--enable-features=AcceleratedVideoDecodeLinuxGL,...`

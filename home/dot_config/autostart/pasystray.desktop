@@ -1,0 +1,9 @@
+[Desktop Entry]
+# Managed by chezmoi: replaces /etc/xdg/autostart/pasystray.desktop to set the same 100% cap and 5% steps as the
+# volume keys (~/.local/bin/vol). No --key-grabbing: the keys are LXQt shortcuts already, so a press acts once.
+Type=Application
+Name=PulseAudio System Tray
+Comment=Volume and output switching for the default output
+Exec=pasystray --volume-max=100 --volume-inc=5
+Icon=pasystray
+X-LXQt-Need-Tray=true

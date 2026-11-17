@@ -39,7 +39,19 @@
             {%- if hits -%}{%- set _ = out.append(hits[0]) -%}{%- endif -%}
           {%- endfor -%}
           {{ out }}
-        lxqt_ini: "{{ panel_ini + hidpi_ini + dark_ini + browser_ini + terminal_ini }}"
+        # panel.conf rows go to the guarded panel step below (the running panel saves over that file); the rest here.
+        lxqt_ini: >-
+          {%- set out = [] -%}
+          {%- for r in panel_ini + hidpi_ini + dark_ini + browser_ini + terminal_ini -%}
+            {%- if r[0] != 'lxqt/panel.conf' -%}{%- set _ = out.append(r) -%}{%- endif -%}
+          {%- endfor -%}
+          {{ out }}
+        lxqt_panel_conf: >-
+          {%- set out = [] -%}
+          {%- for r in panel_ini + hidpi_ini -%}
+            {%- if r[0] == 'lxqt/panel.conf' -%}{%- set _ = out.append(r[1:]) -%}{%- endif -%}
+          {%- endfor -%}
+          {{ out }}
         lxqt_keys: "{{ kbd_ini + screen_ini + media_ini + volume_ini }}"
       vars:
         panel_ini: >-
@@ -196,9 +208,10 @@
       ansible.builtin.shell: setsid -f lxqt-globalkeysd >/dev/null 2>&1
       when: lxqt_keys_stop is not skipped and 'RUNNING' in lxqt_keys_stop.stdout
 
-    # A running lxqt-panel saves its in-memory favorites over panel.conf, which once left the menu at the old count
-    # while the quick launch had the new one. So: dry run first; only on a change stop the panel, write, start it.
-    - name: Favorites changed? (dry run)
+    # A running lxqt-panel saves its in-memory settings over panel.conf, which once left the menu at the old favorites
+    # count while the quick launch had the new one. So every panel.conf key (favorites, widgets, sizes) goes here:
+    # dry run first; only on a change stop the panel, write, start it.
+    - name: Panel settings changed? (dry run)
       community.general.ini_file:
         path: "{{ cfg }}/lxqt/panel.conf"
         section: "{{ item[0] }}"
@@ -212,7 +225,7 @@
           {%- set _ = out.append(['quicklaunch', 'apps\\' ~ loop.index ~ '\\desktop', f]) -%}
           {%- set _ = out.append(['mainmenu', 'favorites\\' ~ loop.index ~ '\\desktopFile', f]) -%}
         {%- endfor -%}
-        {{ out }}
+        {{ out + lxqt_panel_conf }}
       check_mode: true
       register: lxqt_fav_check
       loop_control: { label: "[{{ item[0] }}] {{ item[1] }}" }
@@ -224,7 +237,7 @@
       register: lxqt_panel_stop
       when: lxqt_fav_check is changed
 
-    - name: Favorites in the panel quick launch and the main menu
+    - name: Panel settings (favorites, widgets, sizes)
       community.general.ini_file:
         path: "{{ cfg }}/lxqt/panel.conf"
         section: "{{ item[0] }}"
@@ -238,12 +251,22 @@
           {%- set _ = out.append(['quicklaunch', 'apps\\' ~ loop.index ~ '\\desktop', f]) -%}
           {%- set _ = out.append(['mainmenu', 'favorites\\' ~ loop.index ~ '\\desktopFile', f]) -%}
         {%- endfor -%}
-        {{ out }}
+        {{ out + lxqt_panel_conf }}
       loop_control: { label: "[{{ item[0] }}] {{ item[1] }}" }
 
     - name: Start the panel again
       ansible.builtin.shell: setsid -f lxqt-panel >/dev/null 2>&1
       when: lxqt_panel_stop is not skipped and 'RUNNING' in lxqt_panel_stop.stdout
+
+    # The panel's volume widget is gone (lxqt_panel_plugins); pasystray (desktop role) replaces it. It autostarts at
+    # login (~/.config/autostart/pasystray.desktop, chezmoi); start it now so the tray is not empty until then.
+    - name: Volume tray running (inside the session only)
+      ansible.builtin.shell: |
+        command -v pasystray >/dev/null && [ -n "${DISPLAY:-}" ] || exit 0
+        pgrep -u "$(id -u)" -x pasystray >/dev/null && exit 0
+        setsid -f pasystray --volume-max=100 --volume-inc=5 >/dev/null 2>&1 && echo STARTED
+      register: lxqt_pasystray
+      changed_when: "'STARTED' in lxqt_pasystray.stdout"
 
     # Desktop wallpaper from the boottheme role (lxqt_wallpaper), so it belongs to the same look as GRUB, Plymouth
     # and the login. Machines without that role keep their wallpaper.
