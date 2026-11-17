@@ -212,12 +212,22 @@ the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you 
   device). Its icon follows the default output; scroll = volume, middle-click = mute, left-click = pick the output
   or input and move an app's sound to another device. Same 100% cap and 5% steps as the keys
   (`~/.config/autostart/pasystray.desktop`).
-- **YouTube (Brave):** this GPU (Intel Iris 6100) decodes H.264 in hardware but not VP9/AV1, which YouTube serves by
-  default. The enhanced-h264ify extension (Brave policy) makes YouTube send H.264 (up to 1080p), and Brave's menu
-  entry is a generated user copy whose `Exec` lines add `--enable-features=AcceleratedVideoDecodeLinuxGL,...`
-  (VA-API; Debian's launcher reads no flags file). A `brave-browser` started from a terminal runs without them.
+- **YouTube (Brave):** this GPU (Intel Iris 6100, Broadwell) decodes H.264 in hardware but not the VP9/AV1 YouTube
+  serves by default, so the enhanced-h264ify extension (Brave policy) makes YouTube send H.264 (up to 1080p).
+  Brave (Chromium >= 143) then uses VA-API without any flags, **but only with the non-free Intel driver**: Chromium's
+  decoder on older Intel GPUs needs the driver's video post-processing (`VAEntrypointVideoProc`), which Debian's free
+  `intel-media-va-driver` leaves out. Without it every video fell back to CPU decoding (`FFmpegVideoDecoder`, renderer
+  ~120% of a core for 1080p60) while `brave://gpu` still said "Hardware accelerated"; with
+  `intel-media-va-driver-non-free` (desktop role, Intel GPUs) the same clip decodes on the GPU (renderer ~15%).
+  Background: [Arch forum, VA-API on older Intel](https://bbs.archlinux.org/viewtopic.php?id=244031&p=45),
+  [patched i965 fork for Chromium](https://github.com/irql-notlessorequal/intel-vaapi-driver) (plan B, not needed).
+- **`brave-decode-test`** is the real proof: it plays a 1080p60 H.264 clip in a throwaway Brave (temporary profile,
+  DevTools) and reports the decoder Chromium actually used, its media log and the CPU per process type.
+- **mpv for long videos:** `yt URL` (or `yt` with a link on the clipboard) plays it in mpv, H.264 up to 1080p with
+  VA-API (`~/.config/mpv/mpv.conf`). yt-dlp comes from mise, kept current with `mise up` (YouTube breaks old
+  versions within weeks); Debian's is removed and pinned out.
 - **`media-check`** lists every decision above against the running system (✔ / ✘ with a hint / – n/a), including
-  whether the running Brave was started with the flags and has a VA-API driver loaded in its GPU process: the quick
+  the VA-API post-processing Brave needs, and `media-check --decode` runs `brave-decode-test`: the quick
   way to notice when Brave, PulseAudio or the OS changed something. The expected values sit at the top of the script.
 - **`cpu-stat [SECONDS] [N]`** shows where the CPU goes right now: per app in % of one core over a few seconds
   (Brave split into renderer / gpu / network / ...), total busy %, Wi-Fi interrupts/s and the battery draw.
