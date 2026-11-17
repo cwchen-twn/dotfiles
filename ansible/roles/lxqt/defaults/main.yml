@@ -5,6 +5,9 @@ lxqt_dpi: 192
 lxqt_cursor_size: 48
 lxqt_xfwm4_theme: Default-xhdpi   # xfwm4 title bars don't scale with Xft.dpi
 lxqt_workspaces: 4  # keep in sync with --cols in ~/.config/libinput-gestures.conf
+# Desktop icons pcmanfm-qt generates for its DesktopShortcuts setting (Home, Trash, Computer, Network); removed, with
+# the setting emptied: the file manager's side pane has them all.
+lxqt_desktop_shortcut_files: "{{ ['user-home', 'trash-can', 'computer', 'network'] | map('regex_replace', '^(.*)$', home ~ '/Desktop/\\1.desktop') | list }}"
 # Desktop wallpaper: the boottheme role's wallpaper image (boottheme_images.wallpaper, cropped to the screen), else the
 # login preset's own image; zoomed to fill.
 lxqt_wallpaper: "{{ boottheme_bg.wallpaper | default('/usr/share/sddm/themes/sddm-astronaut-theme/Backgrounds/' ~ (boottheme_preset | default('black_hole')) ~ '.png') }}"

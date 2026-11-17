@@ -179,6 +179,44 @@
         pcmanfm-qt --set-wallpaper '{{ lxqt_wallpaper }}' --wallpaper-mode zoom
       when: lxqt_wallpaper_ini is changed
 
+    # No desktop icons: Home, Trash, Computer and Network are in the file manager's side pane. pcmanfm-qt writes a
+    # ~/Desktop/<name>.desktop per DesktopShortcuts entry and saves its in-memory settings over the file on exit, so
+    # a running desktop is stopped first, then the setting and the files go, then it starts again.
+    - name: Desktop shortcuts still configured?
+      ansible.builtin.shell: |
+        grep -qx 'DesktopShortcuts=' {{ cfg }}/pcmanfm-qt/lxqt/settings.conf 2>/dev/null || echo SETTING
+        ls {{ lxqt_desktop_shortcut_files | map('quote') | join(' ') }} 2>/dev/null | grep -q . && echo FILES
+        exit 0
+      register: lxqt_shortcuts
+      changed_when: false
+
+    - name: Remove the desktop shortcuts
+      when: lxqt_shortcuts.stdout | length > 0
+      block:
+        - name: Stop the desktop (inside the session only)
+          ansible.builtin.shell: |
+            # -fx: the whole command line must match, so this shell (which contains the text) is not counted
+            [ -n "${DISPLAY:-}" ] && pgrep -u "$(id -u)" -fx '(/usr/bin/)?pcmanfm-qt --desktop( .*)?' >/dev/null || exit 0
+            pcmanfm-qt --desktop-off && sleep 1 && echo RUNNING
+          register: lxqt_desktop_stop
+
+        - name: No shortcuts in the desktop settings
+          community.general.ini_file:
+            path: "{{ cfg }}/pcmanfm-qt/lxqt/settings.conf"
+            section: Desktop
+            option: DesktopShortcuts
+            value: ""
+            no_extra_spaces: true
+            mode: "0644"
+
+        - name: Shortcut files gone
+          ansible.builtin.file: { path: "{{ item }}", state: absent }
+          loop: "{{ lxqt_desktop_shortcut_files }}"
+
+        - name: Start the desktop again
+          ansible.builtin.shell: setsid -f pcmanfm-qt --desktop --profile=lxqt >/dev/null 2>&1
+          when: "'RUNNING' in lxqt_desktop_stop.stdout"
+
     # xfwm4 keeps this in xfconf (needs the running session's D-Bus); skipped when run outside the desktop.
     - name: Workspaces (xfwm4), one row like macOS Spaces; 3-finger swipes switch between them
       ansible.builtin.shell: |
