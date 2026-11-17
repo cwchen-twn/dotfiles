@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# bt-codec: move Bluetooth headphones off LDAC to a lighter codec whenever they connect or return to music mode.
+# PulseAudio picks the heaviest codec it can (LDAC) at every connect and does not remember a manual switch; encoding
+# LDAC costs about half a core on a 2015 dual-core, SBC XQ about half of that, and most ears cannot tell on
+# consumer headphones. Run by ~/.config/systemd/user/bt-codec.service; BT_CODEC overrides the target codec
+# (e.g. BT_CODEC=ldac_sq, or BT_CODEC= to keep PulseAudio's choice).
+set -u
+want=${BT_CODEC-sbc_xq_552}
+[ -n "$want" ] || exec sleep infinity
+
+fix() {  # $1: card name; only touches a card that is on LDAC and offers the target codec
+    local c=/card/$1/bluez cur
+    cur=$(pactl send-message "$c" get-codec 2>/dev/null | tr -d '"') || return 0
+    case $cur in ldac*) ;; *) return 0 ;; esac
+    pactl send-message "$c" list-codecs 2>/dev/null | grep -q "\"name\":\"$want\"" || return 0
+    pactl send-message "$c" switch-codec "\"$want\"" >/dev/null && echo "$1: $cur -> $want"
+}
+fix_all() { for card in $(pactl list short cards | awk '$2 ~ /^bluez_card\./ {print $2}'); do fix "$card"; done; }
+
+fix_all
+# A card appears on connect and changes when the headset profile (calls) hands back to A2DP.
+pactl subscribe | while read -r line; do
+    case $line in
+        *"'new' on card"* | *"'change' on card"*) sleep 2; fix_all ;;
+    esac
+done

@@ -1,0 +1,10 @@
+{{ if and (eq .chezmoi.os "linux") .desktop -}}
+#!/usr/bin/env bash
+# Linux desktops: keep Bluetooth headphones off LDAC (CPU); see ~/.local/bin/bt-codec.
+# unit hash: {{ include "dot_config/systemd/user/bt-codec.service" | sha256sum }}
+# script hash: {{ include "dot_local/bin/executable_bt-codec" | sha256sum }}
+set -euo pipefail
+systemctl --user daemon-reload
+systemctl --user enable bt-codec.service
+systemctl --user restart bt-codec.service
+{{ end -}}

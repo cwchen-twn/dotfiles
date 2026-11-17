@@ -63,6 +63,10 @@
 {{ if ne .chezmoi.os "linux" }}
 .config/systemd
 {{ end }}
+{{ if or (ne .chezmoi.os "linux") (not .desktop) }}
+.local/bin/bt-codec
+.config/systemd/user/bt-codec.service
+{{ end }}
 
 {{ if not (has "kubernetes" .devops) }}
 .kube

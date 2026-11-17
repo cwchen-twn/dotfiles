@@ -1,0 +1,15 @@
+# Managed by chezmoi (Linux desktops). Bluetooth headphones on a lighter codec than LDAC: see ~/.local/bin/bt-codec.
+# Idle (blocked on `pactl subscribe`) until a Bluetooth card appears or changes.
+[Unit]
+Description=Bluetooth headphones: lighter codec than LDAC (bt-codec)
+After=pulseaudio.service
+Wants=pulseaudio.socket
+
+[Service]
+Type=exec
+ExecStart=%h/.local/bin/bt-codec
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
