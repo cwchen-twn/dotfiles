@@ -54,6 +54,7 @@
           - p7zip-full
           - zstd
           - shellcheck
+          - python3-venv    # Mason's pip packages (pyrefly, ansible-lint, sqlfluff) build a venv
           - fontconfig
           # system info / monitoring (needs root or kernel interfaces; CLI ones like btop come from mise)
           - inxi            # hardware report: inxi -Fxz

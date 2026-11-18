@@ -30,6 +30,10 @@ fish_add_path -g -a /usr/local/cuda/bin
 if command -q mise
     mise activate fish | source
 end
+# Mason (nvim) is the one installer of language servers; Claude Code's LSP plugin (claude-plugins/mason-lsp)
+# needs them on PATH too. After mise activate (which restores the login order) and with -m, so it comes first:
+# rustup's rust-analyzer stub in ~/.cargo/bin must not win.
+fish_add_path -g -m ~/.local/share/nvim/mason/bin
 {{- if has "kubernetes" .devops }}
 
 # clusters.yaml (chezmoi, encrypted): clusters + tokens. config (unmanaged): current-context, local extras.

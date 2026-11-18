@@ -15,7 +15,6 @@ bitwarden = "latest"
 "github:DeusData/codebase-memory-mcp" = "latest"
 fzf = "latest"
 yt-dlp = "latest"       # YouTube changes break old versions within weeks: `mise up`; mpv uses it (not Debian's)
-tree-sitter = "latest"   # nvim-treesitter builds parsers with it
 # system info / monitoring (kernel-level ones come from apt, ansible base role)
 fastfetch = "latest"     # neofetch successor
 btop = "latest"
@@ -34,7 +33,6 @@ kubectx = "latest"
 {{- end }}
 {{- if has "terraform" .devops }}
 terraform = "latest"
-tflint = "latest"
 hcloud = "latest"        # Hetzner Cloud; token from HCLOUD_TOKEN (hcloud repo's mise env) or `hcloud context create`
 {{- if has "node" .runtimes }}
 wrangler = "latest"      # Cloudflare (npm): Workers, R2, DNS; token from CLOUDFLARE_API_TOKEN
@@ -50,7 +48,6 @@ pnpm = "latest"
 {{- end }}
 {{- if has "go" .runtimes }}
 go = "latest"
-"go:golang.org/x/tools/gopls" = "latest"  # for the Claude gopls-lsp plugin
 {{- end }}
 {{- if has "java" .runtimes }}
 java = "jetbrains-21"

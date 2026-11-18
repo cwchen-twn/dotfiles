@@ -4,7 +4,9 @@ if [ -n "$BASH_VERSION" ] && [ -f "$HOME/.bashrc" ]; then
     . "$HOME/.bashrc"
 fi
 
-for d in "$HOME/bin" "$HOME/.local/bin"{{ if has "rust" .runtimes }} "$HOME/.cargo/bin"{{ end }}; do
+# Each is prepended, so the last wins: Mason's language servers (nvim, shared with Claude Code) come before
+# ~/.cargo/bin, whose rustup rust-analyzer stub must not shadow Mason's.
+for d in "$HOME/bin" "$HOME/.local/bin"{{ if has "rust" .runtimes }} "$HOME/.cargo/bin"{{ end }} "$HOME/.local/share/nvim/mason/bin"; do
     case ":$PATH:" in *":$d:"*) ;; *) [ -d "$d" ] && PATH="$d:$PATH" ;; esac
 done
 export PATH

@@ -18,7 +18,9 @@ require("lazy").setup({
 		{ import = "lazyvim.plugins.extras.editor.telescope" },
 		{ import = "lazyvim.plugins.extras.coding.nvim-cmp" },
 		{ import = "lazyvim.plugins.extras.ui.alpha" },
-		-- languages: LSP, treesitter, formatter and linter per language, installed by mason
+		-- languages: LSP, treesitter, formatter and linter per language, installed by mason.
+		-- Mason is the ONLY installer of language servers: Claude Code uses the same binaries
+		-- (claude-plugins/mason-lsp). A new server = a mason package here + one entry there.
 		{ import = "lazyvim.plugins.extras.lang.typescript" },
 		{ import = "lazyvim.plugins.extras.lang.svelte" },
 		{ import = "lazyvim.plugins.extras.lang.go" },
@@ -31,6 +33,11 @@ require("lazy").setup({
 		{ import = "lazyvim.plugins.extras.lang.yaml" },
 		{ import = "lazyvim.plugins.extras.lang.toml" },
 		{ import = "lazyvim.plugins.extras.lang.markdown" },
+		{ import = "lazyvim.plugins.extras.lang.terraform" },
+		{ import = "lazyvim.plugins.extras.lang.ansible" },
+		{ import = "lazyvim.plugins.extras.lang.helm" },
+		{ import = "lazyvim.plugins.extras.lang.tailwind" },
+		{ import = "lazyvim.plugins.extras.lang.sql" },
 		{ import = "lazyvim.plugins.extras.formatting.prettier" },
 		{ import = "lazyvim.plugins.extras.linting.eslint" },
 		{ import = "cwchen.plugins" },

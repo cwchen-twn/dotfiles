@@ -130,8 +130,9 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 | Source | Tools |
 |---|---|
 | apt / Homebrew (Ansible) | shell + base CLI, docker, tailscale, GUI apps, postgres, VPNs, CUDA |
-| mise (`~/.config/mise/config.toml`) | node, pnpm, go, java, maven, gradle, kubectl, helm, kubectx, terraform, tflint, hcloud (Hetzner), wrangler (Cloudflare), lazygit, neovim, glab, tea, sops, age, rtk, ... |
+| mise (`~/.config/mise/config.toml`) | node, pnpm, go, java, maven, gradle, kubectl, helm, kubectx, terraform, hcloud (Hetzner), wrangler (Cloudflare), lazygit, neovim, glab, tea, sops, age, rtk, ... |
 | own installers | rustup (`~/.cargo`), bun (`~/.bun`), uv and claude (`~/.local/bin`) |
+| Mason (nvim, `~/.local/share/nvim/mason/bin`) | every language server, plus tflint, actionlint, ansible-lint, shellcheck, ruff, prettier. Shared with Claude Code, never installed twice |
 
 Rule: nothing is copied into `/usr/local/bin` or `/opt` by hand. Anything not covered above goes in `~/.local/bin`.
 

@@ -50,3 +50,7 @@ opt.splitbelow = true -- split horizontal window to the bottom
 
 -- turn off swapfile
 opt.swapfile = false
+
+-- Python LSP for LazyVim's lang.python extra (must be set before the extras load): pyrefly, which Claude
+-- Code also uses (claude-plugins/mason-lsp), instead of the default pyright
+vim.g.lazyvim_python_lsp = "pyrefly"

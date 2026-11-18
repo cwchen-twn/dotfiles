@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Install every language server, linter and formatter the nvim config declares (Mason is their only installer; nvim
+# and Claude Code's mason-lsp plugin share them), and repair half-finished installs. Reruns whenever the nvim config
+# changes, so a new LSP added to the config is installed by `chezmoi apply`, not on the next nvim start.
+# Runs after ansible (python3-venv for pip packages) and mise (node, go, java for the rest).
+# nvim config hash: {{ range (glob (joinPath .chezmoi.sourceDir "dot_config/nvim/**/*")) }}{{ if not (stat .).isDir }}{{ include . | sha256sum }}{{ end }}{{ end }}
+set -uo pipefail
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+command -v nvim >/dev/null 2>&1 || { echo "nvim not installed, skipping Mason sync"; exit 0; }
+# The first headless start also installs missing plugins (lazy.nvim bootstrap).
+timeout 1800 nvim --headless -c 'lua require("cwchen.util.mason_sync").run()' 2>/dev/null | grep '^mason:' \
+    || echo "Mason sync failed: open nvim and run :Mason to see why" >&2
+exit 0

@@ -87,10 +87,35 @@ return {
 		end,
 	},
 
-	-- LSP servers LazyVim's language extras don't cover (mason installs them)
+	-- LSP servers LazyVim's language extras don't cover (mason installs them).
+	-- tombi replaces lang.toml's taplo; gh_actions_ls attaches only under .gitea/.github/.forgejo workflows.
 	{
 		"neovim/nvim-lspconfig",
-		opts = { servers = { html = {}, cssls = {}, bashls = {}, lemminx = {} } },
+		opts = {
+			servers = {
+				html = {},
+				cssls = {},
+				bashls = {},
+				lemminx = {},
+				fish_lsp = {},
+				gh_actions_ls = {},
+				postgres_lsp = {},
+				taplo = { enabled = false },
+				tombi = {},
+			},
+		},
+	},
+	-- mason packages that are not lspconfig servers (those are auto-installed from `servers`):
+	-- rust-analyzer (rustaceanvim takes it from PATH; fish puts mason/bin before ~/.cargo/bin's rustup stub),
+	-- and actionlint (CI workflows). shellcheck (bashls diagnostics) comes from apt/Homebrew (ansible base role).
+	{
+		"mason-org/mason.nvim",
+		opts = {
+			ensure_installed = {
+				"rust-analyzer",
+				"actionlint",
+			},
+		},
 	},
 
 	-- git graph (fugitive-based)
