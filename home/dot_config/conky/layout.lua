@@ -33,22 +33,19 @@ end
 local graph = 32
 local barh = 8
 
--- Hardware, found once at start: the disk holding /, the interface of the default route, the battery, the GPU.
+-- Hardware, found once at start: the disk holding /, the network interface, the battery, the GPU.
 local disk
 do
     local p = io.popen('lsblk -no PKNAME "$(findmnt -no SOURCE /)" 2>/dev/null')
     if p then disk = p:read('*l'); p:close() end
     if disk == '' then disk = nil end
 end
-local iface
-for line in io.lines('/proc/net/route') do
-    local i, dest = line:match('^(%S+)%s+(%x+)')
-    if dest == '00000000' then iface = i; break end
-end
-local wifi = false
-for line in io.lines('/proc/net/wireless') do
-    if iface and line:match('^%s*' .. iface:gsub('%p', '%%%0') .. ':') then wifi = true end
-end
+-- Network: every connected interface, the one carrying traffic first (net.lua). ${lua net_watch ...} reloads the
+-- window when that changes: a cable plugged in (USB/Thunderbolt adapters appear only then), Wi-Fi lost or back.
+local nets = dofile(home .. '/.config/conky/net.lua')()
+local net_sig = {}
+for _, n in ipairs(nets) do net_sig[#net_sig + 1] = n.name end
+net_sig = #net_sig > 0 and table.concat(net_sig, ',') or '-'
 local bat
 for _, b in ipairs({ 'BAT0', 'BAT1', 'BAT' }) do
     if read('/sys/class/power_supply/' .. b .. '/type') == 'Battery' then bat = b; break end
@@ -104,11 +101,24 @@ function sections.disk()
 end
 
 function sections.net()
-    if not iface then return end
-    title('Network', wifi and ('Wi-Fi  ${wireless_link_qual_perc ' .. iface .. '}%') or iface)
-    add('${color2}down${color} ${downspeed ' .. iface .. '}${goto ' .. col2 .. '}${color2}up${color} ${upspeed ' .. iface .. '}')
-    add('${downspeedgraph ' .. iface .. ' ' .. graph .. ',' .. half .. ' 89b4fa a6e3a1 -t}'
-        .. '${goto ' .. col2 .. '}${upspeedgraph ' .. iface .. ' ' .. graph .. ',' .. half .. ' fab387 f38ba8 -t}')
+    -- One block per connected interface: kind and Wi-Fi quality, then (only when there are several) the interface
+    -- name and which one carries the traffic, then rates and graphs. None connected: one "offline" line.
+    local watch = '${lua net_watch ' .. net_sig .. '}'
+    if #nets == 0 then
+        title('Network', watch .. 'offline')
+        return
+    end
+    for k, n in ipairs(nets) do
+        local i = n.name
+        local kind = n.wifi and 'Wi-Fi' or (i:match('^e') and 'Ethernet' or i)
+        title(kind, (k == 1 and watch or '') .. (n.wifi and ('${wireless_link_qual_perc ' .. i .. '}%') or ''))
+        if #nets > 1 then
+            add('${color2}' .. i .. (n.primary and '${alignr}in use' or '') .. '${color}')
+        end
+        add('${color2}down${color} ${downspeed ' .. i .. '}${goto ' .. col2 .. '}${color2}up${color} ${upspeed ' .. i .. '}')
+        add('${downspeedgraph ' .. i .. ' ' .. graph .. ',' .. half .. ' 89b4fa a6e3a1 -t}'
+            .. '${goto ' .. col2 .. '}${upspeedgraph ' .. i .. ' ' .. graph .. ',' .. half .. ' fab387 f38ba8 -t}')
+    end
 end
 
 function sections.gpu()
