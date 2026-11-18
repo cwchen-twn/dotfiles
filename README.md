@@ -96,6 +96,10 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
     recolored key by key in `Themes/astronaut.conf.user`.
   - Desktop wallpaper (lxqt role): `jellyfish` from
     [walls-catppuccin-mocha](https://github.com/orangci/walls-catppuccin-mocha).
+  - System monitor on the desktop: two Conky windows (`~/.config/conky/`) under all other windows, one in each outer
+    quarter of the screen. Right: CPU (per core, temperature, top apps) and memory (swap, top apps; processes summed
+    per app as in `cpu-stat`/`mem-stat`). Left: disk and network I/O, GPU busy % (from i915 RC6 residency, no root)
+    and battery draw in watts. About 2.5% of one core for both. Hide with `pkill conky`, restart with `conky-desktop`.
   - None of this art has a license, so nothing is committed: images are fetched from pinned commits with sha256 checks
     and cropped to the screen in `/usr/local/share/backgrounds/dotfiles/`. Change one in `boottheme_images`
     (`ansible/roles/boottheme/defaults/main.yml`: name, url, sha256); drop an entry and that screen uses the login

@@ -77,6 +77,9 @@
 {{ if or (ne .chezmoi.os "linux") (not .desktop) }}
 .local/bin/bt-codec
 .config/systemd/user/bt-codec.service
+.config/conky
+.config/autostart/conky.desktop
+.local/bin/conky-desktop
 {{ end }}
 
 {{ if not (has "kubernetes" .devops) }}

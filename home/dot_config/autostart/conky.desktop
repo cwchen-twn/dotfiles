@@ -1,0 +1,9 @@
+[Desktop Entry]
+# Managed by chezmoi: the system monitor on the desktop (~/.config/conky, two windows). The pause lets pcmanfm-qt draw
+# the desktop and xfwm4 start compositing first (the widget's transparency needs it).
+Type=Application
+Name=Conky
+Comment=System monitor on the desktop
+Exec=sh -c 'exec "$HOME/.local/bin/conky-desktop" 5'
+Icon=utilities-system-monitor
+OnlyShowIn=LXQt;
