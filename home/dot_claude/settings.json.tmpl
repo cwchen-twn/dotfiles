@@ -1,5 +1,9 @@
 {
-  "model": "opus[1m]",
+  "env": {
+    "ENABLE_STOP_REVIEW": "0",
+    "SG_AGENTIC_MODEL": "sonnet"
+  },
+  "model": "opus",
   "hooks": {
     "PreToolUse": [
       {
@@ -90,10 +94,11 @@
     ]
   },
   "enabledPlugins": {
-    "gopls-lsp@claude-plugins-official": true,
-    "document-skills@anthropic-agent-skills": true,
-    "example-skills@anthropic-agent-skills": true,
-    "cloudflare@cloudflare": true
+    "frontend-design@claude-plugins-official": true,
+    "pr-review-toolkit@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true,
+    "cloudflare@cloudflare": true,
+    "mason-lsp@cwchen-local": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
@@ -102,23 +107,23 @@
         "repo": "anthropics/claude-plugins-official"
       }
     },
-    "anthropic-agent-skills": {
-      "source": {
-        "source": "github",
-        "repo": "anthropics/skills"
-      }
-    },
     "cloudflare": {
       "source": {
         "source": "github",
         "repo": "cloudflare/skills"
+      }
+    },
+    "cwchen-local": {
+      "source": {
+        "source": "directory",
+        "path": {{ joinPath .chezmoi.workingTree "claude-plugins" | toJson }}
       }
     }
   },
   "autoMemoryEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
-  "skipAutoPermissionPrompt": true,
+  "theme": "dark",
   "agentPushNotifEnabled": true,
-  "theme": "dark"
+  "skipAutoPermissionPrompt": true
 }

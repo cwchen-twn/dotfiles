@@ -1,0 +1,11 @@
+{{ if has "claude-code" .extras -}}
+#!/usr/bin/env bash
+# Runs on every apply: one-line reminders for Claude Code setup that needs a human (OAuth logins). Silent when done.
+export PATH="$HOME/.local/bin:$PATH"
+command -v claude >/dev/null 2>&1 || exit 0
+if [[ ! -s "$HOME/.config/context7/api-key" ]] && claude mcp get context7 2>/dev/null | grep -q 'Needs authentication'; then
+    echo "REMINDER: context7 is not authenticated. In Claude Code: /mcp -> context7 -> Authenticate," \
+         "or add a free API key to the dotfiles once (README, Claude Code -> Context7)." >&2
+fi
+exit 0
+{{ end -}}

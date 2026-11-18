@@ -1,0 +1,57 @@
+# Task interface for this repo: run `make` (or `make help`) to list targets.
+# Tool versions live in mise.toml; this file only runs tasks. GNU Make 3.81 compatible (macOS).
+#
+# Each stack snippet (templates/<stack>.mk, pasted below) defines <stack>/init, /tidy, /lint, /test,
+# /audit, /build, /updatedep (a no-op `@:` where a verb doesn't apply). The contract targets fan out
+# to every stack listed in STACKS.
+
+-include .env
+
+# Stacks in this repo, e.g. `go bun`, `python`, `rust`, `terraform helm`
+STACKS := go
+
+.DEFAULT_GOAL := help
+
+##help: List the targets
+.PHONY: help
+help:
+	@echo 'Usage: make <target> [name=value ...]'
+	@sed -n 's/^##//p' $(MAKEFILE_LIST) | column -t -s ':' | sed -e 's/^/ /'
+
+##init: Install pinned tools (mise), dependencies and the git hooks
+.PHONY: init
+init: $(addsuffix /init,$(STACKS))
+	mise install
+	@if command -v pre-commit >/dev/null 2>&1; then pre-commit install; else echo "pre-commit not installed: skipping hooks"; fi
+
+##tidy: Format code and tidy modules/lockfiles (writes files)
+.PHONY: tidy
+tidy: $(addsuffix /tidy,$(STACKS))
+
+##lint: Static checks (read-only)
+.PHONY: lint
+lint: $(addsuffix /lint,$(STACKS))
+
+##test: Unit and integration tests
+.PHONY: test
+test: $(addsuffix /test,$(STACKS))
+
+##audit: The gate run by pre-commit and CI - lint + test + vulnerability and secret scans
+.PHONY: audit
+audit: lint test $(addsuffix /audit,$(STACKS))
+	gitleaks git --no-banner --redact .
+
+##build: Build artifacts
+.PHONY: build
+build: $(addsuffix /build,$(STACKS))
+
+##updatedep: Update dependencies to their latest versions (writes files)
+.PHONY: updatedep
+updatedep: $(addsuffix /updatedep,$(STACKS))
+
+##clean: Remove build output
+.PHONY: clean
+clean:
+	rm -rf ./bin ./dist
+
+# ---- stack snippets below (paste from the makefile skill's templates/) ----

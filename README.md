@@ -136,6 +136,57 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 
 Rule: nothing is copied into `/usr/local/bin` or `/opt` by hand. Anything not covered above goes in `~/.local/bin`.
 
+## Claude Code (extra `claude-code`)
+
+One tool per job, all on the Team plan subscription with no API key. `run_onchange_after_40-claude.sh.tmpl`
+installs the set listed in `home/.chezmoidata/claude.yaml`, uninstalls the ones replaced there, and warns about any
+missing language server.
+
+| Job | Tool | Where |
+|---|---|---|
+| Code structure (graph) | codebase-memory-mcp + its hooks and 3 agents | mise, `dot_claude/settings.json`, `dot_claude/agents/` |
+| Symbol lookup (LSP) | `mason-lsp`: Claude's LSP tool on nvim's Mason servers | `claude-plugins/mason-lsp` (local marketplace `cwchen-local`) |
+| Library docs | context7 (hosted MCP; works without a key, a free key raises rate limits) | registered by the claude script |
+| Frontend design | frontend-design | plugin |
+| Specs | OpenSpec (`openspec init` per repo, `/opsx:*`) | mise (npm) |
+| PRD, flows, sitemap, HTML mockups | `product-docs` skill | `dot_config/agents/skills/` |
+| Git (issue → branch → draft PR → fast-forward merge, on tea, glab or gh) | `git-flow` skill + the repo's `## Git profile` | `dot_config/agents/skills/` |
+| Task interface (`make help`, `make audit` = the gate) | `makefile` skill | `dot_config/agents/skills/` |
+| Review | built-in `/code-review`, plus pr-review-toolkit | plugin |
+| Security | built-in `/security-review`, plus security-guidance (patterns + Sonnet commit review; per-turn review off) | plugin, `env` in settings |
+| Tests | `test-runner` agent (Haiku, `make audit`) | `dot_claude/agents/` |
+| E2E | `e2e-tester` agent (Playwright MCP, scoped to the agent, drives the installed Brave) | `dot_claude/agents/`, mise (npm) |
+| UI mockups | local HTML reviewed live in your browser; headless Brave screenshots are Claude's own layout check; Artifact only on request | `product-docs` skill |
+| Web performance | `perf-auditor` agent (chrome-devtools-mcp, scoped; uses Brave where installed) | `dot_claude/agents/`, mise (npm) |
+| Infra review | `infra-reviewer` agent (read-only plan, diff, lint) | `dot_claude/agents/` |
+| Cloudflare | cloudflare plugin | plugin |
+
+- **Browsers:** every browser tool drives the installed Brave, so nothing downloads a second Chromium. A machine
+  without Brave gets Playwright's Chromium for e2e-tester from the script, and perf-auditor there needs Chrome.
+- **Agent-scoped MCP servers** start only when their agent runs, so they cost nothing while idle. The main
+  session runs Opus; the agents run Sonnet or Haiku, because subagents draw on the same usage limits.
+- **Language servers are installed by `chezmoi apply`**: `run_onchange_after_35-nvim-mason.sh` reruns whenever the
+  nvim config changes, installs every Mason package the config declares (headless, `cwchen.util.mason_sync`), and
+  repairs half-finished installs. Run it by hand in nvim with `:lua require("cwchen.util.mason_sync").run()`.
+- **Context7** works on a new machine with no action: the claude script registers it, anonymously. For higher rate
+  limits, add a free API key (context7.com/dashboard) once; chezmoi then authenticates it on every machine:
+  ```sh
+  mkdir -p ~/.config/context7 && chmod 700 ~/.config/context7
+  read -s -P 'Context7 API key: ' k; and printf %s $k > ~/.config/context7/api-key; and chmod 600 ~/.config/context7/api-key
+  chezmoi add --encrypt ~/.config/context7/api-key && chezmoi apply   # the claude script re-registers it with the key
+  ```
+  If the server ever reports "Needs authentication", `chezmoi apply` prints a reminder (`run_after_41`).
+- **Adding a language server:** add the Mason package to the nvim config (a LazyVim `lang.*` extra, or `servers` /
+  `ensure_installed` in `nvim/lua/cwchen/plugins/editor.lua`), then add one entry to
+  `claude-plugins/mason-lsp/.claude-plugin/plugin.json`.
+  Claude maps servers by file extension, so `.yaml` always goes to yaml-language-server, and helm_ls and ansiblels
+  run in nvim only.
+- **Not installed on purpose:**
+  - Serena, GitNexus, other code graphs (they duplicate the graph and LSP);
+  - document-skills and example-skills (they duplicate the Team plan's skills and frontend-design);
+  - the official `*-lsp` plugins (they need their own server binaries);
+  - the terraform and kubernetes MCP servers (the CLIs are enough).
+
 ## Performance (8 GB machines)
 
 - Memory: zram swap (zstd, half of RAM up to 4 GB, priority over the disk swap), `vm.swappiness=180`, and `earlyoom`
@@ -336,4 +387,5 @@ chezmoi cd && git commit -am "..." && git push
 home/       chezmoi source state (.chezmoiroot)
 ansible/    playbook + roles run by home/.chezmoiscripts/run_onchange_after_10-ansible.sh.tmpl
 install/    unattended OS installers (Debian preseed ISO)
+claude-plugins/  local Claude Code marketplace (mason-lsp), added by the claude script
 ```

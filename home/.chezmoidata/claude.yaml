@@ -1,12 +1,40 @@
+# Claude Code toolkit: one tool per job (README "Claude Code"). Installed by
+# .chezmoiscripts/run_onchange_after_40-claude.sh.tmpl; enabled in dot_claude/settings.json.
 claude:
   marketplaces:
     - anthropics/claude-plugins-official
-    - anthropics/skills
     - cloudflare/skills
+  # The local marketplace in this repo (claude-plugins/) is added by the script: its path is per machine.
   plugins:
-    - gopls-lsp@claude-plugins-official
-    - document-skills@anthropic-agent-skills
-    - example-skills@anthropic-agent-skills
+    - frontend-design@claude-plugins-official     # the one frontend-design skill
+    - pr-review-toolkit@claude-plugins-official   # silent-failure-hunter, pr-test-analyzer
+    - security-guidance@claude-plugins-official   # tuned down in settings.json env
     - cloudflare@cloudflare
+    - mason-lsp@cwchen-local                      # LSP on nvim's Mason servers
+  # Replaced or redundant: uninstalled on every machine that still has them.
+  remove:
+    - document-skills@anthropic-agent-skills      # = the Team plan's anthropic-skills:*
+    - example-skills@anthropic-agent-skills       # frontend-design/webapp-testing covered above
+    - gopls-lsp@claude-plugins-official           # mason-lsp runs gopls
+    - context7@claude-plugins-official            # its MCP has no auth header: the script registers context7 itself
+  removeMarketplaces:
+    - anthropic-agent-skills
   mcpServers:
     codebase-memory-mcp: ["codebase-memory-mcp"]
+  # Language servers mason-lsp expects on PATH (Mason installs them when nvim starts). helm_ls and
+  # ansiblels stay nvim-only: Claude maps servers by file extension, and .yaml is yaml-language-server.
+  lspBinaries:
+    - gopls
+    - pyrefly
+    - vtsls
+    - svelteserver
+    - rust-analyzer
+    - jdtls
+    - clangd
+    - yaml-language-server
+    - tombi
+    - terraform-ls
+    - bash-language-server
+    - fish-lsp
+    - postgres-language-server
+    - marksman

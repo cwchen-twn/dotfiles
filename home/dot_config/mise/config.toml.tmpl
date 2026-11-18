@@ -45,6 +45,14 @@ wrangler = "latest"      # Cloudflare (npm): Workers, R2, DNS; token from CLOUDF
 {{- if has "node" .runtimes }}
 node = "lts"
 pnpm = "latest"
+{{- if has "claude-code" .extras }}
+# Claude Code toolkit (README "Claude Code"): spec-driven changes, and the MCP servers its browser subagents run
+# (on the installed Brave). Playwright Test itself is a per-project dev dependency.
+# Language servers, tflint, actionlint, ansible-lint are NOT here: Mason (nvim) installs them for both.
+"npm:@fission-ai/openspec" = "latest"     # `openspec init` per repo, /opsx:* commands
+"npm:@playwright/mcp" = "latest"          # e2e-tester subagent (playwright-mcp), drives Brave
+"npm:chrome-devtools-mcp" = "latest"      # perf-auditor subagent
+{{- end }}
 {{- end }}
 {{- if has "go" .runtimes }}
 go = "latest"

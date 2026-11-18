@@ -1,19 +1,63 @@
 {{ if has "claude-code" .extras -}}
 #!/usr/bin/env bash
 # claude data hash: {{ .claude | toJson | sha256sum }}
+# local plugins hash: {{ output "sh" "-c" (printf "cat \"%s\"/claude-plugins/*/.claude-plugin/*.json \"%s\"/claude-plugins/.claude-plugin/*.json | sha256sum" .chezmoi.workingTree .chezmoi.workingTree) | trim }}
 set -euo pipefail
-# chezmoi scripts do not get the interactive PATH: claude lives in ~/.local/bin, MCP servers come from mise.
-export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+# chezmoi scripts do not get the interactive PATH: claude lives in ~/.local/bin, MCP servers and the
+# toolkit CLIs come from mise, language servers from Mason (nvim).
+export PATH="$HOME/.local/bin:$HOME/.local/share/nvim/mason/bin:$HOME/.local/share/mise/shims:$PATH"
 command -v claude >/dev/null 2>&1 || { echo "claude not installed, skipping plugin/MCP setup"; exit 0; }
+
+{{ range .claude.remove -}}
+claude plugin uninstall {{ . | quote }} --scope user >/dev/null 2>&1 && echo "plugin {{ . }} uninstalled" || true
+{{ end -}}
+{{ range .claude.removeMarketplaces -}}
+claude plugin marketplace remove {{ . | quote }} >/dev/null 2>&1 || true
+{{ end -}}
 {{ range .claude.marketplaces -}}
 claude plugin marketplace add {{ . | quote }} >/dev/null 2>&1 || true
 {{ end -}}
+# This repo's own marketplace (claude-plugins/); update re-reads it after a change.
+claude plugin marketplace add {{ joinPath .chezmoi.workingTree "claude-plugins" | quote }} >/dev/null 2>&1 \
+    || claude plugin marketplace update cwchen-local >/dev/null 2>&1 || true
 {{ range .claude.plugins -}}
 claude plugin install {{ . | quote }} --scope user >/dev/null 2>&1 || echo "plugin {{ . }} not installed (already present or failed)"
 {{ end -}}
+claude plugin update mason-lsp@cwchen-local --scope user >/dev/null 2>&1 || true
 {{ range $name, $cmd := .claude.mcpServers -}}
 claude mcp get {{ $name | quote }} >/dev/null 2>&1 || claude mcp add --scope user {{ $name | quote }} -- {{ range $cmd }}{{ . | quote }} {{ end }}\
     || echo "MCP server {{ $name }} NOT registered" >&2
 command -v {{ index $cmd 0 | quote }} >/dev/null 2>&1 || echo "MCP server {{ $name }}: {{ index $cmd 0 }} not on PATH (mise install?)" >&2
 {{ end -}}
+
+# Context7 (library docs MCP): anonymous by default (lower rate limits). With the age-encrypted API key from this
+# repo (~/.config/context7/api-key) it is authenticated on every machine; if the server ever demands auth without
+# one, run_after_41-claude-reminders.sh says so on each apply (`/mcp` -> context7 -> Authenticate).
+# context7 key hash: {{ range (glob (joinPath .chezmoi.sourceDir "dot_config/*context7/*")) }}{{ include . | sha256sum }}{{ end }}
+C7_URL=https://mcp.context7.com/mcp
+C7_KEY="$HOME/.config/context7/api-key"
+if [[ -s "$C7_KEY" ]]; then
+    claude mcp remove context7 --scope user >/dev/null 2>&1 || true
+    claude mcp add --transport http --scope user context7 "$C7_URL" --header "Authorization: Bearer $(tr -d '[:space:]' <"$C7_KEY")" >/dev/null \
+        || echo "MCP server context7 NOT registered" >&2
+else
+    claude mcp get context7 >/dev/null 2>&1 || claude mcp add --transport http --scope user context7 "$C7_URL" >/dev/null \
+        || echo "MCP server context7 NOT registered" >&2
+fi
+
+# Language servers: installed by run_onchange_after_35-nvim-mason (Mason, from the nvim config).
+missing=()
+for bin in{{ range .claude.lspBinaries }} {{ . }}{{ end }}; do
+    command -v "$bin" >/dev/null 2>&1 || missing+=("$bin")
+done
+((${#missing[@]} == 0)) || echo "LSP servers not on PATH (the Mason sync script, 35-nvim-mason, failed for them; see its output): ${missing[*]}" >&2
+
+{{- if not (has "brave" .desktop) }}
+# No Brave here: the e2e-tester agent's Playwright MCP needs its own Chromium build (a no-op when present).
+# perf-auditor (chrome-devtools-mcp) then needs Chrome installed.
+if command -v playwright-mcp >/dev/null 2>&1; then
+    playwright-mcp install-browser chrome-for-testing >/dev/null 2>&1 \
+        || echo "playwright-mcp install-browser failed: the e2e-tester agent has no browser" >&2
+fi
+{{- end }}
 {{ end -}}

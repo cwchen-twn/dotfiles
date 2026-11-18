@@ -1,0 +1,13 @@
+{
+  "$schema": "https://code.claude.com/schemas/marketplace.json",
+  "name": "cwchen-local",
+  "description": "Plugins that live in the dotfiles repo and are installed by chezmoi (run_onchange_after_40-claude.sh.tmpl).",
+  "owner": { "name": "cwchen-twn" },
+  "plugins": [
+    {
+      "name": "mason-lsp",
+      "source": "./mason-lsp",
+      "description": "Claude Code's LSP tool on the language servers nvim's Mason installs: one copy of each server for both editors."
+    }
+  ]
+}
