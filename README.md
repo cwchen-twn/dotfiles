@@ -72,7 +72,10 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   NetworkManager's automatic choice of WPA3-SAE fails on WPA2/WPA3 mixed APs with the MacBook's Broadcom chip).
 - On MacBooks the `macbook` Ansible role runs automatically (DMI product name): Broadcom Wi-Fi firmware, `mbpfan`, `tlp`,
   F1-F12 as function keys, the FaceTime HD camera (`facetimehd` driver via DKMS + firmware extracted from Apple's update),
-  hibernation (`install/debian/hibernate.sh`: resumes from a swap partition >= RAM, else creates a RAM + 2 GB swap file),
+  hibernation (`install/debian/hibernate.sh`: resumes from a swap partition >= RAM, else creates a RAM + 2 GB swap file;
+  the Wi-Fi driver `brcmfmac` is unloaded around every suspend/hibernate by
+  `/usr/lib/systemd/system-sleep/50-dotfiles-macbook`: otherwise resume hangs and Wi-Fi doesn't come back after suspend), lid closed = suspend, then hibernate after 2 h on battery (plain suspend on AC; logind
+  handles the lid, not LXQt), hibernate at 5% battery, three-finger drag restarted after every wake-up,
   a quieter `mbpfan` curve, a macOS-like touchpad (tap to click, natural scrolling, two-finger right-click:
   `/etc/X11/xorg.conf.d/50-macbook-touchpad.conf`), and the keyboard backlight (Fn+F5/F6 via `brightnessctl`, off after
   60 s idle via `~/.local/bin/kbd-backlight-idle`, `KBD_IDLE_SECS` to change).

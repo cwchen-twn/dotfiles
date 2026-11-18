@@ -232,6 +232,101 @@
   register: hibernate
   changed_when: "'CHANGED' in hibernate.stdout"
 
+# The Broadcom Wi-Fi driver (brcmfmac) doesn't survive the chip losing power, so the hook unloads it before every sleep
+# and loads it again after (Wi-Fi reconnects ~5 s after wake-up, like at boot). Seen on a MacBookPro12,1 (Debian 13,
+# kernel 6.12):
+#   - hibernation: resume hangs (black screen, sometimes a reset) right after the image is loaded. Bisected:
+#     intel_iommu=off and nokaslr didn't help, unloading facetimehd alone didn't, unloading brcmfmac alone did.
+#   - suspend (S3): the card stays unavailable for ~50 s after wake-up and NetworkManager then never reconnects.
+- name: Sleep hook (Wi-Fi driver out during any sleep)
+  ansible.builtin.copy:
+    dest: /usr/lib/systemd/system-sleep/50-dotfiles-macbook
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      # Managed by the dotfiles (ansible macbook role). $1: pre|post, $2: the sleep verb;
+      # SYSTEMD_SLEEP_ACTION: the phase of suspend-then-hibernate (suspend, hibernate, ...).
+      modules="brcmfmac_wcc brcmfmac"   # brcmfmac_wcc uses brcmfmac: unload it first
+      state=/run/dotfiles-sleep-modules
+      case "$1/${SYSTEMD_SLEEP_ACTION:-$2}" in
+          pre/*)
+              : > "$state"
+              for m in $modules; do
+                  grep -q "^$m " /proc/modules || continue
+                  echo "$m" >> "$state"
+                  modprobe -r "$m" || logger -t sleep-hook "could not unload $m: resume may hang"
+              done ;;
+          post/*)
+              [ -f "$state" ] || exit 0
+              for m in $(cat "$state"); do modprobe "$m"; done
+              rm -f "$state" ;;
+      esac
+
+# The touchpad comes back as a new input device after any sleep; linux-3-finger-drag keeps reading the old one
+# (no error, so Restart=on-failure never fires). Restart it once user sessions are thawed: a unit ordered after
+# the sleep targets runs after resume (the system-sleep hook above runs while user sessions are still frozen).
+- name: Restart three-finger drag after sleep
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/dotfiles-after-sleep.service
+    mode: "0644"
+    content: |
+      # Managed by the dotfiles (ansible macbook role)
+      [Unit]
+      Description=Restart per-user input helpers after sleep (dotfiles)
+      After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/bin/sh -c 'for u in $$(loginctl list-users --no-legend | cut -d" " -f2); do systemctl --machine="$$u@.host" --user try-restart three-finger-drag.service || true; done'
+
+      [Install]
+      WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+  register: after_sleep
+
+- name: Enable it
+  ansible.builtin.systemd_service: { name: dotfiles-after-sleep.service, enabled: true, daemon_reload: "{{ after_sleep.changed }}" }
+
+# Lid closed: suspend, then hibernate after 2 h asleep (or earlier if the battery runs low) on battery; plain
+# suspend on AC. Wake from suspend takes ~1 s, from hibernation ~30 s but costs no battery. logind applies this
+# only if LXQt's power manager leaves the lid alone (lxqt-powermanagement.conf below); takes effect after a reboot.
+- name: Drop-in directories (not shipped by Debian)
+  ansible.builtin.file: { path: "{{ item }}", state: directory, mode: "0755" }
+  loop: [/etc/systemd/logind.conf.d, /etc/systemd/sleep.conf.d]
+
+- name: Lid and sleep policy
+  ansible.builtin.copy:
+    dest: "{{ item.dest }}"
+    mode: "0644"
+    content: "{{ item.content }}"
+  loop:
+    - dest: /etc/systemd/logind.conf.d/50-dotfiles-lid.conf
+      content: |
+        # Managed by the dotfiles (ansible macbook role)
+        [Login]
+        HandleLidSwitch=suspend-then-hibernate
+        HandleLidSwitchExternalPower=suspend
+        HandleLidSwitchDocked=ignore
+    - dest: /etc/systemd/sleep.conf.d/50-dotfiles.conf
+      content: |
+        # Managed by the dotfiles (ansible macbook role)
+        [Sleep]
+        HibernateDelaySec=2h
+  loop_control: { label: "{{ item.dest }}" }
+
+# LXQt's power manager otherwise holds the lid switch itself (only suspend/hibernate, no suspend-then-hibernate).
+# Battery low (5%): hibernate instead of the default. Actions: 1 hibernate, 3 shut down, 4 suspend.
+- name: LXQt power manager hands the lid to logind
+  become: false
+  community.general.ini_file:
+    path: "{{ home }}/.config/lxqt/lxqt-powermanagement.conf"
+    section: General
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+    no_extra_spaces: true
+    mode: "0644"
+  loop: "{{ {'enableLidWatcher': 'false', 'enableBatteryWatcher': 'true', 'powerLowAction': 1, 'powerLowLevel': 5} | dict2items }}"
+  when: desktop | length > 0
+
 # Retina screen (`hidpi`, see setup.yml): readable GRUB, console and login screen. The desktop session itself is the
 # lxqt role (Xft.dpi in ~/.Xresources).
 - name: HiDPI boot and login
