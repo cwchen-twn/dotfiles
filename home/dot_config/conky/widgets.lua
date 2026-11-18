@@ -197,17 +197,30 @@ function conky_top_value(kind, i)
 end
 
 -- ${lua net_watch SIG} (in the first Network title, returns nothing): SIG is the comma-separated list of connected
--- interfaces the window was built with ('-' for none). Reload the window (SIGUSR1: Conky re-reads its config and
--- layout.lua rebuilds the Network blocks) when the list now differs: one connected or dropped, or the traffic moved
--- to another one (the first is the one in use). Checked on every update; it only reads /proc and /sys.
+-- interfaces the window was built with ('-' for none). When the list now differs (one connected or dropped, or the
+-- traffic moved to another one; the first is the one in use), restart this window so layout.lua rebuilds the Network
+-- blocks: start a fresh Conky with the same config, then exit this one. NOT an in-place reload (SIGUSR1): that
+-- shrank the window to 16x16 in the middle of the screen, so a Wi-Fi drop made the panel vanish until the next login.
+-- Checked on every update; it only reads /proc and /sys until it fires, and then only once.
 local connected = dofile(os.getenv('HOME') .. '/.config/conky/net.lua')
+local restarting = false
 function conky_net_watch(sig)
+    if restarting then return '' end
     local names = {}
     for _, n in ipairs(connected()) do names[#names + 1] = n.name end
     local now = #names > 0 and table.concat(names, ',') or '-'
     if now ~= (sig or '-') then
         local pid = (read('/proc/self/stat') or ''):match('^(%d+)')
-        if pid then os.execute('kill -USR1 ' .. pid) end
+        local f = io.open('/proc/self/cmdline', 'rb')
+        local cmdline = f and f:read('a') or ''
+        if f then f:close() end
+        local conf = cmdline:match('%-%-config=([^\0]+)')
+        if pid and conf then
+            restarting = true
+            -- detached from this process; the 1 s gap lets this window go before the new one takes its place
+            os.execute(("setsid sh -c 'sleep 1; exec conky --daemonize --config=\"%s\"' >/dev/null 2>&1 &"):format(conf))
+            os.execute('kill ' .. pid)
+        end
     end
     return ''
 end

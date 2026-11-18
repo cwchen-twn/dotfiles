@@ -5,6 +5,10 @@
 set -eu
 delay=${1:-0}
 pkill -x conky || true
+# A Conky whose main loop hung ignores SIGTERM in practice (its handler only sets a flag the loop checks), and its
+# window lingers as a 16x16 square mid-screen. Give the others a second to exit, then kill what is left.
+for _ in 1 2 3 4 5; do pgrep -x conky >/dev/null || break; sleep 0.2; done
+pkill -9 -x conky || true
 for side in left right; do
     conky --daemonize --pause="$delay" --config="$HOME/.config/conky/$side.conf" >/dev/null 2>&1
 done

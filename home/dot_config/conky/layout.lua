@@ -40,7 +40,7 @@ do
     if p then disk = p:read('*l'); p:close() end
     if disk == '' then disk = nil end
 end
--- Network: every connected interface, the one carrying traffic first (net.lua). ${lua net_watch ...} reloads the
+-- Network: every connected interface, the one carrying traffic first (net.lua). ${lua net_watch ...} restarts the
 -- window when that changes: a cable plugged in (USB/Thunderbolt adapters appear only then), Wi-Fi lost or back.
 local nets = dofile(home .. '/.config/conky/net.lua')()
 local net_sig = {}

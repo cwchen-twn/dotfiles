@@ -1,4 +1,4 @@
--- Connected network interfaces, shared by layout.lua (one Network block each) and widgets.lua (net_watch: reload
+-- Connected network interfaces, shared by layout.lua (one Network block each) and widgets.lua (net_watch: restart
 -- the window when this list changes). Returns a list of { name, wifi, primary }, the primary first.
 -- Connected: a physical interface (it has a device: no lo, tailscale0, docker0, VPN tunnels) whose operstate is
 -- "up" (Wi-Fi associated, Ethernet cable in). Primary: the one carrying the default route with the lowest metric,
