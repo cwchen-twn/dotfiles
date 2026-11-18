@@ -12,6 +12,9 @@
 .local/bin/cpu-stat
 .local/bin/vol
 .local/bin/brave-decode-test
+.local/bin/reboot-needed
+.local/bin/debian-release-upgrade
+.config/fish/conf.d/reboot-needed.fish
 .config/fish/functions/yt.fish
 .config/mpv
 .config/autostart/pasystray.desktop

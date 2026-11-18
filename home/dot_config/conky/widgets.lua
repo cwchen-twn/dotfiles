@@ -211,3 +211,21 @@ function conky_net_watch(sig)
     end
     return ''
 end
+
+-- ${lua_parse reboot_notice} (prefixed to the window's first line): a red "Reboot" title line when a newer kernel or
+-- a library waits for one (reboot-needed in ~/.local/bin, the same check fish runs at shell start), else nothing.
+-- Security updates install themselves daily, so this is checked every 5 minutes, not on every update.
+local reboot = { at = -300, text = '' }
+function conky_reboot_notice()
+    local now = uptime()
+    if now - reboot.at >= 300 then
+        reboot.at = now
+        local p = io.popen('"$HOME/.local/bin/reboot-needed" 2>/dev/null')
+        local msg = p and p:read('*l') or ''
+        if p then p:close() end
+        local what = msg:match('kernel (%S+) installed')
+        what = what and ('kernel ' .. what:gsub('[+-].*', '')) or (msg:match(': (%S+)') or ''):sub(1, 16)
+        reboot.text = msg ~= '' and ('${font1}${color f38ba8}Reboot${font}${alignr}' .. what .. ' waiting${color}\n${voffset 8}') or ''
+    end
+    return reboot.text
+end

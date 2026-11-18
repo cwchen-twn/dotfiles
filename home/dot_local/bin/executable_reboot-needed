@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# reboot-needed: print one line and exit 0 when this machine waits for a reboot, print nothing and exit 1 otherwise.
+# Waiting means: a newer kernel is installed than the one running, or a package asked for a reboot
+# (/run/reboot-required, written by unattended-upgrades' kernel hook and by packages like libc6 and dbus).
+# Security updates install themselves (ansible base role) but never reboot; this is how you hear about it.
+# Shown at fish start (conf.d/reboot-needed.fish) and on the Conky desktop (widgets.lua).
+set -u
+running=$(uname -r)
+newest=$(ls -v /boot/vmlinuz-* 2>/dev/null | tail -n 1)
+newest=${newest#/boot/vmlinuz-}
+if [ -n "$newest" ] && [ "$newest" != "$running" ]; then
+    echo "reboot needed: kernel $newest installed, $running running"
+    exit 0
+fi
+if [ -e /run/reboot-required ]; then
+    pkgs=$(sort -u /run/reboot-required.pkgs 2>/dev/null | paste -sd ' ')
+    echo "reboot needed${pkgs:+: $pkgs}"
+    exit 0
+fi
+exit 1

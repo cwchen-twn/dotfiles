@@ -146,6 +146,21 @@ Rule: nothing is copied into `/usr/local/bin` or `/opt` by hand. Anything not co
 - Brave: Memory Saver on (balanced), no background mode, Dark Reader installed by policy (`brave://policy`).
 - MacBook: turbo boost only on AC (`/etc/tlp.d/50-dotfiles.conf`).
 
+## OS updates (Debian)
+
+- **Security updates install themselves; the reboot is yours.** `unattended-upgrades` runs daily, Debian security
+  only, only on AC power, and never reboots (Ansible base role, `/etc/apt/apt.conf.d/51unattended-upgrades-local`).
+  When a newer kernel or a library waits for a reboot, `reboot-needed` says so: in yellow when a fish shell starts, and as a red
+  "Reboot" line on the desktop (Conky). Log: `/var/log/unattended-upgrades/`.
+- Everything else (point releases, Brave, Docker and other third-party repos): `sudo apt update && sudo apt upgrade`.
+- **Release upgrades (Debian 13 trixie -> 14 forky) are manual.** The sources name the codename, not `stable`, so a new
+  release changes nothing by itself. Wait for the x.1 point release, read the release notes, then
+  `debian-release-upgrade --dry-run` and `debian-release-upgrade`. It refuses until the release is out and the
+  machine is ready (AC power, free space, no broken or held packages). Then it backs up and switches the Debian
+  sources, runs `upgrade --without-new-pkgs` and `full-upgrade`, and finishes with `chezmoi apply`. The Ansible
+  playbook reruns whenever the OS codename changes, so Docker, Tailscale, PostgreSQL and the other repos follow.
+- The hcloud server is different: it reboots itself at 04:00 when a patch needs it (see that repo's `host/CLAUDE.md`).
+
 ## What this repo manages, and how to list it
 
 | What | Command |

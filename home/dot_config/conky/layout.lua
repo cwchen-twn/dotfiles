@@ -58,7 +58,8 @@ end
 
 -- Sections: each appends its lines to t.
 local t = {}
-local function add(line) t[#t + 1] = line end
+local prefix = ''       -- put before the window's first line (sections.reboot)
+local function add(line) t[#t + 1] = prefix .. line; prefix = '' end
 local function title(name, right)
     add((#t > 0 and '${voffset 8}' or '') .. '${font1}${color1}' .. name .. '${font}${color}' .. (right and ('${alignr}' .. right) or ''))
 end
@@ -90,6 +91,9 @@ function sections.mem()
         add('${color2}${lua top_name mem ' .. i .. '}${alignr}${lua top_value mem ' .. i .. '}${color}')
     end
 end
+
+-- Nothing, or a red "Reboot" line above the first section when a new kernel waits (widgets.lua, reboot-needed).
+function sections.reboot() prefix = '${lua_parse reboot_notice}' end
 
 function sections.disk()
     if not disk then return end

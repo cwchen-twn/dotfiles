@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Rerun when the playbook or this machine's selections change.
 # ansible hash: {{ range (glob (joinPath .chezmoi.workingTree "ansible/**/*")) }}{{ if not (stat .).isDir }}{{ include . | sha256sum }}{{ end }}{{ end }}
+# os release (a Debian/Ubuntu upgrade reruns it, re-pointing the third-party repos): {{ if hasKey .chezmoi "osRelease" }}{{ .chezmoi.osRelease.versionCodename | default "" }}{{ end }}
 # selections: {{ dict "devops" .devops "runtimes" .runtimes "desktop" .desktop "extras" .extras | toJson | sha256sum }}
 set -euo pipefail
 command -v ansible-playbook >/dev/null 2>&1 || { echo "ansible-playbook not found, skipping"; exit 0; }

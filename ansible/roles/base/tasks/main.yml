@@ -141,6 +141,37 @@
         enabled: true
         state: "{{ 'restarted' if earlyoom_conf.changed else 'started' }}"
 
+# Security updates (kernel included) install themselves daily; the reboot is left to the user. The hcloud server does
+# the opposite (reboots itself at 04:00) because nothing ever reboots a server; a laptop or desktop reboots often, and
+# rebooting one under its user loses work. reboot-needed (~/.local/bin; fish at shell start, Conky on the desktop) says
+# when a new kernel or library waits for one. Origins stay Debian's default: security only. Point releases, Brave,
+# Docker and the other third-party repos still come with a manual apt upgrade. Release upgrades: debian-release-upgrade.
+- name: Automatic security updates
+  when: is_debian
+  block:
+    - name: unattended-upgrades
+      ansible.builtin.apt: { name: [unattended-upgrades, apt-listchanges] }
+
+    - name: Run apt update and unattended-upgrade daily (apt-daily timers)
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        mode: "0644"
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+
+    - name: Never reboot by itself; only on AC power; drop superseded kernels
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/51unattended-upgrades-local
+        mode: "0644"
+        content: |
+          // Managed by the dotfiles (ansible base role). See the comment there.
+          Unattended-Upgrade::Automatic-Reboot "false";
+          Unattended-Upgrade::OnlyOnACPower "true";
+          Unattended-Upgrade::Skip-Updates-On-Metered-Connections "true";
+          Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+          Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+
 - name: macOS base
   when: is_mac
   community.general.homebrew:
