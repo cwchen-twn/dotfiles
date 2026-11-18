@@ -42,7 +42,7 @@
         # panel.conf rows go to the guarded panel step below (the running panel saves over that file); the rest here.
         lxqt_ini: >-
           {%- set out = [] -%}
-          {%- for r in panel_ini + hidpi_ini + dark_ini + browser_ini + terminal_ini -%}
+          {%- for r in panel_ini + hidpi_ini + dark_ini + browser_ini + terminal_ini + lock_ini -%}
             {%- if r[0] != 'lxqt/panel.conf' -%}{%- set _ = out.append(r) -%}{%- endif -%}
           {%- endfor -%}
           {{ out }}
@@ -98,6 +98,12 @@
             {%- endfor -%}
           {%- endif -%}
           {{ out }}
+        # Screen lock: i3lock on the login screen's background (~/.local/bin/lock-screen), run by xss-lock, which also
+        # locks on idle and before sleep (~/.config/autostart/xss-lock.desktop; xscreensaver's autostart is hidden).
+        # LXQt's "Lock screen" asks logind, and xss-lock answers. xss-lock already locks before sleep, so LXQt doesn't.
+        lock_ini:
+          - ['lxqt/lxqt.conf', 'Screensaver', 'lock_command', 'loginctl lock-session']
+          - ['lxqt/session.conf', 'General', 'lock_screen_before_power_actions', 'false']
         terminal_ini: "{{ [
             ['lxqt/session.conf', 'Environment', 'TERM', 'alacritty'],
             ['lxqt/globalkeyshortcuts.conf', 'Control%2BAlt%2BT.1', 'Comment', 'Alacritty'],

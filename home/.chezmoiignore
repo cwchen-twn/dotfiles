@@ -80,6 +80,9 @@
 .config/conky
 .config/autostart/conky.desktop
 .local/bin/conky-desktop
+.local/bin/lock-screen
+.config/autostart/xss-lock.desktop
+.config/autostart/lxqt-xscreensaver-autostart.desktop
 {{ end }}
 
 {{ if not (has "kubernetes" .devops) }}

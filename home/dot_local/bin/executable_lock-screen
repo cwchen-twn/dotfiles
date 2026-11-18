@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# lock-screen: lock the X session with i3lock on the login screen's background (the SDDM astronaut theme's image), so
+# unlocking looks like logging in. Run by xss-lock (~/.config/autostart/xss-lock.desktop) on idle, before sleep and
+# when anything asks logind to lock (LXQt's "Lock screen", `loginctl lock-session`). Type the password and press
+# Enter: i3lock shows no box, only a ring that reacts to keys (red: wrong password).
+set -u
+src=/usr/share/sddm/themes/sddm-astronaut-theme/Backgrounds/dotfiles-login.jpg
+size=$(xrandr 2>/dev/null | sed -n 's/.* current \([0-9]*\) x \([0-9]*\),.*/\1x\2/p')
+img=${XDG_CACHE_HOME:-$HOME/.cache}/lock-screen/${size:-unknown}.png
+# i3lock wants a PNG of the screen's size: make one per resolution, again when the background changes.
+if [ -n "$size" ] && [ -r "$src" ] && { [ ! -s "$img" ] || [ "$src" -nt "$img" ]; }; then
+    mkdir -p "${img%/*}"
+    magick "$src" -resize "$size^" -gravity center -extent "$size" "$img.tmp.png" && mv "$img.tmp.png" "$img"
+fi
+args=(--ignore-empty-password --show-failed-attempts --color=11111b)
+[ -s "$img" ] && args+=(--image="$img")
+
+# Before sleep xss-lock holds sleep back until the lock is up (its fd in XSS_SLEEP_LOCK_FD): i3lock without --nofork
+# returns once the screen is locked, then the fd is closed so sleep goes on, and this script stays until unlock.
+if [ -n "${XSS_SLEEP_LOCK_FD:-}" ] && [ -e "/dev/fd/$XSS_SLEEP_LOCK_FD" ]; then
+    i3lock "${args[@]}" {XSS_SLEEP_LOCK_FD}<&-
+    exec {XSS_SLEEP_LOCK_FD}<&-
+else
+    i3lock "${args[@]}"
+fi
+while pgrep -xu "$EUID" i3lock >/dev/null; do sleep 0.5; done

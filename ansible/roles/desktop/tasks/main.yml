@@ -77,6 +77,9 @@
           - pasystray      # tray volume icon that follows the default output (~/.config/autostart/pasystray.desktop)
           - mpv            # video player; YouTube via yt-dlp from mise and VA-API (~/.config/mpv/mpv.conf)
           - conky-std      # system monitor on the desktop (~/.config/conky, autostarted)
+          - i3lock         # screen lock on the login background (~/.local/bin/lock-screen)
+          - xss-lock       # runs it on idle, before sleep and on LXQt's Lock screen (autostarted)
+          - imagemagick    # lock-screen scales the background to the screen
     # yt-dlp comes from mise (YouTube breaks old versions within weeks; Debian stable's is months old). mpv only
     # Recommends Debian's, so remove it and pin it out so a later mpv install does not bring it back.
     - name: No Debian yt-dlp (mise provides it)
