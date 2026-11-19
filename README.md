@@ -152,7 +152,8 @@ missing language server.
 | Symbol lookup (LSP) | `mason-lsp`: Claude's LSP tool on nvim's Mason servers | `claude-plugins/mason-lsp` (local marketplace `cwchen-local`) |
 | Library docs | context7 (hosted MCP, API key) | registered by the claude script (MCP keys below) |
 | Frontend design | frontend-design | plugin |
-| Specs | OpenSpec (`openspec init` per repo, `/opsx:*`) | mise (npm) |
+| Specs | OpenSpec (`openspec init` per repo, `/openspec-*` skills) | mise (npm) |
+| New project (repo from the Gitea `project-template`, clone, `make init`, Claude on `/kickoff`) | `new-project` script + `kickoff` skill | `dot_local/bin/`, `dot_config/agents/skills/` |
 | PRD, flows, sitemap, HTML mockups | `product-docs` skill | `dot_config/agents/skills/` |
 | Git (issue → branch → draft PR → fast-forward merge, on tea, glab or gh) | `git-flow` skill + the repo's `## Git profile` | `dot_config/agents/skills/` |
 | Task interface (`make help`, `make audit` = the gate) | `makefile` skill | `dot_config/agents/skills/` |

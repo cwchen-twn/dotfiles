@@ -88,7 +88,7 @@ Follow the **frontend-design** skill for the visual direction, and agree on that
 ## Stage 4: Handoff
 
 - In a repo that uses OpenSpec (an `openspec/` dir exists, or the user agrees to `openspec init`), create the change
-  with `/opsx:propose`, or `openspec` directly.
+  with `/openspec-propose`, or `openspec` directly.
   - Reference `docs/product/` from the proposal.
   - Turn each acceptance criterion into a task, naming the **make target that verifies it** (e.g. `make test/e2e`).
 - Otherwise, write the same task list into the git-flow issue's `## Plan`.

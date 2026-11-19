@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# new-project: start a new project from the project-template repo on Gitea, then open Claude on /kickoff.
+#
+#   new-project <name> [description] [--public] [--no-claude]
+#
+# 1. Generates <owner>/<name> from <owner>/project-template through the Gitea API (default tea login).
+#    Gitea fills $REPO_NAME and $REPO_DESCRIPTION in the template's CLAUDE.md and README.
+# 2. Clones it over HTTPS into ~/Documents/Gitea/<owner>/<name> and runs `make init`.
+# 3. Starts an interactive `claude "/kickoff"` there: you explain the idea, and the product-docs flow begins.
+# The template is a separate repo; its Makefile follows the makefile skill's templates/Makefile.base.
+set -euo pipefail
+
+TEMPLATE=${NEW_PROJECT_TEMPLATE:-project-template}
+ROOT=${NEW_PROJECT_ROOT:-$HOME/Documents/Gitea}
+
+usage() {
+    sed -n '2,4p' "$0" | sed 's/^# \{0,1\}//'
+    exit "${1:-0}"
+}
+die() {
+    echo "new-project: $*" >&2
+    exit 1
+}
+
+name='' description='' private=true claude=true
+while [ $# -gt 0 ]; do
+    case $1 in
+        -h | --help) usage ;;
+        --public) private=false ;;
+        --no-claude) claude=false ;;
+        -*) die "unknown option $1" ;;
+        *)
+            if [ -z "$name" ]; then
+                name=$1
+            elif [ -z "$description" ]; then
+                description=$1
+            else
+                die "too many arguments"
+            fi
+            ;;
+    esac
+    shift
+done
+[ -n "$name" ] || usage 1
+[[ $name =~ ^[a-z0-9][a-z0-9._-]*$ ]] || die "name must be lowercase letters, digits, '.', '_' or '-': $name"
+for tool in tea git python3 make; do
+    command -v "$tool" >/dev/null || die "$tool not found"
+done
+
+json() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get(sys.argv[1]) or "")' "$1"; }
+
+owner=$(tea api user | json login)
+[ -n "$owner" ] || die "no Gitea login: run 'tea login add' first"
+dir=$ROOT/$owner/$name
+[ ! -e "$dir" ] || die "$dir already exists"
+if [ -n "$(tea api "repos/$owner/$name" 2>/dev/null | json name)" ]; then
+    die "$owner/$name already exists on Gitea"
+fi
+
+echo "Generating $owner/$name from $owner/$TEMPLATE"
+body=$(python3 -c 'import json,sys; print(json.dumps({"owner": sys.argv[1], "name": sys.argv[2],
+    "description": sys.argv[3], "private": sys.argv[4] == "true", "git_content": True}))' \
+    "$owner" "$name" "$description" "$private")
+clone_url=$(tea api -X POST "repos/$owner/$TEMPLATE/generate" -d "$body" | json clone_url)
+[ -n "$clone_url" ] || die "generating from $owner/$TEMPLATE failed (is it a template repo?)"
+
+mkdir -p "$ROOT/$owner"
+git clone "$clone_url" "$dir"
+cd "$dir"
+make init
+
+echo
+echo "Ready: $dir"
+if $claude; then
+    command -v claude >/dev/null || die "claude not found; run it in $dir and type /kickoff"
+    exec claude "/kickoff"
+fi
+echo "Next: cd $dir && claude \"/kickoff\""

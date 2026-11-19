@@ -30,8 +30,12 @@ Every project is driven the same way. Follow it unless the repo's CLAUDE.md/AGEN
   - issue → `<issue>-<slug>` branch → draft PR/MR → fast-forward merge;
   - the repo's `## Git profile` overrides the defaults.
   - Commit, push, open PRs, merge or tag only when asked.
+- **A new project starts with `new-project <name> [description]`:** it generates the repo from the Gitea
+  `project-template`, clones it, runs `make init` and opens Claude on `/kickoff` (the `kickoff` skill), which takes the
+  idea and hands off to `product-docs`.
 - **New apps or UI features start with the `product-docs` skill:** PRD → Mermaid flows and sitemap → HTML mockups
-  reviewed live in the local browser before any code. Then an OpenSpec change (`/opsx:propose`) where the repo uses OpenSpec.
+  reviewed live in the local browser before any code. Then an OpenSpec change (`/openspec-propose`) where the repo
+  uses OpenSpec.
 - **The main session plans, implements and decides; subagents return conclusions, not logs.** Delegate:
   - `test-runner` after a change and before committing (runs `make audit`, reports failures only);
   - `e2e-tester` for web UI flows and mockup comparison (Playwright);
