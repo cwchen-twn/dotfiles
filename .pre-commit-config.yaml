@@ -1,12 +1,44 @@
+# Hooks for `git commit` (installed by `make init`). The fast file checks below run on staged files;
+# make-audit runs the whole gate once per commit. `make lint/hygiene` runs the file checks on every file,
+# so CI applies them too (it skips make-audit, which would recurse, and the branch and staged-only hooks).
+# Files the apps themselves rewrite (fcitx5, DBeaver, LazyVim): kept byte-for-byte as the app writes them,
+# or every machine would show drift after the app saves.
+exclude: ^home/(dot_config/fcitx5/|dot_local/share/DBeaverData/|dot_config/nvim/create_lazyvim\.json$)
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: no-commit-to-branch
+        args: [--branch, main]
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+        exclude: \.age$
+      - id: end-of-file-fixer
+        exclude: \.age$
+      - id: check-yaml
+        exclude: \.tmpl$
+      - id: check-json
+      - id: check-toml
+        exclude: (^|/)modify_   # chezmoi modify_ scripts, not TOML
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+        exclude: ^home/   # chezmoi sets modes from name prefixes (executable_), not from git
+      - id: check-added-large-files
+      - id: detect-private-key
+        exclude: \.age$
+
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.28.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
+
   - repo: local
     hooks:
-      - id: no-internal-hosts
-        name: block internal IPs / work domains
-        entry: bash -c 'if grep -nE "192\.168\.[0-9]+\.[0-9]+|\.gov\.py" "$@"; then exit 1; fi' --
+      - id: make-audit
+        name: make audit
+        entry: make audit
         language: system
-        exclude: '\.age$|^\.pre-commit-config\.yaml$'
+        # one run per commit: with file names, pre-commit would split a large commit into batches
+        pass_filenames: false
+        require_serial: true
+        always_run: true
