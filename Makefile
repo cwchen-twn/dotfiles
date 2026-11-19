@@ -91,11 +91,16 @@ shell/test:
 	@:
 
 # ---- fish: fish_indent on plain files; syntax check on those and the rendered templates ----
+# fish 4 is one binary that acts as fish_indent when called by that name; mise's package ships only `fish`,
+# so the pinned one is linked here (a system fish_indent may be a different version, or missing as in CI).
+FISH_INDENT := build/bin/fish_indent
+$(FISH_INDENT):
+	mkdir -p $(@D) && ln -sf "$$(command -v fish)" $@
 .PHONY: fish/tidy fish/lint fish/test
-fish/tidy:
-	fish_indent -w $(FISH_FILES)
-fish/lint: chezmoi/render
-	fish_indent --check $(FISH_FILES)
+fish/tidy: $(FISH_INDENT)
+	$(FISH_INDENT) -w $(FISH_FILES)
+fish/lint: chezmoi/render $(FISH_INDENT)
+	$(FISH_INDENT) --check $(FISH_FILES)
 	@for f in $(FISH_FILES) $$(find $(RENDERED) -name '*.fish'); do fish --no-execute "$$f" || exit 1; done
 fish/test:
 	@:
