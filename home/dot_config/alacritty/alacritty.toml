@@ -17,3 +17,7 @@ family = "JetBrainsMono Nerd Font"
 opacity = 0.8
 dimensions.columns = 100
 dimensions.lines = 30
+
+# Shift+Enter sends ESC+CR (Meta+Enter), which Claude Code reads as a newline instead of submit.
+[keyboard]
+bindings = [{ key = "Return", mods = "Shift", chars = "\u001B\r" }]
