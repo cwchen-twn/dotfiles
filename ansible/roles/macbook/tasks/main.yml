@@ -292,6 +292,9 @@
 #   - hibernation: resume hangs (black screen, sometimes a reset) right after the image is loaded. Bisected:
 #     intel_iommu=off and nokaslr didn't help, unloading facetimehd alone didn't, unloading brcmfmac alone did.
 #   - suspend (S3): the card stays unavailable for ~50 s after wake-up and NetworkManager then never reconnects.
+# Before unloading, the hook pins the card and its PCIe bridge in D0 (power/control=on). On battery TLP sets them to
+# runtime PM "auto", so the card, once unbound, drops to D3cold, and after any sleep the firmware never powers it back:
+# "Unable to change power state from D3cold to D0, device inaccessible", no Wi-Fi until a reboot.
 - name: Sleep hook (Wi-Fi driver out during any sleep)
   ansible.builtin.copy:
     dest: /usr/lib/systemd/system-sleep/50-dotfiles-macbook
@@ -305,6 +308,13 @@
       case "$1/${SYSTEMD_SLEEP_ACTION:-$2}" in
           pre/*)
               : > "$state"
+              # Keep the card and its bridge powered while unbound (no D3cold); TLP re-applies its setting after resume.
+              for d in /sys/bus/pci/drivers/brcmfmac/0000:*; do
+                  [ -e "$d" ] || continue
+                  d=$(readlink -f "$d")
+                  echo on > "$d/power/control"
+                  echo on > "$(dirname "$d")/power/control"
+              done
               for m in $modules; do
                   grep -q "^$m " /proc/modules || continue
                   echo "$m" >> "$state"
@@ -367,6 +377,9 @@
         # Managed by the dotfiles (ansible macbook role)
         [Sleep]
         HibernateDelaySec=2h
+        # Power off (S5) after writing the image instead of entering ACPI S4: in S4 the armed wake sources
+        # (Wi-Fi, USB, PCIe ports) powered the MacBook straight back on. Resume from the image is unchanged.
+        HibernateMode=shutdown
   loop_control: { label: "{{ item.dest }}" }
 
 # LXQt's power manager otherwise holds the lid switch itself (only suspend/hibernate, no suspend-then-hibernate).
