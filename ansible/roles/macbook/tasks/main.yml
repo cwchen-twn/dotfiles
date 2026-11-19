@@ -49,6 +49,59 @@
   ansible.builtin.systemd_service: { name: "{{ item }}", enabled: true, state: started }
   loop: [mbpfan, tlp]
 
+# BD PROCHOT: the SMC can assert the CPU's external "processor hot" line, which pins every core at 500 MHz with no
+# thermal throttle event logged. Seen on a MacBookPro12,1 on battery under load (Brave) at 68-76 C. Clearing bit 0 of
+# MSR 0x1FC makes the CPU ignore that line; its own thermal protection (TjMax ~105 C) still applies. The bit comes
+# back on reboot and after resume, so the unit runs at boot and after every sleep. Check: `sudo rdmsr -a 0x1FC` is even.
+- name: Ignore the SMC's BD PROCHOT
+  block:
+    - name: Msr-tools (rdmsr, wrmsr)
+      ansible.builtin.apt: { name: msr-tools }
+
+    - name: Clear script and its unit
+      ansible.builtin.copy:
+        dest: "{{ item.dest }}"
+        mode: "{{ item.mode }}"
+        content: "{{ item.content }}"
+      loop:
+        - dest: /usr/local/sbin/clear-bd-prochot
+          mode: "0755"
+          content: |
+            #!/bin/sh
+            # Managed by the dotfiles (ansible macbook role). Clears BD PROCHOT (MSR 0x1FC bit 0) on every CPU.
+            set -eu
+            modprobe msr
+            for d in /dev/cpu/[0-9]*; do
+                c=${d##*/}
+                v=$(rdmsr -p "$c" -u 0x1FC)
+                [ $((v & 1)) -eq 1 ] || continue
+                wrmsr -p "$c" 0x1FC $((v & ~1))
+                logger -t clear-bd-prochot "cleared BD PROCHOT on CPU $c"
+            done
+        - dest: /etc/systemd/system/clear-bd-prochot.service
+          mode: "0644"
+          content: |
+            # Managed by the dotfiles (ansible macbook role)
+            [Unit]
+            Description=Ignore the SMC's BD PROCHOT (CPU stuck at 500 MHz)
+            After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/local/sbin/clear-bd-prochot
+
+            [Install]
+            WantedBy=multi-user.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+      loop_control: { label: "{{ item.dest }}" }
+      register: prochot_unit
+
+    - name: Enable it and clear the bit now
+      ansible.builtin.systemd_service:
+        name: clear-bd-prochot.service
+        enabled: true
+        state: started
+        daemon_reload: "{{ prochot_unit.changed }}"
+
 - name: F1-F12 act as function keys (hold Fn for media keys)
   ansible.builtin.copy:
     dest: /etc/modprobe.d/hid_apple.conf
