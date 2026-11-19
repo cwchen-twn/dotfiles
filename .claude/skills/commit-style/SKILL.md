@@ -11,7 +11,7 @@ issue**. The oldest commits (`add vim-latex-live-preview`) predate any conventio
 
 ## Format
 
-```
+```text
 <type>(<scope>): <Subject that states the outcome>
 
 <Reason: what was wrong, missing or requested, with the symptom or the measurement.
@@ -37,6 +37,7 @@ Co-Authored-By: ...
 | `docs` | README or CLAUDE.md only, with no config change |
 
 **The scope is required.** It names the area of the machine, not a file. Reuse an existing scope:
+
 - desktop session: `desktop` `lxqt` `fcitx5` `touchpad` `look` `fonts`;
 - apps: `brave` `audio` `video` `music` `camera` `dbeaver`;
 - shell and tools: `fish` `nvim` `tools` `mise` `ssh`;
@@ -57,14 +58,17 @@ Add a new scope only for a new area. `chore(deps):` is reserved for Renovate.
   - "X shows Y, and follows changes"
   - a tool name followed by what it does
 - Good:
-  ```
+
+  ```text
   fix(desktop): A Wi-Fi drop no longer makes the left Conky window vanish
   fix(brave): GPU video decoding via the non-free Intel media driver, not flags
   fix(macbook): Wi-Fi survives sleep, and the lid suspends then hibernates
   perf(brave): YouTube in H.264 with hardware decoding
   ```
+
 - Too thin, because it says what a diff already shows:
-  ```
+
+  ```text
   fix(conky): Update widgets.lua
   feat: Add lock screen
   fix(desktop): Added restart logic       (past-tense "Added X" is another repo's style)
@@ -78,7 +82,7 @@ Add a new scope only for a new area. `chore(deps):` is reserved for Renovate.
      `16x16 in the middle of the screen`, `~50 s after wake-up`).
 
    A bullets-only body is out of style, even when the change is small.
-2. **Then `- ` bullets, one per change**, led by the area: `desktop role: …`, `conky-desktop: …`, `README: …`. Each says
+2. **Then `-` bullets, one per change**, led by the area: `desktop role: …`, `conky-desktop: …`, `README: …`. Each says
    what changed and, when it isn't obvious, why ("so that…", "because…", "(was …)"). A one-change commit may skip
    bullets and say it in the reason paragraph.
 3. **Ruled out**, when anything was: what was tried and why it lost. Experiments that bisect a problem belong here.
@@ -87,6 +91,7 @@ Add a new scope only for a new area. `chore(deps):` is reserved for Renovate.
    - then the `Co-Authored-By` line the session asks for.
 
 Body rules:
+
 - Wrap at ~90 columns. The measured p90 is 91.
 - Plain ASCII punctuation is fine (`->`, `--`). Write `~` for approximate numbers.
 - **Never claim a measurement you didn't take.** The value of these bodies is that their numbers can be trusted.
@@ -96,7 +101,7 @@ Body rules:
 
 ## Examples (from this history, with the git-flow footer)
 
-```
+```text
 fix(desktop): A Wi-Fi drop no longer makes the left Conky window vanish
 
 The left window disappeared after Wi-Fi dropped a few times. It hadn't crashed: it was a
@@ -113,7 +118,7 @@ Closes #12
 Co-Authored-By: ...
 ```
 
-```
+```text
 fix(brave): GPU video decoding via the non-free Intel media driver, not flags
 
 Measured with brave-decode-test (1080p60 H.264): Brave picked VaapiVideoDecoder, then fell
@@ -130,7 +135,7 @@ Closes #7
 Co-Authored-By: ...
 ```
 
-```
+```text
 feat(tools): brave-decode-test
 
 brave://gpu reports "Hardware accelerated" even when every video falls back to software,

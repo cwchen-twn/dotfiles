@@ -4,7 +4,7 @@ Personal dotfiles for Debian/Ubuntu/Lubuntu and macOS, managed with [chezmoi](ht
 chezmoi deploys the configs, [Ansible](ansible/) installs system packages (apt/Homebrew), and
 [mise](https://mise.jdx.dev/) manages CLI tools and language runtimes.
 
-Primary repo: https://git.chenantunez.com/cwchen-twn/dotfiles (mirrored to GitHub).
+Primary repo: <https://git.chenantunez.com/cwchen-twn/dotfiles> (mirrored to GitHub).
 
 ## New machine
 
@@ -22,10 +22,11 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
 | desktop | brave, vscode, alacritty, libinput-gestures, shutter, libreoffice, balena-etcher, calibre, obsidian, dbeaver, fcitx5 |
 | extras | postgres, openvpn (2.x), openfortivpn, nordvpn, nvidia-cuda, claude-code |
 
-Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age, gitleaks, rtk, codebase-memory-mcp and the Bitwarden CLI.
-System info / monitoring: fastfetch, btop, duf, gdu (mise); inxi (`sysinfo`), lm-sensors, smartmontools, iotop-c, nethogs,
-nvtop, s-tui, acpi, speedtest-cli (apt); `mem-stat [N]` (memory summary, swap, top N apps), `batinfo`, `battery` (TLP health) and `sudo intel_gpu_top` on MacBooks.
-The JetBrainsMono Nerd Font is installed when any desktop app is selected, and on Linux it is the default `monospace`
+Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age,
+gitleaks, rtk, codebase-memory-mcp and the Bitwarden CLI. System info / monitoring: fastfetch, btop, duf, gdu (mise);
+inxi (`sysinfo`), lm-sensors, smartmontools, iotop-c, nethogs, nvtop, s-tui, acpi, speedtest-cli (apt); `mem-stat [N]`
+(memory summary, swap, top N apps), `batinfo`, `battery` (TLP health) and `sudo intel_gpu_top` on MacBooks. The
+JetBrainsMono Nerd Font is installed when any desktop app is selected, and on Linux it is the default `monospace`
 (`~/.config/fontconfig/conf.d/50-monospace.conf`), so every terminal and code font gets Nerd Font icons.
 
 Network toolbox (apt unless noted; `myip` and `ports` are fish functions):
@@ -45,14 +46,15 @@ Network toolbox (apt unless noted; `myip` and `ports` are fish functions):
 Change the selection later with `chezmoi init --prompt` (or `chezmoi edit-config`), then `chezmoi apply`.
 Deselecting something stops managing it; it does not uninstall it.
 
-Bootstrap order (`home/.chezmoiscripts/`): install ansible, install mise, fetch the age key from Vaultwarden, log in to GitHub
-(`gh`, optional: Ansible and mise download ~20 release binaries through the GitHub API, which allows only 60 anonymous
-requests/h; with the login they use `gh auth token`), apply the dotfiles,
-then run the Ansible playbook, `mise install`, fisher, the ssh-agent unit, and the Claude plugins/MCP servers. Finally, create this machine's SSH key if it's missing.
+Bootstrap order (`home/.chezmoiscripts/`): install ansible, install mise, fetch the age key from Vaultwarden, log in to
+GitHub (`gh`, optional: Ansible and mise download ~20 release binaries through the GitHub API, which allows only 60
+anonymous requests/h; with the login they use `gh auth token`), apply the dotfiles, then run the Ansible playbook,
+`mise install`, fisher, the ssh-agent unit, and the Claude plugins/MCP servers. Finally, create this machine's SSH key
+if it's missing.
 
-Afterwards: log out and back in (login shell, groups, desktop settings), then run `register-ssh-key` (fish). It logs in to
-`gh`, `glab` and `tea` where needed and uploads the key. If you skipped the GitHub login and a step hit the rate limit:
-`gh auth login`, then `chezmoi apply` (re-runs only what changed or failed).
+Afterwards: log out and back in (login shell, groups, desktop settings), then run `register-ssh-key` (fish). It logs in
+to `gh`, `glab` and `tea` where needed and uploads the key. If you skipped the GitHub login and a step hit the rate
+limit: `gh auth login`, then `chezmoi apply` (re-runs only what changed or failed).
 
 ## Fresh Debian install from USB (laptops)
 
@@ -66,29 +68,31 @@ Boot the target from the stick (Mac: hold Option, pick "EFI Boot"). The default 
 **wipes the first non-USB disk** and installs without questions (~15 min, needs the Wi-Fi from the build).
 After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above.
 
-- `preseed.cfg.tmpl`: the installer answers. Secrets are filled in at build time and only live in the ISO (`~/.cache/debian-iso/`, mode 600).
+- `preseed.cfg.tmpl`: the installer answers. Secrets are filled in at build time and only live in the ISO
+  (`~/.cache/debian-iso/`, mode 600).
 - `pick-disk.sh`: picks the internal disk and zeroes its old partition tables (used drives, APFS, LVM).
 - `late.sh`: drops `~/bootstrap.sh` and writes a NetworkManager profile for the install's Wi-Fi (WPA2-PSK, PMF optional:
   NetworkManager's automatic choice of WPA3-SAE fails on WPA2/WPA3 mixed APs with the MacBook's Broadcom chip).
-- On MacBooks the `macbook` Ansible role runs automatically (DMI product name): Broadcom Wi-Fi firmware, `mbpfan`, `tlp`,
-  F1-F12 as function keys, the FaceTime HD camera (`facetimehd` driver via DKMS + firmware extracted from Apple's update),
-  hibernation (`install/debian/hibernate.sh`: resumes from a swap partition >= RAM, else creates a RAM + 2 GB swap file;
-  the Wi-Fi driver `brcmfmac` is unloaded around every suspend/hibernate by
-  `/usr/lib/systemd/system-sleep/50-dotfiles-macbook`: otherwise resume hangs and Wi-Fi doesn't come back after suspend), lid closed = suspend, then hibernate after 2 h on battery (plain suspend on AC; logind
-  handles the lid, not LXQt), hibernate at 5% battery, three-finger drag restarted after every wake-up,
-  a quieter `mbpfan` curve, a macOS-like touchpad (tap to click, natural scrolling, two-finger right-click:
+- On MacBooks the `macbook` Ansible role runs automatically (DMI product name): Broadcom Wi-Fi firmware, `mbpfan`,
+  `tlp`, F1-F12 as function keys, the FaceTime HD camera (`facetimehd` driver via DKMS + firmware extracted from Apple's
+  update), hibernation (`install/debian/hibernate.sh`: resumes from a swap partition >= RAM, else creates a RAM + 2 GB
+  swap file; the Wi-Fi driver `brcmfmac` is unloaded around every suspend/hibernate by
+  `/usr/lib/systemd/system-sleep/50-dotfiles-macbook`: otherwise resume hangs and Wi-Fi doesn't come back after
+  suspend), lid closed = suspend, then hibernate after 2 h on battery (plain suspend on AC; logind handles the lid, not
+  LXQt), hibernate at 5% battery, three-finger drag restarted after every wake-up, a quieter `mbpfan` curve, a
+  macOS-like touchpad (tap to click, natural scrolling, two-finger right-click:
   `/etc/X11/xorg.conf.d/50-macbook-touchpad.conf`), and the keyboard backlight (Fn+F5/F6 via `brightnessctl`, off after
   60 s idle via `~/.local/bin/kbd-backlight-idle`, `KBD_IDLE_SECS` to change).
 - FaceTime camera in browsers/Meet: facetimehd reports its sizes as a range, which Chromium's camera code skips (also
   through PipeWire), so Brave/Chrome see no camera. Before a call run `camera-on` and pick "FaceTime HD (relay)": a
   v4l2loopback camera (`/dev/video10`, fixed 1280x720) fed by ffmpeg. `camera-off` afterwards (the LED goes off).
 - The build asks for the swap partition size (default 16 GB; >= RAM to hibernate).
-- The `lxqt` Ansible role sets only specific keys in `~/.config/lxqt/*.conf` (LXQt rewrites those files, so chezmoi doesn't
-  own them): on Retina MacBooks 2x scaling (`Xft.dpi: 192` in `~/.Xresources`, which Qt, Brave, GTK via `GDK_SCALE` and
-  Alacritty all follow); system-wide dark mode (LXQt theme/palette, GTK, freedesktop color-scheme); Brave as default browser; Alacritty as terminal
-  (Ctrl+Alt+T); panel quick launch + menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, Shutter, as selected);
-  panel widgets (`lxqt_panel_plugins`: Debian default minus mount, plus the CPU monitor).
-  Also 4 workspaces in a row for the gestures.
+- The `lxqt` Ansible role sets only specific keys in `~/.config/lxqt/*.conf` (LXQt rewrites those files, so chezmoi
+  doesn't own them): on Retina MacBooks 2x scaling (`Xft.dpi: 192` in `~/.Xresources`, which Qt, Brave, GTK via
+  `GDK_SCALE` and Alacritty all follow); system-wide dark mode (LXQt theme/palette, GTK, freedesktop color-scheme);
+  Brave as default browser; Alacritty as terminal (Ctrl+Alt+T); panel quick launch + menu favorites (file manager,
+  Brave, Alacritty, VS Code, Obsidian, DBeaver, Shutter, as selected); panel widgets (`lxqt_panel_plugins`: Debian
+  default minus mount, plus the CPU monitor). Also 4 workspaces in a row for the gestures.
 - Retina boot and login (macbook role): GRUB console font at 36 px, console in Terminus 16x32, SDDM greeter at 2x.
 - Look (`boottheme` role, desktop machines), Catppuccin Mocha throughout:
   - GRUB: [AstronautGrub](https://github.com/Flava-Clown/AstronautGrub) (pinned; `boottheme_grub_variant` astronaut
@@ -197,17 +201,18 @@ missing language server.
   (kills the heaviest browser tab before the machine freezes; never Xorg/SDDM/the session). Check: `zramctl`,
   `systemctl status earlyoom`.
 - On demand instead of at boot: Docker (`docker.socket`: the first `docker` command starts it; containers don't
-  auto-start at boot), VPNs (see [VPNs](#vpns); NordVPN's socket unit can't start it lazily), PostgreSQL (`pgstart` / `pgstop`). ModemManager, cups-browsed and
-  NetworkManager-wait-online are off; printing still works through `cups.socket`.
+  auto-start at boot), VPNs (see [VPNs](#vpns); NordVPN's socket unit can't start it lazily), PostgreSQL (`pgstart` /
+  `pgstop`). ModemManager, cups-browsed and NetworkManager-wait-online are off; printing still works through
+  `cups.socket`.
 - Brave: Memory Saver on (balanced), no background mode, Dark Reader installed by policy (`brave://policy`).
 - MacBook: turbo boost only on AC (`/etc/tlp.d/50-dotfiles.conf`).
 
 ## OS updates (Debian)
 
-- **Security updates install themselves; the reboot is yours.** `unattended-upgrades` runs daily, Debian security
-  only, only on AC power, and never reboots (Ansible base role, `/etc/apt/apt.conf.d/51unattended-upgrades-local`).
-  When a newer kernel or a library waits for a reboot, `reboot-needed` says so: in yellow when a fish shell starts, and as a red
-  "Reboot" line on the desktop (Conky). Log: `/var/log/unattended-upgrades/`.
+- **Security updates install themselves; the reboot is yours.** `unattended-upgrades` runs daily, Debian security only,
+  only on AC power, and never reboots (Ansible base role, `/etc/apt/apt.conf.d/51unattended-upgrades-local`). When a
+  newer kernel or a library waits for a reboot, `reboot-needed` says so: in yellow when a fish shell starts, and as a
+  red "Reboot" line on the desktop (Conky). Log: `/var/log/unattended-upgrades/`.
 - Everything else (point releases, Brave, Docker and other third-party repos): `sudo apt update && sudo apt upgrade`.
 - **Release upgrades (Debian 13 trixie -> 14 forky) are manual.** The sources name the codename, not `stable`, so a new
   release changes nothing by itself. Wait for the x.1 point release, read the release notes, then
@@ -235,8 +240,8 @@ missing language server.
 The repo is public. Secrets are never committed in plain text:
 
 - Whole files (e.g. `~/.ssh/config.d/work`) are age-encrypted chezmoi files (`encrypted_*.age`).
-- The age identity lives in the personal Vaultwarden (`vw.chenantunez.com`, item `chezmoi-age-key`). It is fetched once to
-  `~/.config/chezmoi/key.txt`; use `bwp` (fish function) for the personal vault.
+- The age identity lives in the personal Vaultwarden (`vw.chenantunez.com`, item `chezmoi-age-key`). It is fetched once
+  to `~/.config/chezmoi/key.txt`; use `bwp` (fish function) for the personal vault.
 - The SOPS age key for the infra repo (hcloud: k3s Secrets, Terraform/CLI secrets, `RESTIC_PASSWORD`) is a chezmoi
   encrypted file, `~/.config/sops/age/keys.txt`, on machines with the `terraform` or `kubernetes` devops group. mise
   uses it for project `[env]` SOPS files (`sops.age_key_file`), so inside hcloud the CLIs and Terraform are authenticated.
@@ -246,7 +251,8 @@ The repo is public. Secrets are never committed in plain text:
   global config here is `latest`.
 - SSH private keys are per machine and never synced. Each new key is registered with GitHub, GitLab and Gitea.
 - Git HTTPS credentials come from `gh`, `glab` and `tea` credential helpers, not from `~/.git-credentials`.
-- `pre-commit install` enables gitleaks and an internal-IP check.
+- `make init` installs the pre-commit hooks: gitleaks on staged changes, then `make audit` (which includes the
+  internal-IP and work-domain check, `scripts/check-public.sh`).
 
 ## Printing, scanning and Bluetooth (Linux desktops)
 
@@ -387,9 +393,20 @@ chezmoi cd && git commit -am "..." && git push
 
 ## Layout
 
-```
+```text
 home/       chezmoi source state (.chezmoiroot)
 ansible/    playbook + roles run by home/.chezmoiscripts/run_onchange_after_10-ansible.sh.tmpl
 install/    unattended OS installers (Debian preseed ISO)
 claude-plugins/  local Claude Code marketplace (mason-lsp), added by the claude script
+Makefile    the task interface (`make help`); `make audit` is the gate run by pre-commit and CI
+mise.toml   pinned versions of the gate's linters (not deployed: the machines' tools are in home/dot_config/mise)
+scripts/    helpers the Makefile calls (template rendering, shell file discovery, public-repo check)
+ci/         chezmoi fixture config for CI: every option selected, placeholder identity
+.gitea/     Gitea Actions: make audit on every PR and on main
 ```
+
+### Checks
+
+`make init` once per clone, then `make audit` runs before every commit (pre-commit hook) and on every PR (Gitea
+Actions). `make tidy` fixes formatting. Templates are rendered with `ci/chezmoi.toml` on Linux, so darwin-only
+template branches are not rendered in CI.

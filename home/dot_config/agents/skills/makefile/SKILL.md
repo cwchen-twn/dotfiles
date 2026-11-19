@@ -13,7 +13,8 @@ description: The Makefile is every project's single task interface, with the sam
 | **Make** | every task: build, test, lint, run, deploy, maintenance scripts |
 | **Mason** (nvim) | editor language servers |
 
-- Don't use mise tasks or package.json scripts as an entry point. A `package.json` script may exist, but **a make target wraps it**.
+- Don't use mise tasks or package.json scripts as an entry point. A `package.json` script may exist, but **a make
+  target wraps it**.
 - pre-commit, CI and humans all call the same targets, so "works locally" means "works in CI".
 
 ## Using an existing Makefile
@@ -21,7 +22,8 @@ description: The Makefile is every project's single task interface, with the sam
 1. Run `make help`.
 2. Use the targets: `make test`, not `go test ./...`.
 3. **`make audit` is the gate**, run before every commit and in CI. Fix what it reports; never bypass it (`--no-verify`).
-4. A new script or recurring command becomes a target with a `##` help line, not a loose shell file. A long script can live in `scripts/`, with a target that calls it.
+4. A new script or recurring command becomes a target with a `##` help line, not a loose shell file. A long script can
+   live in `scripts/`, with a target that calls it.
 
 ## The contract
 
@@ -48,16 +50,21 @@ Any other target uses a `group/action` name: `db/reset`, `migrations/new`, `upgr
 
 ## Style
 
-Start from [templates/Makefile.base](templates/Makefile.base), then add a snippet per stack from `templates/` (`go.mk`, `python-uv.mk`, `bun.mk`, `rust.mk`, `terraform.mk`, `helm.mk`, `ansible.mk`). Paste the snippets in, rather than using `include`, so the file stays self-contained and readable.
+Start from [templates/Makefile.base](templates/Makefile.base), then add a snippet per stack from `templates/` (`go.mk`,
+`python-uv.mk`, `bun.mk`, `rust.mk`, `terraform.mk`, `helm.mk`, `ansible.mk`). Paste the snippets in, rather than using
+`include`, so the file stays self-contained and readable.
 
 - `##<target>: <description>` directly above each target. This is what `help` prints; the description must not contain `:`.
 - `.PHONY:` for every target that isn't a file.
 - `-include .env` for local settings. Commit `.env.example`, never `.env`.
 - **Parameters** are `name=value`. Fail clearly when one is missing:
+
   ```make
   @test -n "$(name)" || { echo "usage: make migrations/new name=<name>"; exit 1; }
   ```
-- **Destructive targets** (dropping data, deploying, force-pushing anything) require `confirm=yes` and print what they will do first.
+
+- **Destructive targets** (dropping data, deploying, force-pushing anything) require `confirm=yes` and print what they
+  will do first.
 - **Portability:** recipes must work with GNU Make **3.81**, which is what macOS ships.
   - No `.ONESHELL`, `::=`, `!=`, `$(file …)` or other 4.x-only features.
   - Each recipe line is its own `sh` shell, so chain with `&&` or `\`.
@@ -68,6 +75,7 @@ Start from [templates/Makefile.base](templates/Makefile.base), then add a snippe
 ## Wiring
 
 - **pre-commit** (`.pre-commit-config.yaml`), as a local hook:
+
   ```yaml
   - repo: local
     hooks:
@@ -77,7 +85,9 @@ Start from [templates/Makefile.base](templates/Makefile.base), then add a snippe
         language: system
         pass_filenames: false
   ```
-- **CI** (Gitea, GitHub or GitLab): the job runs `mise install` (or the setup actions), then `make audit`, plus `make test/e2e` and `make build` where relevant. CI does nothing that isn't a make target.
+
+- **CI** (Gitea, GitHub or GitLab): the job runs `mise install` (or the setup actions), then `make audit`, plus
+  `make test/e2e` and `make build` where relevant. CI does nothing that isn't a make target.
 - **The repo's CLAUDE.md** lists the main targets, with one line each, under a "Commands" heading.
 - **Git profile:** `gate: make audit`. See the git-flow skill.
 

@@ -1,6 +1,7 @@
 # Commit styles
 
-Choose with `commit-style:` in the repo's Git profile. A repo skill, such as hcloud's `.claude/skills/commit-style`, overrides both styles.
+Choose with `commit-style:` in the repo's Git profile. A repo skill, such as hcloud's `.claude/skills/commit-style`,
+overrides both styles.
 
 ## Common to both
 
@@ -23,7 +24,7 @@ Don't use made-up types (`add`, `update`, `bug`, `wip`) or component prefixes (`
 
 ## `reasoned-list` (default)
 
-```
+```text
 <type>: <Past-tense subject that names the intention>
 
 <Why: 1-3 sentences on the problem, symptom or requirement. Quote the
@@ -36,14 +37,16 @@ Closes #<issue>            (or Refs #<issue> for intermediate commits)
 Co-Authored-By: ...
 ```
 
-- **Subject:** past tense, sentence case, starts with a verb: Added, Fixed, Corrected, Moved, Removed, Replaced, Updated, Split, Renamed. Keep it to about 100 characters.
+- **Subject:** past tense, sentence case, starts with a verb: Added, Fixed, Corrected, Moved, Removed, Replaced,
+  Updated, Split, Renamed. Keep it to about 100 characters.
   - Name the intention when it fits, e.g. "…so the testing cluster receives renewals".
   - Bad: "Updated values.yaml" lists what was touched, not why.
-- **Body:** start with the reason. Then give a numbered list with one line per change: *what* changed and, when it isn't obvious, *why* ("because…", "so that…", "(was …)").
+- **Body:** start with the reason. Then give a numbered list with one line per change: *what* changed and, when it
+  isn't obvious, *why* ("because…", "so that…", "(was …)").
 
 Example:
 
-```
+```text
 fix: Corrected the dashboard's database settings so its password is never logged
 
 The app logs every env override at startup and masks only names like
@@ -62,6 +65,7 @@ Refs #47
 The subject **states the finding**, not the edit. It is often long (50–85 characters), with a comma clause for the why.
 
 The body is prose paragraphs, in roughly this order:
+
 1. what was wrong and the mechanism;
 2. **the measurement** (numbers, exact errors, before/after counts);
 3. what was believed and turned out false, often in CAPS;
@@ -72,7 +76,7 @@ Use ASCII `--` and `->` in the body.
 
 Good subjects:
 
-```
+```text
 fix: Cloudflare was challenging Renovate's API, so no PR was ever opened
 feat: push the tailnet policy from git, because the console is not a source
 ```

@@ -1,6 +1,7 @@
 # Forge commands
 
-Same flow, three CLIs. `<n>` is the issue or PR number. Bodies are files written first (`issue.md`, `pr.md`), so quoting never breaks.
+Same flow, three CLIs. `<n>` is the issue or PR number. Bodies are files written first (`issue.md`, `pr.md`), so quoting
+never breaks.
 
 | Step | Gitea (`tea`) | GitLab (`glab`) | GitHub (`gh`) |
 |---|---|---|---|
@@ -16,11 +17,17 @@ Same flow, three CLIs. `<n>` is the issue or PR number. Bodies are files written
 
 ## Notes
 
-- **Gitea drafts** are PRs whose title starts with `WIP:`. `--draft` adds the prefix, and marking the PR ready means editing the title to remove it.
-- **Gitea merge style.** `tea pulls merge` supports only `merge|rebase|squash|rebase-merge`, and **defaults to `merge` (a merge commit) whatever the repo's default is**. Use the API call above for fast-forward-only.
-  - `--style rebase` is the fallback. On a branch that is already rebased it yields the same linear history, but Gitea rewrites the committer.
+- **Gitea drafts** are PRs whose title starts with `WIP:`. `--draft` adds the prefix, and marking the PR ready means
+  editing the title to remove it.
+- **Gitea merge style.** `tea pulls merge` supports only `merge|rebase|squash|rebase-merge`, and **defaults to `merge`
+  (a merge commit) whatever the repo's default is**. Use the API call above for fast-forward-only.
+  - `--style rebase` is the fallback. On a branch that is already rebased it yields the same linear history, but Gitea
+    rewrites the committer.
   - If the API answers 405 or 409, `main` has moved. Rebase, push with `--force-with-lease`, wait for CI, and retry.
-- **GitLab** fast-forwards only when the project's `merge_method` is `ff`. If `glab mr merge` refuses, rebase first, as above.
+- **GitLab** fast-forwards only when the project's `merge_method` is `ff`. If `glab mr merge` refuses, rebase first, as
+  above.
 - **GitHub** `--rebase` replays the commits onto `main`. With a branch already rebased, the result is the fast-forward equivalent.
-- **Push mirrors.** If a repo's GitHub copy is a push mirror of Gitea, all issue, PR and merge work happens on Gitea; the mirror follows by itself.
-- **Closing keywords** (`Closes #N`, `Fixes #N`) work on all three forges when they appear in the PR body or in a commit that reaches the default branch.
+- **Push mirrors.** If a repo's GitHub copy is a push mirror of Gitea, all issue, PR and merge work happens on Gitea;
+  the mirror follows by itself.
+- **Closing keywords** (`Closes #N`, `Fixes #N`) work on all three forges when they appear in the PR body or in a
+  commit that reaches the default branch.

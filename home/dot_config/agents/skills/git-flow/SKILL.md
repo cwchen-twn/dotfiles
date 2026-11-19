@@ -6,6 +6,7 @@ description: Git workflow for every repository, on any forge (Gitea via tea, Git
 # Git flow
 
 **Order of precedence:**
+
 1. the repo's own git or commit skill (e.g. `.claude/skills/commit-style`), for what it covers;
 2. the repo's **Git profile** (below);
 3. these defaults.
@@ -24,13 +25,15 @@ git remote get-url origin
 | `gitlab.com` or a GitLab host | GitLab | `glab` |
 | `github.com` | GitHub | `gh` |
 
-When in doubt, `glab repo view` / `tea repos ls` / `gh repo view` tells which login works. A GitHub repo that is only a **push mirror** of Gitea is never worked on directly: use the Gitea origin.
+When in doubt, `glab repo view` / `tea repos ls` / `gh repo view` tells which login works. A GitHub repo that is only a
+**push mirror** of Gitea is never worked on directly: use the Gitea origin.
 
 Commands per forge are in [references/forges.md](references/forges.md). Read it before the first forge command in a session.
 
-**Git profile.** Look for a `## Git profile` block in the repo's `CLAUDE.md` or `AGENTS.md`. Every key is optional, and missing keys take the default shown:
+**Git profile.** Look for a `## Git profile` block in the repo's `CLAUDE.md` or `AGENTS.md`. Every key is optional, and
+missing keys take the default shown:
 
-```
+```text
 ## Git profile
 issue-first: yes                 # yes | no (then branches are <type>/<slug>)
 branch: <issue>-<slug>           # or <type>/<slug>
@@ -45,10 +48,12 @@ rust-analyzer: mason             # or rustup, for pinned/nightly toolchains
 ## 1. Before any development: issue → branch → draft PR
 
 Every change goes through an issue and a PR or MR. That includes config, CI, docs and skills.
+
 - Never commit to the default branch.
 - Never start on an unrelated branch.
 
-1. **Issue.** Search first; create one only if none exists. Use [templates/issue.md](templates/issue.md) and leave out any section that would be empty:
+1. **Issue.** Search first; create one only if none exists. Use [templates/issue.md](templates/issue.md) and leave out
+   any section that would be empty:
 
    | Section | Content |
    |---|---|
@@ -59,9 +64,11 @@ Every change goes through an issue and a PR or MR. That includes config, CI, doc
    | `## Reference` | Related issues, PRs/MRs, docs, links |
 
 2. **Branch.** Create it from an up-to-date default branch and name it `<issue>-<short-slug>`:
+
    ```bash
    git switch main && git pull --ff-only && git switch -c 48-git-flow
    ```
+
 3. **Draft PR/MR.** Open it once the first commit is pushed, and keep it a draft until it is ready.
    - **Title:** the conventional subject of the main change, in commit-subject format (§2).
    - **Body:** use [templates/pr.md](templates/pr.md):
@@ -75,6 +82,7 @@ Every change goes through an issue and a PR or MR. That includes config, CI, doc
 ## 2. Commits
 
 Pick the style from the profile. Both styles are described in [references/commit-styles.md](references/commit-styles.md).
+
 - **`reasoned-list` (default):**
   - a past-tense, sentence-case subject that names the intention;
   - a 1–3 sentence reason, then a numbered change list;
@@ -82,6 +90,7 @@ Pick the style from the profile. Both styles are described in [references/commit
 - **`finding-prose`:** the subject states the finding, and the body is prose with measurements. hcloud uses this.
 
 Rules for every style:
+
 - Conventional type: `feat` `fix` `perf` `refactor` `chore` (and `docs`, where the repo uses it).
 - **No scope.** `chore(deps):` is Renovate's only.
 - No trailing period. Exactly one type.
@@ -95,15 +104,20 @@ Rules for every style:
 
 - **`fast-forward-only` (default):** no merge commit, no squash.
   - If `main` has moved, rebase first:
+
     ```bash
     git fetch && git rebase origin/main
     git push --force-with-lease
     ```
+
     Then let CI pass again.
-  - Merge through the forge with the fast-forward method. The tea, glab and gh forms are in `forges.md`. **`tea pulls merge`'s default style creates a merge commit**, so don't use it bare.
-- After the merge, delete the branch. Then `git switch main && git pull --ff-only`, and archive any OpenSpec change: `openspec archive <change>`.
+  - Merge through the forge with the fast-forward method. The tea, glab and gh forms are in `forges.md`.
+    **`tea pulls merge`'s default style creates a merge commit**, so don't use it bare.
+- After the merge, delete the branch. Then `git switch main && git pull --ff-only`, and archive any OpenSpec change:
+  `openspec archive <change>`.
 
 **Renovate PRs/MRs** (`renovate/*` branches, opened by the bot):
+
 - No issue needed; the Dependency Dashboard tracks them.
 - Review, merge, and deploy the way the repo deploys.
 - Don't push to a Renovate branch unless you need to: Renovate stops rebasing a branch once a human commits to it.
@@ -111,6 +125,7 @@ Rules for every style:
 ## 4. Tags (profile `tags:` ≠ `none`)
 
 See [references/release-tags.md](references/release-tags.md). The non-negotiables:
+
 - Tags are always annotated (`git tag -a`), and the message lists the changes since the previous tag of the same series.
 - Production or release tags go only on commits that are on `main`.
 - **Never move, delete or re-push an existing tag.** Fix forward with the next version.

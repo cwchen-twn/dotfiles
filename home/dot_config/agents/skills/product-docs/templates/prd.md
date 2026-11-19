@@ -27,6 +27,7 @@ Status: draft · Owner: <name> · Last updated: <YYYY-MM-DD>
 <!-- One paragraph. -->
 
 Acceptance criteria:
+
 - [ ] Given …, when …, then …
 
 ## Constraints
@@ -35,7 +36,7 @@ Acceptance criteria:
 
 ## Open questions
 
-- 
+-
 
 ## Links
 
