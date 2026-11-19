@@ -221,7 +221,7 @@ Stability first: one reviewed batch a month, not a stream of PRs.
 
 The runner is `hcloud/.gitea/workflows/renovate.yaml` (daily; it autodiscovers every `cwchen-twn` repo with a
 `renovate.json`). Apps and infra (rigel-ledger, hcloud, projects from `project-template`) use the weekly
-`renovate-config:fast` preset instead, where patch bumps of dev tooling merge themselves on green CI.
+`renovate-config:fast` preset instead, where patch bumps of mise and CI version pins merge themselves on green CI.
 
 ## OS updates (Debian)
 
