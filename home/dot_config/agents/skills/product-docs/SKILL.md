@@ -54,7 +54,8 @@ Follow the **frontend-design** skill for the visual direction, and agree on that
    Chromium, no extra browser), and read the PNGs. Fix overflow, clipping, contrast and alignment until they look right.
 
    ```bash
-   B=$(command -v brave-browser || echo "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser")
+   # the packaged binary: ~/.local/bin/brave-browser adds force-dark, which would repaint the mockups
+   B=/usr/bin/brave-browser; [ -x "$B" ] || B="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
    S=docs/product/mockups/.shots; mkdir -p "$S"; f=docs/product/mockups/<screen>.html
    for vp in 390,844 1280,800; do
      "$B" --headless --disable-gpu --hide-scrollbars --window-size=$vp \

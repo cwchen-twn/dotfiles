@@ -307,12 +307,12 @@ the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you 
      (`VAEntrypointVideoProc`). Debian's free build leaves those GPU kernels out (7 entrypoints instead of 20), so
      every video fell back to CPU decoding (`FFmpegVideoDecoder`, renderer ~120% of a core for 1080p60) while
      `brave://gpu` still said "Hardware accelerated".
-  3. **Vulkan for Brave** (`--enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE`, in a generated copy of
-     Brave's menu entry; Debian's launcher reads no flags file): with hardware decoding on, the picture showed
-     coloured squares (iHD) or black areas and squares (patched i965). On X11 Chromium can't pass decoded frames
-     zero-copy (that needs EGL, which Chrome blocks for Intel on X11), and its OpenGL format conversion corrupts them
-     on this GPU. With ANGLE on Vulkan (Mesa `hasvk`) the picture is clean and the 1080p60 test clip costs GPU
-     process ~19% + renderer ~8% of a core.
+  3. **Vulkan for Brave** (`--enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE`, in a generated copy of Brave's
+     menu entry and a `~/.local/bin/brave-browser` wrapper; Debian's launcher reads no flags file): with hardware
+     decoding on, the picture showed coloured squares (iHD) or black areas and squares (patched i965). On X11 Chromium
+     can't pass decoded frames zero-copy (that needs EGL, which Chrome blocks for Intel on X11), and its OpenGL format
+     conversion corrupts them on this GPU. With ANGLE on Vulkan (Mesa `hasvk`) the picture is clean and the 1080p60 test
+     clip costs GPU process ~19% + renderer ~8% of a core.
 
   Ruled out along the way (none helped): Chromium VA-API flags (`AcceleratedVideoDecodeLinuxGL`,
   `...ZeroCopyGL`, `VaapiIgnoreDriverChecks`), xfwm4 sync modes (`glx`, `xpresent`), the Intel X driver (SNA +
@@ -322,7 +322,11 @@ the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you 
   (the Vulkan suggestion) and [known issues](https://github.com/irql-notlessorequal/intel-vaapi-driver/issues/12),
   [Arch forum VA-API thread](https://bbs.archlinux.org/viewtopic.php?id=244031&p=45), and
   [brave://gpu false positives](https://forum.manjaro.org/t/hardware-video-acceleration-working-for-firefox-but-not-on-google-chrome-or-brave-or-chromium-browser/189629).
-  A `brave-browser` started from a terminal runs without the flags; start Brave from the menu or panel.
+  `/usr/bin/brave-browser` (what the agents and mockup screenshots use) runs without the flags.
+- **Brave CPU:** with the above, video and page raster run on the GPU (`brave://gpu`: Vulkan); what stays is page
+  JavaScript on each tab's main thread. Brave's task manager (Shift+Esc) or `cpu-stat` shows which tab. Dark Reader
+  is gone for that reason (it restyles from a script in every tab on each DOM change); pages are darkened natively
+  by Blink's `WebContentsForceDark` flag, set on every machine through the same launchers.
 - **`brave-decode-test`** is the real proof: it plays a 1080p60 H.264 clip in a throwaway Brave (temporary profile,
   DevTools) and reports the decoder Chromium actually used, its media log and the CPU per process type.
 - **mpv for long videos:** `yt URL` (or `yt` with a link on the clipboard) plays it in mpv, H.264 up to 1080p with
