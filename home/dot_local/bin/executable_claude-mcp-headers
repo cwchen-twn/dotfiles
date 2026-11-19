@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# claude-mcp-headers: Claude Code's `headersHelper` for remote MCP servers that take an API key (context7, cloudflare).
+# Claude Code runs it on each connection with CLAUDE_CODE_MCP_SERVER_NAME set; it prints the headers as JSON. The key
+# is ~/.config/claude-mcp/<server name>, decrypted there by chezmoi (added with `claude-mcp-key <server name>`), so
+# it never lands in ~/.claude.json. No key: an empty object, and the server stays unauthenticated.
+set -euo pipefail
+name=${CLAUDE_CODE_MCP_SERVER_NAME:-${1:-}}
+key_file="$HOME/.config/claude-mcp/$name"
+if [[ -n $name && -s $key_file ]]; then
+    key=$(tr -d '[:space:]' <"$key_file")
+    printf '{"Authorization":"Bearer %s"}\n' "$key"
+else
+    printf '{}\n'
+fi

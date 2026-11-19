@@ -146,7 +146,7 @@ missing language server.
 |---|---|---|
 | Code structure (graph) | codebase-memory-mcp + its hooks and 3 agents | mise, `dot_claude/settings.json`, `dot_claude/agents/` |
 | Symbol lookup (LSP) | `mason-lsp`: Claude's LSP tool on nvim's Mason servers | `claude-plugins/mason-lsp` (local marketplace `cwchen-local`) |
-| Library docs | context7 (hosted MCP; works without a key, a free key raises rate limits) | registered by the claude script |
+| Library docs | context7 (hosted MCP, API key) | registered by the claude script (MCP keys below) |
 | Frontend design | frontend-design | plugin |
 | Specs | OpenSpec (`openspec init` per repo, `/opsx:*`) | mise (npm) |
 | PRD, flows, sitemap, HTML mockups | `product-docs` skill | `dot_config/agents/skills/` |
@@ -159,7 +159,7 @@ missing language server.
 | UI mockups | local HTML reviewed live in your browser; headless Brave screenshots are Claude's own layout check; Artifact only on request | `product-docs` skill |
 | Web performance | `perf-auditor` agent (chrome-devtools-mcp, scoped; uses Brave where installed) | `dot_claude/agents/`, mise (npm) |
 | Infra review | `infra-reviewer` agent (read-only plan, diff, lint) | `dot_claude/agents/` |
-| Cloudflare | cloudflare plugin | plugin |
+| Cloudflare | cloudflare plugin (skills) + its MCP server, by API token | plugin; server registered by the claude script |
 
 - **Browsers:** every browser tool drives the installed Brave, so nothing downloads a second Chromium. A machine
   without Brave gets Playwright's Chromium for e2e-tester from the script, and perf-auditor there needs Chrome.
@@ -168,14 +168,18 @@ missing language server.
 - **Language servers are installed by `chezmoi apply`**: `run_onchange_after_35-nvim-mason.sh` reruns whenever the
   nvim config changes, installs every Mason package the config declares (headless, `cwchen.util.mason_sync`), and
   repairs half-finished installs. Run it by hand in nvim with `:lua require("cwchen.util.mason_sync").run()`.
-- **Context7** works on a new machine with no action: the claude script registers it, anonymously. For higher rate
-  limits, add a free API key (context7.com/dashboard) once; chezmoi then authenticates it on every machine:
-  ```sh
-  mkdir -p ~/.config/context7 && chmod 700 ~/.config/context7
-  read -s -P 'Context7 API key: ' k; and printf %s $k > ~/.config/context7/api-key; and chmod 600 ~/.config/context7/api-key
-  chezmoi add --encrypt ~/.config/context7/api-key && chezmoi apply   # the claude script re-registers it with the key
-  ```
-  If the server ever reports "Needs authentication", `chezmoi apply` prints a reminder (`run_after_41`).
+- **MCP keys (context7, cloudflare):** authenticated on every machine by API key, not OAuth. OAuth logins can't be
+  copied between machines, because their refresh tokens rotate. Once per key, on any machine:
+  `claude-mcp-key context7` (free key: context7.com/dashboard) and `claude-mcp-key cloudflare` (API token:
+  dash.cloudflare.com -> My Profile -> API Tokens; scope it narrowly, no client-IP filter). That reads the key
+  hidden, stores it age-encrypted in this repo, and applies; then commit the new `encrypted_*.age` through git-flow.
+  `claude-mcp-headers` sends it as `Authorization: Bearer` (Claude's `headersHelper`), so the key never lands in
+  `~/.claude.json`. Our user-scope `cloudflare` outranks the cloudflare plugin's own copy, and the plugin's skills
+  stay. `chezmoi apply` reminds you about missing keys (`run_after_41`).
+- **No "install <lang>-lsp plugin?" prompts:** Claude Code offers an official LSP plugin whenever its server binary is
+  on PATH, and Mason puts them there. mason-lsp already serves those languages, so the claude script turns the
+  suggestions off (`lspRecommendationDisabled`), and the Mason sync uninstalls servers the nvim config no longer
+  declares.
 - **Adding a language server:** add the Mason package to the nvim config (a LazyVim `lang.*` extra, or `servers` /
   `ensure_installed` in `nvim/lua/cwchen/plugins/editor.lua`), then add one entry to
   `claude-plugins/mason-lsp/.claude-plugin/plugin.json`.

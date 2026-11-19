@@ -30,19 +30,28 @@ claude mcp get {{ $name | quote }} >/dev/null 2>&1 || claude mcp add --scope use
 command -v {{ index $cmd 0 | quote }} >/dev/null 2>&1 || echo "MCP server {{ $name }}: {{ index $cmd 0 }} not on PATH (mise install?)" >&2
 {{ end -}}
 
-# Context7 (library docs MCP): anonymous by default (lower rate limits). With the age-encrypted API key from this
-# repo (~/.config/context7/api-key) it is authenticated on every machine; if the server ever demands auth without
-# one, run_after_41-claude-reminders.sh says so on each apply (`/mcp` -> context7 -> Authenticate).
-# context7 key hash: {{ range (glob (joinPath .chezmoi.sourceDir "dot_config/*context7/*")) }}{{ include . | sha256sum }}{{ end }}
-C7_URL=https://mcp.context7.com/mcp
-C7_KEY="$HOME/.config/context7/api-key"
-if [[ -s "$C7_KEY" ]]; then
-    claude mcp remove context7 --scope user >/dev/null 2>&1 || true
-    claude mcp add --transport http --scope user context7 "$C7_URL" --header "Authorization: Bearer $(tr -d '[:space:]' <"$C7_KEY")" >/dev/null \
-        || echo "MCP server context7 NOT registered" >&2
-else
-    claude mcp get context7 >/dev/null 2>&1 || claude mcp add --transport http --scope user context7 "$C7_URL" >/dev/null \
-        || echo "MCP server context7 NOT registered" >&2
+# Remote MCP servers that take an API key, authenticated on every machine without OAuth: claude-mcp-headers (the
+# headersHelper) sends `Authorization: Bearer` from ~/.config/claude-mcp/<name>, an age-encrypted chezmoi file added
+# with `claude-mcp-key <name>`. The key is read per connection, so adding or rotating one needs no re-registration.
+# User scope outranks plugins, so this `cloudflare` replaces the cloudflare plugin's own copy (its skills stay).
+# run_after_41-claude-reminders.sh says which keys are still missing.
+{{- range $name, $url := .claude.keyedMcpServers }}
+want={{ dict "type" "http" "url" $url "headersHelper" (joinPath $.chezmoi.homeDir ".local/bin/claude-mcp-headers") | toJson | quote }}
+# Re-register only when the user-scope entry differs (`claude mcp get` doesn't show headersHelper; ~/.claude.json does).
+if [[ "$(jq -c --arg n {{ $name | quote }} '.mcpServers[$n] // {} | {headersHelper, type, url}' "$HOME/.claude.json" 2>/dev/null)" \
+      != "$(jq -c '{headersHelper, type, url}' <<<"$want")" ]]; then
+    claude mcp remove {{ $name | quote }} --scope user >/dev/null 2>&1 || true
+    claude mcp add-json --scope user {{ $name | quote }} "$want" >/dev/null || echo "MCP server {{ $name }} NOT registered" >&2
+fi
+{{- end }}
+
+# mason-lsp serves every language we use, so Claude Code's "install <lang>-lsp plugin?" suggestions only offer
+# duplicates (they fire whenever an official plugin's server binary is on PATH, and Mason puts them there). Same key
+# as the dialog's "Disable all LSP recommendations"; ~/.claude.json is rewritten atomically, and only when needed.
+CJ="$HOME/.claude.json"
+if [[ -f $CJ ]] && [[ "$(jq -r '.lspRecommendationDisabled // false' "$CJ" 2>/dev/null)" != true ]]; then
+    tmp=$(mktemp "$CJ.XXXXXX") && jq '.lspRecommendationDisabled = true' "$CJ" >"$tmp" \
+        && mv "$tmp" "$CJ" || { rm -f "$tmp"; echo "could not turn off LSP plugin suggestions in $CJ" >&2; }
 fi
 
 # Language servers: installed by run_onchange_after_35-nvim-mason (Mason, from the nvim config).

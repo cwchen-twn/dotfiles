@@ -114,6 +114,7 @@ return {
 			ensure_installed = {
 				"rust-analyzer",
 				"actionlint",
+				"tree-sitter-cli", -- LazyVim installs it on its own; declared so the Mason sync never prunes it
 			},
 		},
 	},

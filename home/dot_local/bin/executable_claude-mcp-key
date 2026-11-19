@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# claude-mcp-key <server>: store (or rotate) the API key of a remote MCP server for Claude Code on every machine.
+# Reads the key without echoing it, writes ~/.config/claude-mcp/<server> (mode 600), adds it to the dotfiles
+# age-encrypted (chezmoi add --encrypt), and re-registers the servers. Commit the new encrypted file through git-flow.
+# Servers: context7 (free key: context7.com/dashboard), cloudflare (API token: dash.cloudflare.com -> My Profile ->
+# API Tokens; scope it narrowly, no client-IP filter).
+set -euo pipefail
+name=${1:-}
+case $name in
+    context7 | cloudflare) ;;
+    *) echo "usage: claude-mcp-key context7|cloudflare" >&2; exit 2 ;;
+esac
+dir="$HOME/.config/claude-mcp"
+install -d -m 700 "$dir"
+read -r -s -p "$name API key (input hidden): " key; echo
+key=$(printf '%s' "$key" | tr -d '[:space:]')
+[[ -n $key ]] || { echo "empty key, nothing changed" >&2; exit 1; }
+umask 077
+printf '%s\n' "$key" >"$dir/$name"
+chezmoi add --encrypt "$dir/$name"
+echo "stored, encrypted in the dotfiles source: $(chezmoi source-path "$dir/$name")"
+chezmoi apply   # the claude script reruns (its hash covers the encrypted keys) and registers the server with it

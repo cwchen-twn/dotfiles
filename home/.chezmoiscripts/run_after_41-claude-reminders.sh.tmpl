@@ -1,11 +1,13 @@
 {{ if has "claude-code" .extras -}}
 #!/usr/bin/env bash
-# Runs on every apply: one-line reminders for Claude Code setup that needs a human (OAuth logins). Silent when done.
+# Runs on every apply: one-line reminders for Claude Code setup that needs a human. Silent when everything is done.
 export PATH="$HOME/.local/bin:$PATH"
 command -v claude >/dev/null 2>&1 || exit 0
-if [[ ! -s "$HOME/.config/context7/api-key" ]] && claude mcp get context7 2>/dev/null | grep -q 'Needs authentication'; then
-    echo "REMINDER: context7 is not authenticated. In Claude Code: /mcp -> context7 -> Authenticate," \
-         "or add a free API key to the dotfiles once (README, Claude Code -> Context7)." >&2
+{{- range $name, $url := .claude.keyedMcpServers }}
+if [[ ! -s "$HOME/.config/claude-mcp/{{ $name }}" ]]; then
+    echo "REMINDER: MCP server {{ $name }} has no API key on this machine: run \`claude-mcp-key {{ $name }}\` once" \
+         "(the key is then age-encrypted in the dotfiles, and every machine gets it)." >&2
 fi
+{{- end }}
 exit 0
 {{ end -}}

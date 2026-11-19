@@ -1,5 +1,6 @@
 -- Headless Mason sync: install every package the nvim config asks for (mason.nvim `ensure_installed`, plus each
--- enabled nvim-lspconfig server through mason-lspconfig's mapping), repair half-installed ones, report failures.
+-- enabled nvim-lspconfig server through mason-lspconfig's mapping), repair half-installed ones, uninstall the ones
+-- the config no longer declares, report failures.
 -- Run: nvim --headless -c 'lua require("cwchen.util.mason_sync").run()'   (exit 1 when anything is missing)
 local M = {}
 
@@ -77,6 +78,23 @@ function M.run()
     end
     return true
   end, 1000)
+
+  -- One owner: a package the config no longer declares (a replaced server, e.g. pyright after pyrefly) is
+  -- uninstalled, so its binary leaves PATH, where Claude Code would otherwise offer an LSP plugin for it.
+  local removed = {}
+  for _, name in ipairs(registry.get_installed_package_names()) do
+    if not wanted[name] then
+      local ok, pkg = pcall(registry.get_package, name)
+      if ok then
+        pkg:uninstall()
+        table.insert(removed, name)
+      end
+    end
+  end
+  table.sort(removed)
+  if #removed > 0 then
+    out("mason: removed (no longer in the config): " .. table.concat(removed, " "))
+  end
 
   local missing = {}
   for name in pairs(wanted) do

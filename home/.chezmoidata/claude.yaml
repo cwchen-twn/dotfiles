@@ -17,10 +17,16 @@ claude:
     - example-skills@anthropic-agent-skills       # frontend-design/webapp-testing covered above
     - gopls-lsp@claude-plugins-official           # mason-lsp runs gopls
     - context7@claude-plugins-official            # its MCP has no auth header: the script registers context7 itself
+    - pyright-lsp@claude-plugins-official         # accepted LSP suggestions: mason-lsp already serves them
+    - lua-lsp@claude-plugins-official
   removeMarketplaces:
     - anthropic-agent-skills
   mcpServers:
     codebase-memory-mcp: ["codebase-memory-mcp"]
+  # Remote MCP servers authenticated by API key (claude-mcp-headers / claude-mcp-key), registered in user scope.
+  keyedMcpServers:
+    context7: https://mcp.context7.com/mcp
+    cloudflare: https://mcp.cloudflare.com/mcp
   # Language servers mason-lsp expects on PATH (Mason installs them when nvim starts). helm_ls and
   # ansiblels stay nvim-only: Claude maps servers by file extension, and .yaml is yaml-language-server.
   lspBinaries:
@@ -38,3 +44,4 @@ claude:
     - fish-lsp
     - postgres-language-server
     - marksman
+    - lua-language-server
