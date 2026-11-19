@@ -5,3 +5,8 @@
 # never commit decrypted secrets or keys
 key.txt
 *.key
+
+# tool caches and build output (make clean)
+__pycache__/
+build/
+ansible/.ansible/
