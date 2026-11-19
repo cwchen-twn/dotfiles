@@ -1,0 +1,17 @@
+# Fixture config for `make chezmoi/render` and `make chezmoi/test` (CI and local).
+# Mirrors the [data] of home/.chezmoi.toml.tmpl with every option selected, so every template branch that
+# depends on a choice is rendered. Placeholder identity: nothing here is a real machine.
+encryption = "age"
+
+[age]
+identity = "/dev/null"
+recipient = "age16twhc0ygqpsru9c7zlnmemlg88kpjcq2gz2g9cm5dljmnsmlng4q9p5nxc"
+
+[data]
+name = "ci"
+email = "ci@example.invalid"
+sshKey = "id_ed25519_ci"
+devops = ["kubernetes", "terraform", "docker", "tailscale"]
+runtimes = ["node", "go", "java", "rust", "bun", "python"]
+desktop = ["brave", "vscode", "alacritty", "libinput-gestures", "shutter", "libreoffice", "balena-etcher", "calibre", "obsidian", "dbeaver", "fcitx5", "supersonic"]
+extras = ["postgres", "openvpn", "openfortivpn", "nordvpn", "nvidia-cuda", "claude-code"]

@@ -1,0 +1,20 @@
+# markdownlint-cli2 (make markdown/lint). Relaxed for prose-heavy docs and skill files.
+config:
+  default: true
+  MD013:
+    line_length: 120
+    code_blocks: false
+    tables: false
+  MD024:
+    siblings_only: true
+  MD033: false        # inline HTML (details/summary, kbd) is fine
+  MD041: false        # skills and agents start with YAML front matter, not a heading
+  MD060: false        # compact tables (| a | b |) are not padded to aligned columns
+globs:
+  - "**/*.md"
+ignores:
+  # upstream copies installed by codebase-memory-mcp: kept as shipped
+  - home/dot_config/agents/skills/codebase-memory/**
+  - home/dot_claude/agents/codebase-memory*.md
+# skip whatever git ignores (build/, ansible/.ansible collections, ...)
+gitignore: true

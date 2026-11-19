@@ -1,0 +1,3 @@
+# shellcheck (make shell/lint)
+# Sourced files (~/.bashrc, os-release, ...) live on the target machine, not in this repo.
+disable=SC1091

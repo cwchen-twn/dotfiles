@@ -1,0 +1,7 @@
+# ruff (make python/tidy, python/lint): the helper scripts Ansible ships in ansible/roles/*/files.
+# A project config replaces any user-level ruff config, so CI and every machine see the same rules.
+line-length = 120
+target-version = "py311"   # Debian 12's python3, the oldest these scripts run on
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]

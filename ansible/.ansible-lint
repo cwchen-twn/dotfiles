@@ -1,0 +1,8 @@
+# ansible-lint config (make ansible/lint). Runs from ansible/ with --project-dir . so requirements.yml is found
+# and collections land in ansible/.ansible (git-ignored).
+profile: production
+skip_list:
+  # register names like `drv`, `repo_key` stay short: roles here are never shared or composed with others
+  - var-naming[no-role-prefix]
+exclude_paths:
+  - .ansible/

@@ -1,0 +1,26 @@
+# Tools for this repo's gate (`make audit`), the same versions locally and in CI.
+# These are project pins, not global installs: Mason still owns the editor's language servers and linters
+# (AGENTS.md). `make upgradeable` lists newer versions, `make updatedep` bumps them.
+
+[tools]
+# runtimes the npm/pipx tools below run on
+node = "24"
+python = "3.13"
+uv = "0.13.9"
+
+# shell, fish, lua, python
+shellcheck = "0.11.0"
+shfmt = "3.14.1"
+"aqua:fish-shell/fish-shell" = "4.9.3"   # fish -n and fish_indent in CI (static binary)
+stylua = "2.6.0"
+ruff = "0.17.5"
+
+# ansible, markdown, CI workflows
+"pipx:ansible-lint" = "26.11.0"          # brings ansible-core (ansible-playbook, ansible-galaxy)
+"npm:markdownlint-cli2" = "0.24.1"
+actionlint = "1.7.12"
+
+# chezmoi templates, hooks, secrets
+chezmoi = "2.74.1"
+pre-commit = "4.7.0"
+gitleaks = "8.30.1"
