@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Stability first: the stable preset opens one grouped PR on the 1st of the month with releases at least 14 days old; majors wait for a tick on the Dependency Dashboard; nothing merges itself.",
+  "extends": [
+    "local>cwchen-twn/renovate-config:stable"
+  ],
+  "enabledManagers": [
+    "mise",
+    "pre-commit",
+    "github-actions",
+    "custom.regex"
+  ],
+  "pre-commit": {
+    "enabled": true
+  },
+  "customManagers": [
+    {
+      "description": "The global mise config is a chezmoi template, not valid TOML, so the mise manager can't parse it. Its exact pins carry a renovate annotation on the line above; the 'latest' entries move with `mise up` on each machine instead.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^home/dot_config/mise/config\\.toml\\.tmpl$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>\\S+?)(?: extractVersion=(?<extractVersion>\\S+?))?(?: versioning=(?<versioning>\\S+?))?\\s+\\S+ = \"(?<currentValue>[^\"]+)\""
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "gitleaks runs twice in the gate, from mise.toml (make audit) and as a pre-commit hook; keep them on one version.",
+      "matchDepNames": [
+        "gitleaks",
+        "aqua:gitleaks/gitleaks",
+        "gitleaks/gitleaks",
+        "https://github.com/gitleaks/gitleaks"
+      ],
+      "groupName": "gitleaks"
+    }
+  ]
+}

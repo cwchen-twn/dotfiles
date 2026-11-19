@@ -4,13 +4,15 @@
 [tools]
 # core
 lazygit = "latest"
-"aqua:neovim/neovim" = "0.12"  # LazyVim needs >= 0.11
+# renovate: datasource=github-releases depName=neovim/neovim extractVersion=^v(?<version>\d+\.\d+) versioning=loose
+"aqua:neovim/neovim" = "0.12"  # LazyVim needs >= 0.11; the minor floats, patches come with `mise up`
 glab = "latest"
 "forgejo:gitea/tea" = { version = "latest", api_url = "https://gitea.com/api/v1" }
 sops = "latest"
 age = "latest"
 gitleaks = "latest"
 bitwarden = "latest"
+# renovate: datasource=github-releases depName=rtk-ai/rtk extractVersion=^v(?<version>.+)$
 "github:rtk-ai/rtk" = "0.42.4"
 "github:DeusData/codebase-memory-mcp" = "latest"
 fzf = "latest"

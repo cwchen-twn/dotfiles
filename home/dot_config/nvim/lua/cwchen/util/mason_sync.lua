@@ -1,7 +1,9 @@
 -- Headless Mason sync: install every package the nvim config asks for (mason.nvim `ensure_installed`, plus each
 -- enabled nvim-lspconfig server through mason-lspconfig's mapping), repair half-installed ones, uninstall the ones
--- the config no longer declares, report failures.
+-- the config no longer declares, report failures. With { upgrade = true }, also move every installed package to the
+-- registry's latest version (Mason pins nothing, so packages otherwise stay at the version first installed).
 -- Run: nvim --headless -c 'lua require("cwchen.util.mason_sync").run()'   (exit 1 when anything is missing)
+--      nvim --headless -c 'lua require("cwchen.util.mason_sync").run({ upgrade = true })'   (make nvim/update)
 local M = {}
 
 local function out(msg)
@@ -47,7 +49,18 @@ local function healthy(pkg)
 	return true
 end
 
-function M.run()
+-- installed and latest version differ; false when either is unknown (no network, a package without versions)
+local function outdated(pkg)
+	local ok_cur, cur = pcall(pkg.get_installed_version, pkg)
+	local ok_new, new = pcall(pkg.get_latest_version, pkg)
+	if ok_cur and ok_new and cur and new and cur ~= new then
+		return cur, new
+	end
+	return false
+end
+
+function M.run(opts)
+	opts = opts or {}
 	require("lazy").load({ plugins = { "mason.nvim", "mason-lspconfig.nvim", "nvim-lspconfig" } })
 	local registry = require("mason-registry")
 	local refreshed = false
@@ -68,6 +81,13 @@ function M.run()
 			out("mason: installing " .. name)
 			pkg:install({ force = true })
 			table.insert(started, pkg)
+		elseif opts.upgrade then
+			local cur, new = outdated(pkg)
+			if cur then
+				out(("mason: upgrading %s %s -> %s"):format(name, cur, new))
+				pkg:install({ version = new })
+				table.insert(started, pkg)
+			end
 		end
 	end
 	vim.wait(1800000, function()

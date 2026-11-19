@@ -208,6 +208,21 @@ missing language server.
 - Brave: Memory Saver on (balanced), no background mode, Dark Reader installed by policy (`brave://policy`).
 - MacBook: turbo boost only on AC (`/etc/tlp.d/50-dotfiles.conf`).
 
+## Tool updates
+
+Stability first: one reviewed batch a month, not a stream of PRs.
+
+| What | How it moves |
+|---|---|
+| This repo's pins: `mise.toml` (the gate's tools), pre-commit revs, CI actions, mise in CI, `rtk` and the neovim minor in the global mise config | **Renovate**, preset `renovate-config:stable` (`renovate.json`): one grouped PR "monthly tool updates" on the 1st, releases at least 14 days old; majors only after a tick on the Dependency Dashboard issue; nothing merges itself |
+| `latest` entries in `~/.config/mise/config.toml` | `mise up` on each machine |
+| nvim plugins (`lazy-lock.json`) and Mason's packages | `make nvim/update` (Lazy sync, Mason upgrade, `lazy-lock.json` copied back here). Renovate can't read them; its monthly PR is the reminder |
+| apt packages | below |
+
+The runner is `hcloud/.gitea/workflows/renovate.yaml` (daily; it autodiscovers every `cwchen-twn` repo with a
+`renovate.json`). Apps and infra (rigel-ledger, hcloud, projects from `project-template`) use the weekly
+`renovate-config:fast` preset instead, where patch bumps of dev tooling merge themselves on green CI.
+
 ## OS updates (Debian)
 
 - **Security updates install themselves; the reboot is yours.** `unattended-upgrades` runs daily, Debian security only,

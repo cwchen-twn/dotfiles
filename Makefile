@@ -48,11 +48,20 @@ test: $(addsuffix /test,$(STACKS))
 audit: lint test
 	gitleaks git --no-banner --redact .
 
-##updatedep: Bump the tool pins in mise.toml and the pre-commit hook revisions (writes files)
+##updatedep: Bump the tool pins in mise.toml and the pre-commit hook revisions now (Renovate does it monthly)
 .PHONY: updatedep
 updatedep:
 	mise upgrade --bump
 	pre-commit autoupdate
+
+# Renovate can't see these: lazy.nvim pins plugins in lazy-lock.json, Mason pins nothing. Run it when the monthly
+# Renovate PR arrives, on the machine you edit from, and commit lazy-lock.json with it.
+##nvim/update: Update nvim plugins (lazy-lock.json, copied back to the source) and Mason packages on this machine
+.PHONY: nvim/update
+nvim/update:
+	nvim --headless '+Lazy! sync' +qa
+	nvim --headless -c 'lua require("cwchen.util.mason_sync").run({ upgrade = true })'
+	chezmoi re-add $(HOME)/.config/nvim/lazy-lock.json
 
 ##upgradeable: List tools with newer versions than the pins
 .PHONY: upgradeable

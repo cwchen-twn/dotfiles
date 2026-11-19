@@ -39,7 +39,7 @@ Every repo provides the targets that apply to it, under exactly these names:
 | `audit` | **the gate**: `lint` + `test` + vulnerability and secret scans + "is it tidy" checks (`go mod tidy -diff`, `gofmt -l`, `cargo fmt --check`) | no |
 | `build` | build artifacts (`build/dev`, `build/prod` when they differ) | yes |
 | `run` | run locally (`run/live` = hot reload) | – |
-| `updatedep` | update dependencies to latest | yes |
+| `updatedep` | update dependencies to latest, by hand (Renovate does it on its schedule, see AGENTS.md) | yes |
 | `upgradeable` | list what could be updated | no |
 | `test/e2e` | Playwright specs (web apps) | no |
 | `clean` | remove build output | yes |

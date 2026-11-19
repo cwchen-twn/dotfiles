@@ -26,6 +26,9 @@ Every project is driven the same way. Follow it unless the repo's CLAUDE.md/AGEN
 
 - **Tasks run through make.** Run `make help` first. `make audit` is the gate before every commit and in CI, and it is
   never bypassed (no `--no-verify`). A new script or recurring command becomes a make target. See the `makefile` skill.
+- **Dependencies move through Renovate.** Every repo carries a `renovate.json` extending
+  `local>cwchen-twn/renovate-config:fast` (apps, infra: weekly, dev-tooling patches automerge) or `:stable` (slow-moving
+  config: one grouped PR a month). The self-hosted runner finds it by itself. Its PRs are `chore(deps):`.
 - **Git runs through the `git-flow` skill:**
   - issue → `<issue>-<slug>` branch → draft PR/MR → fast-forward merge;
   - the repo's `## Git profile` overrides the defaults.
