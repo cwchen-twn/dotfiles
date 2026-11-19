@@ -28,7 +28,6 @@ jobs:
       - name: Install the pinned tools
         uses: jdx/mise-action@v5.2.10
         with:
-          # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
           version: 2026.11.8 # mise itself, as on the machines
           cache: false
           # the default is the Gitea job token, which api.github.com rejects (401); mise downloads anonymously
