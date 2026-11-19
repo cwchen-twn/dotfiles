@@ -8,7 +8,7 @@ set -u
 want=${BT_CODEC-sbc_xq_552}
 [ -n "$want" ] || exec sleep infinity
 
-fix() {  # $1: card name; only touches a card that is on LDAC and offers the target codec
+fix() { # $1: card name; only touches a card that is on LDAC and offers the target codec
     local c=/card/$1/bluez cur
     cur=$(pactl send-message "$c" get-codec 2>/dev/null | tr -d '"') || return 0
     case $cur in ldac*) ;; *) return 0 ;; esac
@@ -21,6 +21,9 @@ fix_all
 # A card appears on connect and changes when the headset profile (calls) hands back to A2DP.
 pactl subscribe | while read -r line; do
     case $line in
-        *"'new' on card"* | *"'change' on card"*) sleep 2; fix_all ;;
+        *"'new' on card"* | *"'change' on card"*)
+            sleep 2
+            fix_all
+            ;;
     esac
 done

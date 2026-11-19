@@ -6,20 +6,24 @@
 set -u
 
 # ---------------------------------------------------------------- the decisions (change here when they change)
-BT_POLICY_ARG="auto_switch=2"          # headphones switch to the headset profile (mic) when any app records
-BT_AVOID_CODEC="ldac"                  # LDAC costs about half a core to encode on a 2015 dual-core: bt-codec moves off it
-SUPERSONIC_TRANSCODE=(RequestTranscode=true Codec=opus MaxBitRateKBPS=192)   # Opus instead of raw FLAC
-MEDIA_KEYS=(XF86AudioPlay=playerctl XF86AudioNext=playerctl XF86AudioPrev=playerctl   # key=command it must run,
-            XF86AudioRaiseVolume=vol XF86AudioLowerVolume=vol XF86AudioMute=vol)      # as its only enabled binding
-VAAPI_NEED="VideoProc"   # Chromium's VA-API decoder on older Intel needs the driver's post-processing (non-free iHD)
-BRAVE_VULKAN="Vulkan,DefaultANGLEVulkan,VulkanFromANGLE"   # Brave composites with Vulkan: GL conversion corrupted frames
-BRAVE_H264IFY="omkfmpieigblcllmkgbflkikinpkodlk"                              # enhanced-h264ify
+BT_POLICY_ARG="auto_switch=2"                                                       # headphones switch to the headset profile (mic) when any app records
+BT_AVOID_CODEC="ldac"                                                               # LDAC costs about half a core to encode on a 2015 dual-core: bt-codec moves off it
+SUPERSONIC_TRANSCODE=(RequestTranscode=true Codec=opus MaxBitRateKBPS=192)          # Opus instead of raw FLAC
+MEDIA_KEYS=(XF86AudioPlay=playerctl XF86AudioNext=playerctl XF86AudioPrev=playerctl # key=command it must run,
+    XF86AudioRaiseVolume=vol XF86AudioLowerVolume=vol XF86AudioMute=vol)            # as its only enabled binding
+VAAPI_NEED="VideoProc"                                                              # Chromium's VA-API decoder on older Intel needs the driver's post-processing (non-free iHD)
+BRAVE_VULKAN="Vulkan,DefaultANGLEVulkan,VulkanFromANGLE"                            # Brave composites with Vulkan: GL conversion corrupted frames
+BRAVE_H264IFY="omkfmpieigblcllmkgbflkikinpkodlk"                                    # enhanced-h264ify
 # --------------------------------------------------------------------------------------------------------------
 
 fails=0
-ok()   { printf '  \e[32m✔\e[0m %-38s %s\n' "$1" "$2"; }
-bad()  { printf '  \e[31m✘\e[0m %-38s %s\n' "$1" "$2"; [ -n "${3:-}" ] && printf '      \e[2m→ %s\e[0m\n' "$3"; fails=$((fails + 1)); }
-na()   { printf '  \e[2m– %-38s %s\e[0m\n' "$1" "$2"; }
+ok() { printf '  \e[32m✔\e[0m %-38s %s\n' "$1" "$2"; }
+bad() {
+    printf '  \e[31m✘\e[0m %-38s %s\n' "$1" "$2"
+    [ -n "${3:-}" ] && printf '      \e[2m→ %s\e[0m\n' "$3"
+    fails=$((fails + 1))
+}
+na() { printf '  \e[2m– %-38s %s\e[0m\n' "$1" "$2"; }
 section() { printf '\n\e[1m%s\e[0m\n' "$1"; }
 
 # ---------------------------------------------------------------- audio
@@ -27,20 +31,24 @@ section "Audio"
 if pactl info >/dev/null 2>&1; then
     ok "sound server" "$(pactl info | sed -n 's/^Server Name: //p') $(pactl info | sed -n 's/^Server Version: //p')"
     arg=$(pactl list modules 2>/dev/null | awk '/Name: module-bluetooth-policy/ {f=1} f && /Argument:/ {sub(/^[^:]*: */, ""); print; exit}')
-    if [ "$arg" = "$BT_POLICY_ARG" ]; then ok "headset profile when recording" "$arg"
+    if [ "$arg" = "$BT_POLICY_ARG" ]; then
+        ok "headset profile when recording" "$arg"
     else bad "headset profile when recording" "module-bluetooth-policy: '${arg:-not loaded}'" "$HOME/.config/pulse/default.pa (chezmoi); pulseaudio -k to reload"; fi
     ok "default output" "$(pactl get-default-sink)"
     ok "default input" "$(pactl get-default-source)"
 else
     bad "sound server" "pactl cannot reach it" "systemctl --user status pulseaudio"
 fi
-if pgrep -u "$(id -u)" -x pasystray >/dev/null; then ok "volume tray (pasystray)" "running"
-elif command -v pasystray >/dev/null 2>&1; then bad "volume tray (pasystray)" "not running" "setsid -f pasystray --volume-max=100 --volume-inc=5 (autostarts at login)"
+if pgrep -u "$(id -u)" -x pasystray >/dev/null; then
+    ok "volume tray (pasystray)" "running"
+elif command -v pasystray >/dev/null 2>&1; then
+    bad "volume tray (pasystray)" "not running" "setsid -f pasystray --volume-max=100 --volume-inc=5 (autostarts at login)"
 else bad "volume tray (pasystray)" "not installed" "chezmoi apply (apt pasystray, desktop role)"; fi
 if grep -qE '^plugins=.*\bvolume\b' "$HOME/.config/lxqt/panel.conf" 2>/dev/null; then
     bad "panel volume widget" "still in the panel (shows a fixed device)" "chezmoi apply (lxqt role removes it)"
 else ok "panel volume widget" "removed (pasystray instead)"; fi
-if systemctl --user is-active -q bt-codec.service; then ok "bt-codec service" "active"
+if systemctl --user is-active -q bt-codec.service; then
+    ok "bt-codec service" "active"
 else bad "bt-codec service" "$(systemctl --user is-active bt-codec.service)" "systemctl --user enable --now bt-codec.service"; fi
 cards=$(pactl list short cards 2>/dev/null | awk '$2 ~ /^bluez_card\./ {print $2}')
 if [ -z "$cards" ]; then na "Bluetooth audio device" "none connected"; fi
@@ -59,14 +67,16 @@ section "Music (Supersonic)"
 if command -v supersonic >/dev/null 2>&1 || [ -x "$HOME/.local/share/mise/shims/supersonic" ]; then
     ok "supersonic" "$(mise ls --current github:dweymouth/supersonic 2>/dev/null | awk 'NR==1 {print $2}')"
 else bad "supersonic" "not installed" "mise install (supersonic in the chezmoi desktop list)"; fi
-if { ldconfig -p 2>/dev/null || /usr/sbin/ldconfig -p 2>/dev/null || /sbin/ldconfig -p 2>/dev/null; } | grep -q 'libmpv.so.2'; then ok "libmpv" "libmpv.so.2"
+if { ldconfig -p 2>/dev/null || /usr/sbin/ldconfig -p 2>/dev/null || /sbin/ldconfig -p 2>/dev/null; } | grep -q 'libmpv.so.2'; then
+    ok "libmpv" "libmpv.so.2"
 else bad "libmpv" "missing" "chezmoi apply (apt libmpv2, desktop role)"; fi
 conf=$HOME/.config/supersonic/config.toml
 if [ -r "$conf" ]; then
     for kv in "${SUPERSONIC_TRANSCODE[@]}"; do
         k=${kv%%=*} want=${kv#*=}
         have=$(awk -v k="$k" '/^\[/ {s=$0} s=="[Transcoding]" && $1==k {print $3; exit}' "$conf" | tr -d "\"'")
-        if [ "$have" = "$want" ]; then ok "stream $k" "$have"
+        if [ "$have" = "$want" ]; then
+            ok "stream $k" "$have"
         else bad "stream $k" "'${have:-unset}' (want $want)" "chezmoi apply ~/.config/supersonic (modify template)"; fi
     done
 else na "stream settings" "no ~/.config/supersonic/config.toml yet"; fi
@@ -98,33 +108,42 @@ if command -v vainfo >/dev/null 2>&1; then
     v=$(vainfo 2>/dev/null)
     drv=$(sed -n 's/.*Driver version: //p' <<<"$v" | head -1)
     profiles=$(grep -E 'VAEntrypointVLD' <<<"$v" | grep -oE 'VAProfile(H264|VP8|VP9|AV1|HEVC)[A-Za-z0-9]*' | sed 's/VAProfile//' | sort -u | paste -sd' ' -)
-    if grep -q 'H264' <<<"$profiles"; then ok "GPU hardware decode" "$profiles"
+    if grep -q 'H264' <<<"$profiles"; then
+        ok "GPU hardware decode" "$profiles"
     else bad "GPU hardware decode" "no H.264 decode (${profiles:-none})" "vainfo; drivers: intel-media-va-driver / i965-va-driver"; fi
     [ -n "$drv" ] && ok "VA-API driver" "$drv"
 else bad "vainfo" "missing" "chezmoi apply (apt vainfo, desktop role)"; fi
 pol=/etc/brave/policies/managed/dotfiles.json
-if grep -q "$BRAVE_H264IFY" "$pol" 2>/dev/null; then ok "enhanced-h264ify (policy)" "force-installed"
+if grep -q "$BRAVE_H264IFY" "$pol" 2>/dev/null; then
+    ok "enhanced-h264ify (policy)" "force-installed"
 else bad "enhanced-h264ify (policy)" "not in $pol" "chezmoi apply (desktop role)"; fi
 if command -v vainfo >/dev/null 2>&1; then
-    if grep -q "VAEntrypoint$VAAPI_NEED" <<<"$v"; then ok "VA-API post-processing" "$VAAPI_NEED (Brave can decode on the GPU)"
+    if grep -q "VAEntrypoint$VAAPI_NEED" <<<"$v"; then
+        ok "VA-API post-processing" "$VAAPI_NEED (Brave can decode on the GPU)"
     else bad "VA-API post-processing" "no $VAAPI_NEED: Brave falls back to CPU decoding" "Intel: apt install intel-media-va-driver-non-free (desktop role)"; fi
 fi
 launcher=$HOME/.local/share/applications/brave-browser.desktop
-if grep -q "^Exec=.*--enable-features=$BRAVE_VULKAN" "$launcher" 2>/dev/null; then ok "Brave menu entry" "Vulkan flags"
+if grep -q "^Exec=.*--enable-features=$BRAVE_VULKAN" "$launcher" 2>/dev/null; then
+    ok "Brave menu entry" "Vulkan flags"
 else bad "Brave menu entry" "no Vulkan flags in $launcher" "chezmoi apply (desktop role generates it on Intel graphics)"; fi
 main=$(pgrep -u "$(id -u)" -xo brave)
-if [ -z "$main" ]; then na "running Brave" "not running"
+if [ -z "$main" ]; then
+    na "running Brave" "not running"
 else
-    if tr '\0' ' ' </proc/"$main"/cmdline | grep -q -- "--enable-features=$BRAVE_VULKAN"; then ok "running Brave" "started with the Vulkan flags"
+    if tr '\0' ' ' </proc/"$main"/cmdline | grep -q -- "--enable-features=$BRAVE_VULKAN"; then
+        ok "running Brave" "started with the Vulkan flags"
     else bad "running Brave" "started without the Vulkan flags (hardware video shows corrupted squares)" "quit Brave (menu > Exit) and start it from the menu/panel"; fi
     gpu=$(pgrep -u "$(id -u)" -f -- '--type=gpu-process' | head -1)
-    if [ -n "$gpu" ] && grep -q 'libvulkan_intel' /proc/"$gpu"/maps 2>/dev/null; then ok "Brave GPU process" "Vulkan ($(grep -oE 'libvulkan_intel[a-z_]*' /proc/"$gpu"/maps | head -1))"
+    if [ -n "$gpu" ] && grep -q 'libvulkan_intel' /proc/"$gpu"/maps 2>/dev/null; then
+        ok "Brave GPU process" "Vulkan ($(grep -oE 'libvulkan_intel[a-z_]*' /proc/"$gpu"/maps | head -1))"
     elif [ -n "$gpu" ]; then bad "Brave GPU process" "not using Vulkan" "brave://gpu: check Vulkan / ANGLE backend"; fi
 fi
 if [ "${1:-}" = --decode ]; then
     if command -v brave-decode-test >/dev/null 2>&1; then
-        r=$(brave-decode-test 2>&1); rc=$?
-        d=$(sed -n 's/^decoder: //p' <<<"$r"); c=$(sed -n 's/^cpu: *//p' <<<"$r")
+        r=$(brave-decode-test 2>&1)
+        rc=$?
+        d=$(sed -n 's/^decoder: //p' <<<"$r")
+        c=$(sed -n 's/^cpu: *//p' <<<"$r")
         case $rc in
             0) ok "Brave decodes on the GPU (test)" "$d; $c" ;;
             1) bad "Brave decodes on the GPU (test)" "$d; $c" "brave-decode-test shows the media log" ;;
@@ -141,12 +160,15 @@ case $yd in
     "") bad "yt-dlp" "missing" "mise install (yt-dlp in the mise config)" ;;
     *) bad "yt-dlp" "$yd ($("$yd" --version 2>/dev/null)): not from mise" "chezmoi apply (desktop role removes Debian's)" ;;
 esac
-if dpkg -s yt-dlp >/dev/null 2>&1; then bad "Debian yt-dlp" "installed (too old for YouTube)" "chezmoi apply (desktop role removes and pins it out)"
+if dpkg -s yt-dlp >/dev/null 2>&1; then
+    bad "Debian yt-dlp" "installed (too old for YouTube)" "chezmoi apply (desktop role removes and pins it out)"
 else ok "Debian yt-dlp" "absent"; fi
-if grep -q '^hwdec=vaapi' "$HOME/.config/mpv/mpv.conf" 2>/dev/null; then ok "mpv" "hwdec=vaapi, H.264 from yt-dlp (yt URL)"
+if grep -q '^hwdec=vaapi' "$HOME/.config/mpv/mpv.conf" 2>/dev/null; then
+    ok "mpv" "hwdec=vaapi, H.264 from yt-dlp (yt URL)"
 else bad "mpv" "no hwdec=vaapi in ~/.config/mpv/mpv.conf" "chezmoi apply"; fi
 
 echo
-if [ "$fails" -eq 0 ]; then printf '\e[32mAll as decided.\e[0m  Cost per app: cpu-stat\n'
+if [ "$fails" -eq 0 ]; then
+    printf '\e[32mAll as decided.\e[0m  Cost per app: cpu-stat\n'
 else printf '\e[31m%d check(s) drifted.\e[0m  Cost per app: cpu-stat\n' "$fails"; fi
 exit "$fails"

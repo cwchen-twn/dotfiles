@@ -6,6 +6,7 @@
 # Shown at fish start (conf.d/reboot-needed.fish) and on the Conky desktop (widgets.lua).
 set -u
 running=$(uname -r)
+# shellcheck disable=SC2012 # kernel file names are plain; ls -v sorts versions
 newest=$(ls -v /boot/vmlinuz-* 2>/dev/null | tail -n 1)
 newest=${newest#/boot/vmlinuz-}
 if [ -n "$newest" ] && [ "$newest" != "$running" ]; then

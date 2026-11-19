@@ -13,18 +13,30 @@
 # shellcheck disable=SC1091,SC2016  # os-release is sourced at run time; check() evals its quoted test
 set -euo pipefail
 
-next_of() { case $1 in bookworm) echo trixie ;; trixie) echo forky ;; forky) echo duke ;; *) return 1 ;; esac; }
+next_of() { case $1 in bookworm) echo trixie ;; trixie) echo forky ;; forky) echo duke ;; *) return 1 ;; esac }
 
 dry=false
-[ "${1:-}" = --dry-run ] && { dry=true; shift; }
+[ "${1:-}" = --dry-run ] && {
+    dry=true
+    shift
+}
 . /etc/os-release
-[ "${ID:-}" = debian ] || { echo "Debian only (this is ${ID:-unknown})" >&2; exit 1; }
+[ "${ID:-}" = debian ] || {
+    echo "Debian only (this is ${ID:-unknown})" >&2
+    exit 1
+}
 current=${VERSION_CODENAME:?no VERSION_CODENAME in /etc/os-release}
-target=${1:-$(next_of "$current")} || { echo "no known release after $current: pass the codename" >&2; exit 1; }
+target=${1:-$(next_of "$current")} || {
+    echo "no known release after $current: pass the codename" >&2
+    exit 1
+}
 echo "Debian $current -> $target"
 
 fail=false
-check() { if eval "$2"; then echo "  ok    $1"; else echo "  FAIL  $1"; fail=true; fi; }
+check() { if eval "$2"; then echo "  ok    $1"; else
+    echo "  FAIL  $1"
+    fail=true
+fi; }
 # Released = deb.debian.org has dists/<target>/Release and its Suite is "stable" (testing has one long before).
 suite=$(curl -fsSL "https://deb.debian.org/debian/dists/$target/Release" 2>/dev/null | sed -n 's/^Suite: //p')
 check "$target is released (suite: ${suite:-not found})" '[ "$suite" = stable ]'
@@ -35,12 +47,12 @@ on_ac() {
         found=true
         [ "$(cat "$s/online" 2>/dev/null)" = 1 ] && return 0
     done
-    ! $found   # desktops have no Mains supply listed
+    ! $found # desktops have no Mains supply listed
 }
 check "on AC power" on_ac
 check "5 GB free in /" '[ "$(df --output=avail -k / | tail -n 1)" -ge 5242880 ]'
 check "300 MB free in /boot" '[ "$(df --output=avail -k /boot | tail -n 1)" -ge 307200 ]'
-check "no broken packages (apt-get check)" 'apt-get check -o Debug::NoLocking=1 >/dev/null 2>&1'  # read-only: no root, no lock
+check "no broken packages (apt-get check)" 'apt-get check -o Debug::NoLocking=1 >/dev/null 2>&1' # read-only: no root, no lock
 check "no held packages" '[ -z "$(apt-mark showhold)" ]'
 check "no half-installed packages (dpkg --audit)" '[ -z "$(dpkg --audit)" ]'
 
@@ -50,14 +62,23 @@ files=()
 for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do
     [ -f "$f" ] && grep -q "\b$current\b" "$f" && files+=("$f")
 done
-[ ${#files[@]} -gt 0 ] || { echo "  FAIL  no Debian source mentions $current"; fail=true; }
+[ ${#files[@]} -gt 0 ] || {
+    echo "  FAIL  no Debian source mentions $current"
+    fail=true
+}
 for f in "${files[@]}"; do
     echo "--- $f"
     sed "s/\b$current\b/$target/g" "$f" | diff -u "$f" - | sed -n '/^[-+][^-+]/p' || true
 done
 
-$fail && { echo "Not upgrading: fix the FAIL lines above." >&2; exit 1; }
-$dry && { echo "Dry run: nothing changed."; exit 0; }
+$fail && {
+    echo "Not upgrading: fix the FAIL lines above." >&2
+    exit 1
+}
+$dry && {
+    echo "Dry run: nothing changed."
+    exit 0
+}
 read -rp "Upgrade to $target now? [y/N] " ok
 [ "$ok" = y ] || exit 1
 

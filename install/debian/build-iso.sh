@@ -8,7 +8,7 @@
 # env var (HOSTNAME_NEW USERNAME_NEW FULLNAME TIMEZONE KEYMAP SWAP_GB WIFI_SSID WIFI_PASS PASSHASH) for unattended builds.
 # Secrets only end up in the generated ISO (mode 600), never in the repo.
 set -euo pipefail
-shopt -u patsub_replacement 2>/dev/null || true   # keep '&' literal in ${var//pat/repl}
+shopt -u patsub_replacement 2>/dev/null || true # keep '&' literal in ${var//pat/repl}
 
 here=$(cd "$(dirname "$0")" && pwd)
 cache=${XDG_CACHE_HOME:-$HOME/.cache}/debian-iso
@@ -18,15 +18,30 @@ write_dev=
 
 while [ $# -gt 0 ]; do
     case $1 in
-        --write) write_dev=${2:?--write needs a device, e.g. /dev/sdb}; shift 2 ;;
-        --out) out=$2; shift 2 ;;
-        -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
-        *) echo "unknown argument: $1" >&2; exit 2 ;;
+        --write)
+            write_dev=${2:?--write needs a device, e.g. /dev/sdb}
+            shift 2
+            ;;
+        --out)
+            out=$2
+            shift 2
+            ;;
+        -h | --help)
+            sed -n '2,10p' "$0"
+            exit 0
+            ;;
+        *)
+            echo "unknown argument: $1" >&2
+            exit 2
+            ;;
     esac
 done
 
 for cmd in curl xorriso openssl sha256sum; do
-    command -v "$cmd" >/dev/null || { echo "missing $cmd (apt install $cmd)" >&2; exit 1; }
+    command -v "$cmd" >/dev/null || {
+        echo "missing $cmd (apt install $cmd)" >&2
+        exit 1
+    }
 done
 
 ask() { # ask VAR "prompt" default
@@ -39,8 +54,10 @@ ask_secret() { # ask_secret VAR "prompt"
     local var=$1 prompt=$2 a b
     [ -n "${!var-}" ] && return
     while :; do
-        read -rsp "$prompt: " a; echo
-        read -rsp "$prompt (again): " b; echo
+        read -rsp "$prompt: " a
+        echo
+        read -rsp "$prompt (again): " b
+        echo
         [ "$a" = "$b" ] && [ -n "$a" ] && break
         echo "empty or mismatch, try again"
     done
@@ -53,7 +70,12 @@ ask FULLNAME "Full name" "$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1)"
 ask TIMEZONE "Timezone" "$(timedatectl show -p Timezone --value 2>/dev/null || echo UTC)"
 ask KEYMAP "Keyboard layout (xkb)" us
 ask SWAP_GB "Swap size in GB (>= the target's RAM to hibernate)" 16
-[[ $SWAP_GB =~ ^[0-9]+$ ]] && [ "$SWAP_GB" -gt 0 ] || { echo "swap size must be a whole number of GB" >&2; exit 1; }
+# shellcheck disable=SC2153 # SWAP_GB is set by ask (printf -v)
+[[ $SWAP_GB =~ ^[0-9]+$ ]] && [ "$SWAP_GB" -gt 0 ] || {
+    echo "swap size must be a whole number of GB" >&2
+    exit 1
+}
+# shellcheck disable=SC2034 # read through ${!src} by the @@KEY@@ substitution loop
 SWAP_MB=$((SWAP_GB * 1024))
 ask WIFI_SSID "Wi-Fi SSID (empty: choose the network on the target during install)"
 [ -z "$WIFI_SSID" ] || ask_secret WIFI_PASS "Wi-Fi password"
@@ -72,7 +94,10 @@ if [ ! -f "$cache/$iso" ]; then
     curl -fL --progress-bar -o "$cache/$iso.part" "$mirror/$iso"
     mv "$cache/$iso.part" "$cache/$iso"
 fi
-(cd "$cache" && grep " $iso\$" <<<"$sums" | sha256sum -c --quiet) || { echo "checksum mismatch: $cache/$iso" >&2; exit 1; }
+(cd "$cache" && grep " $iso\$" <<<"$sums" | sha256sum -c --quiet) || {
+    echo "checksum mismatch: $cache/$iso" >&2
+    exit 1
+}
 
 # --- render the preseed and a grub.cfg whose default entry runs it
 work=$(mktemp -d)
@@ -85,6 +110,7 @@ cfg=$(<"$here/preseed.cfg.tmpl")
 priority=critical
 if [ -z "$WIFI_SSID" ]; then
     cfg=$(grep -v '^d-i netcfg/wireless_' <<<"$cfg")
+    # shellcheck disable=SC2034 # read through ${!src} by the @@KEY@@ substitution loop
     WIFI_PASS=
     priority=high
 fi
@@ -92,8 +118,11 @@ for v in HOSTNAME_NEW:HOSTNAME USERNAME_NEW:USERNAME FULLNAME TIMEZONE KEYMAP SW
     src=${v%%:*} key=${v#*:}
     cfg=${cfg//@@$key@@/${!src}}
 done
-printf '%s\n' "$cfg" > "$work/preseed.cfg"
-if grep -q '@@[A-Z_]*@@' "$work/preseed.cfg"; then echo "unrendered placeholder in preseed" >&2; exit 1; fi
+printf '%s\n' "$cfg" >"$work/preseed.cfg"
+if grep -q '@@[A-Z_]*@@' "$work/preseed.cfg"; then
+    echo "unrendered placeholder in preseed" >&2
+    exit 1
+fi
 
 xorriso -osirrox on -indev "$cache/$iso" -extract /boot/grub/grub.cfg "$work/grub.orig" >/dev/null 2>&1
 chmod u+w "$work/grub.orig"
@@ -109,7 +138,7 @@ menuentry --hotkey=u 'Auto install (WIPES internal disk)' {
 }
 EOF
     sed -n '/^menuentry --hotkey=g/,$p' "$work/grub.orig"
-} > "$work/grub.cfg"
+} >"$work/grub.cfg"
 
 rm -f "$out"
 xorriso -indev "$cache/$iso" -outdev "$out" -boot_image any replay \
@@ -122,12 +151,24 @@ echo "built $out (from $iso; contains your password hash${WIFI_SSID:+ and Wi-Fi 
 
 # --- write to USB
 [ -n "$write_dev" ] || exit 0
-[ -b "$write_dev" ] || { echo "$write_dev is not a block device" >&2; exit 1; }
-[ "$(lsblk -dno TYPE "$write_dev")" = disk ] || { echo "$write_dev is not a whole disk" >&2; exit 1; }
-[ "$(lsblk -dno TRAN "$write_dev")" = usb ] || { echo "$write_dev is not a USB disk, refusing" >&2; exit 1; }
+[ -b "$write_dev" ] || {
+    echo "$write_dev is not a block device" >&2
+    exit 1
+}
+[ "$(lsblk -dno TYPE "$write_dev")" = disk ] || {
+    echo "$write_dev is not a whole disk" >&2
+    exit 1
+}
+[ "$(lsblk -dno TRAN "$write_dev")" = usb ] || {
+    echo "$write_dev is not a USB disk, refusing" >&2
+    exit 1
+}
 lsblk -o NAME,SIZE,TRAN,MODEL,MOUNTPOINTS "$write_dev"
 read -rp "ERASE everything on $write_dev? type the device name to confirm: " confirm
-[ "$confirm" = "$write_dev" ] || { echo "aborted"; exit 1; }
+[ "$confirm" = "$write_dev" ] || {
+    echo "aborted"
+    exit 1
+}
 for part in $(lsblk -lnpo NAME "$write_dev" | tail -n +2); do
     udisksctl unmount -b "$part" >/dev/null 2>&1 || sudo umount "$part" 2>/dev/null || true
 done

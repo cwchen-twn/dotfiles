@@ -2,7 +2,10 @@
 return {
 	"christoomey/vim-tmux-navigator", -- <C-h/j/k/l> across nvim splits and tmux panes
 	"inkarkat/vim-ReplaceWithRegister", -- gr{motion}: replace with register
-	{ "szw/vim-maximizer", keys = { { "<leader>sm", "<cmd>MaximizerToggle<CR>", desc = "Maximize/minimize a split" } } },
+	{
+		"szw/vim-maximizer",
+		keys = { { "<leader>sm", "<cmd>MaximizerToggle<CR>", desc = "Maximize/minimize a split" } },
+	},
 	{ "catgoose/nvim-colorizer.lua", event = { "BufReadPre", "BufNewFile" }, opts = {} },
 	{ "kylechui/nvim-surround", version = "*", event = "VeryLazy", opts = {} },
 
@@ -120,9 +123,14 @@ return {
 	},
 
 	-- git graph (fugitive-based)
-	{ "rbong/vim-flog", cmd = { "Flog", "Flogsplit", "Floggit" }, dependencies = { "tpope/vim-fugitive" }, keys = {
-		{ "<leader>gv", "<cmd>Flog<cr>", desc = "Git graph (Flog)" },
-	} },
+	{
+		"rbong/vim-flog",
+		cmd = { "Flog", "Flogsplit", "Floggit" },
+		dependencies = { "tpope/vim-fugitive" },
+		keys = {
+			{ "<leader>gv", "<cmd>Flog<cr>", desc = "Git graph (Flog)" },
+		},
+	},
 
 	-- markdown preview (from LazyVim's markdown extra): open in the default browser, on localhost only
 	{

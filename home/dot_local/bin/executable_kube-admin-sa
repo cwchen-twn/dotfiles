@@ -56,16 +56,25 @@ for _ in $(seq 30); do
     [ -n "$token" ] && break
     sleep 1
 done
-[ -n "$token" ] || { echo "token not populated in $ns/$sa-token" >&2; exit 1; }
+[ -n "$token" ] || {
+    echo "token not populated in $ns/$sa-token" >&2
+    exit 1
+}
 token="$(printf '%s' "$token" | base64 -d)"
 
 cluster="$(kubectl config view --raw -o jsonpath="{.contexts[?(@.name==\"$ctx\")].context.cluster}")"
 server="$(kubectl config view --raw -o jsonpath="{.clusters[?(@.name==\"$cluster\")].cluster.server}")"
 ca="$(kubectl config view --raw -o jsonpath="{.clusters[?(@.name==\"$cluster\")].cluster.certificate-authority-data}")"
-[ -n "$server" ] && [ -n "$ca" ] || { echo "no server/CA data for cluster '$cluster' of context '$ctx'" >&2; exit 1; }
+[ -n "$server" ] && [ -n "$ca" ] || {
+    echo "no server/CA data for cluster '$cluster' of context '$ctx'" >&2
+    exit 1
+}
 
 mkdir -p "$(dirname "$out")"
-[ -e "$out" ] || ( umask 077; printf 'apiVersion: v1\nkind: Config\n' > "$out" )
+[ -e "$out" ] || (
+    umask 077
+    printf 'apiVersion: v1\nkind: Config\n' >"$out"
+)
 chmod 600 "$out"
 k() { kubectl --kubeconfig "$out" config "$@" >/dev/null; }
 k set-cluster "$ctx" --server="$server"

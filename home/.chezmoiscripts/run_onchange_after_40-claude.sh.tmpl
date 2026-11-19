@@ -50,8 +50,10 @@ fi
 # as the dialog's "Disable all LSP recommendations"; ~/.claude.json is rewritten atomically, and only when needed.
 CJ="$HOME/.claude.json"
 if [[ -f $CJ ]] && [[ "$(jq -r '.lspRecommendationDisabled // false' "$CJ" 2>/dev/null)" != true ]]; then
-    tmp=$(mktemp "$CJ.XXXXXX") && jq '.lspRecommendationDisabled = true' "$CJ" >"$tmp" \
-        && mv "$tmp" "$CJ" || { rm -f "$tmp"; echo "could not turn off LSP plugin suggestions in $CJ" >&2; }
+    if ! { tmp=$(mktemp "$CJ.XXXXXX") && jq '.lspRecommendationDisabled = true' "$CJ" >"$tmp" && mv "$tmp" "$CJ"; }; then
+        rm -f "${tmp:-}"
+        echo "could not turn off LSP plugin suggestions in $CJ" >&2
+    fi
 fi
 
 # Language servers: installed by run_onchange_after_35-nvim-mason (Mason, from the nvim config).

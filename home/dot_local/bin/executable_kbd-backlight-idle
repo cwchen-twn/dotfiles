@@ -3,7 +3,7 @@
 # Started from ~/.config/autostart (needs $DISPLAY). Needs brightnessctl + xprintidle (ansible macbook role).
 set -u
 dev=smc::kbd_backlight
-limit=$(( ${KBD_IDLE_SECS:-60} * 1000 ))
+limit=$((${KBD_IDLE_SECS:-60} * 1000))
 saved=
 while sleep 2; do
     idle=$(xprintidle 2>/dev/null) || continue

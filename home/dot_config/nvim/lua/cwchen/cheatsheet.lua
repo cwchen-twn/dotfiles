@@ -20,7 +20,10 @@ local function pretty(lhs)
 		if special then
 			local s = special:sub(2, -2)
 			s = s:gsub("^[Cc]%-", "Ctrl-"):gsub("^[Mm]%-", "Alt-"):gsub("^[Aa]%-", "Alt-"):gsub("^[Ss]%-", "Shift-")
-			s = s:gsub("^[Ll]eader$", "Space"):gsub("^[Cc][Rr]$", "Enter"):gsub("^[Ee]sc$", "Esc"):gsub("^[Tt]ab$", "Tab")
+			s = s:gsub("^[Ll]eader$", "Space")
+				:gsub("^[Cc][Rr]$", "Enter")
+				:gsub("^[Ee]sc$", "Esc")
+				:gsub("^[Tt]ab$", "Tab")
 			s = s:gsub("^[Bb][Ss]$", "Backspace"):gsub("^[Ss]pace$", "Space")
 			table.insert(out, s)
 			i = i + #special
@@ -35,10 +38,12 @@ end
 
 -- Comparable form of an lhs: special keys lowercased, <leader>/<Space> -> " " ("<Space>ff" == "<leader>ff" == " ff")
 local function norm(lhs)
-	return (lhs:gsub("<[^>]+>", function(t)
-		t = t:lower()
-		return (t == "<space>" or t == "<leader>") and " " or t
-	end))
+	return (
+		lhs:gsub("<[^>]+>", function(t)
+			t = t:lower()
+			return (t == "<space>" or t == "<leader>") and " " or t
+		end)
+	)
 end
 
 -- which-key group prefixes (" f" -> "file/find")
@@ -203,7 +208,10 @@ function M.write(bufnr)
 	if #tree > 0 then
 		table.insert(h, "<section><h2>file tree panel (Space e e)</h2><table>")
 		for _, r in ipairs(tree) do
-			table.insert(h, string.format("<tr><td class=k><kbd>%s</kbd></td><td>%s</td></tr>", esc(r.key), esc(r.desc)))
+			table.insert(
+				h,
+				string.format("<tr><td class=k><kbd>%s</kbd></td><td>%s</td></tr>", esc(r.key), esc(r.desc))
+			)
 		end
 		table.insert(h, "</table></section>")
 	end

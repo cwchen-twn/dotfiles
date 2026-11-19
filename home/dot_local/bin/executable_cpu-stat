@@ -6,7 +6,11 @@
 set -u
 secs=${1:-5}
 top=${2:-12}
-case "$secs$top" in *[!0-9]*) echo "usage: cpu-stat [SECONDS] [N]" >&2; exit 2 ;; esac
+case "$secs$top" in *[!0-9]*)
+    echo "usage: cpu-stat [SECONDS] [N]" >&2
+    exit 2
+    ;;
+esac
 hz=$(getconf CLK_TCK)
 cores=$(nproc)
 
@@ -16,21 +20,32 @@ snapshot() {
     for f in /proc/[0-9]*/stat; do
         read -r line <"$f" 2>/dev/null || continue
         pid=${line%% *}
-        comm=${line#*(}; comm=${comm%)*}
+        comm=${line#*(}
+        comm=${comm%)*}
         rest=${line##*) }
         # rest starts at field 3 (state): utime is field 14 overall -> 12th here, stime the 13th
+        # shellcheck disable=SC2086 # split into fields on purpose
         set -- $rest
-        t=$(( ${12} + ${13} ))
+        t=$((${12} + ${13}))
         case $comm in
-            brave|chrome|chromium|electron|code)
-                local cl; cl=$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null)
+            brave | chrome | chromium | electron | code)
+                local cl
+                cl=$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null)
                 case $cl in
                     *--type=renderer*) comm="$comm (renderer)" ;;
                     *--type=gpu-process*) comm="$comm (gpu)" ;;
-                    *--utility-sub-type=*) t2=${cl#*--utility-sub-type=}; t2=${t2%% *}; comm="$comm (${t2##*.})" ;;
-                    *--type=*) t2=${cl#*--type=}; comm="$comm (${t2%% *})" ;;
+                    *--utility-sub-type=*)
+                        t2=${cl#*--utility-sub-type=}
+                        t2=${t2%% *}
+                        comm="$comm (${t2##*.})"
+                        ;;
+                    *--type=*)
+                        t2=${cl#*--type=}
+                        comm="$comm (${t2%% *})"
+                        ;;
                     *) comm="$comm (main)" ;;
-                esac ;;
+                esac
+                ;;
         esac
         printf '%s %s %s\n' "$pid" "$t" "$comm"
     done
@@ -38,13 +53,18 @@ snapshot() {
 busy() { awk '/^cpu / {print $2+$3+$4+$7+$8, $2+$3+$4+$5+$6+$7+$8}' /proc/stat; }
 wifi_irq() { awk '/brcmf|iwlwifi|ath|rtw|mt76/ {for (i=2; i<=NF && $i ~ /^[0-9]+$/; i++) s+=$i} END {print s+0}' /proc/interrupts; }
 
-a=$(snapshot); b0=$(busy); w0=$(wifi_irq)
+a=$(snapshot)
+b0=$(busy)
+w0=$(wifi_irq)
 sleep "$secs"
-b1=$(busy); w1=$(wifi_irq); c=$(snapshot)
+b1=$(busy)
+w1=$(wifi_irq)
+c=$(snapshot)
 
-read -r bu0 bt0 <<<"$b0"; read -r bu1 bt1 <<<"$b1"
-printf 'CPU busy %d%% of %d cores over %ss' $(( (bu1 - bu0) * 100 / (bt1 - bt0 > 0 ? bt1 - bt0 : 1) )) "$cores" "$secs"
-printf ', Wi-Fi %d interrupts/s' $(( (w1 - w0) / secs ))
+read -r bu0 bt0 <<<"$b0"
+read -r bu1 bt1 <<<"$b1"
+printf 'CPU busy %d%% of %d cores over %ss' $(((bu1 - bu0) * 100 / (bt1 - bt0 > 0 ? bt1 - bt0 : 1))) "$cores" "$secs"
+printf ', Wi-Fi %d interrupts/s' $(((w1 - w0) / secs))
 if [ "$(cat /sys/class/power_supply/BAT0/status 2>/dev/null)" = Discharging ]; then
     printf ', battery draw %.1f W' "$(awk -v v="$(cat /sys/class/power_supply/BAT0/voltage_now)" -v i="$(cat /sys/class/power_supply/BAT0/current_now)" 'BEGIN {print v * i / 1e12}')"
 fi

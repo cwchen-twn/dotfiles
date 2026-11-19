@@ -6,7 +6,7 @@ set -u
 user=$1
 home=/target/home/$user
 
-cat > "$home/bootstrap.sh" <<'EOF'
+cat >"$home/bootstrap.sh" <<'EOF'
 #!/bin/sh
 # Run once after the first login: installs chezmoi and applies the dotfiles (asks what to install).
 set -eu
@@ -34,7 +34,7 @@ if [ -n "$ssid" ] && [ -n "$psk" ] && [ -d /target/etc/NetworkManager ]; then
     nm=/target/etc/NetworkManager/system-connections
     mkdir -p "$nm"
     f="$nm/$(printf %s "$ssid" | tr -c 'A-Za-z0-9._-' _).nmconnection"
-    cat > "$f" <<EOF
+    cat >"$f" <<EOF
 [connection]
 id=$ssid
 type=wifi
