@@ -15,7 +15,7 @@
       - plymouth-themes
       - fonts-jetbrains-mono   # GRUB theme font, regenerated at the scaled sizes
 
-- name: sddm-astronaut source (pinned)
+- name: Sddm-astronaut source (pinned)
   ansible.builtin.git:
     repo: https://github.com/Keyitdev/sddm-astronaut-theme.git
     dest: "{{ boottheme_src }}"
@@ -66,21 +66,22 @@
       {{ out }}
 
 # ---------------------------------------------------------------- login (SDDM)
-- name: SDDM theme files
+- name: SDDM theme files  # noqa: command-instead-of-module  rsync --itemize-changes drives changed_when
   ansible.builtin.command: >-
     rsync -a --delete --itemize-changes --exclude .git --exclude Themes/astronaut.conf.user --exclude 'Backgrounds/dotfiles-*'
     {{ boottheme_src }}/ /usr/share/sddm/themes/sddm-astronaut-theme/
   register: boottheme_rsync
   changed_when: boottheme_rsync.stdout | length > 0
 
-- name: Theme fonts
+- name: Theme fonts  # noqa: command-instead-of-module  rsync --itemize-changes drives changed_when
   ansible.builtin.command: >-
     rsync -a --itemize-changes {{ boottheme_src }}/Fonts/ /usr/share/fonts/sddm-astronaut/
   register: boottheme_fonts
   changed_when: boottheme_fonts.stdout | length > 0
 
-- name: Font cache
+- name: Font cache  # noqa: no-handler  inline on purpose
   ansible.builtin.command: fc-cache -f /usr/share/fonts/sddm-astronaut
+  changed_when: true
   when: boottheme_fonts.changed
 
 - name: Login background
@@ -96,7 +97,7 @@
 
 # SDDM loads <ConfigFile>.user on top of metadata.desktop's ConfigFile (Themes/astronaut.conf), so upstream files stay
 # untouched: the preset's layout, with our background and palette swapped in key by key.
-- name: Login config (preset layout, our image and palette)
+- name: Login config (preset layout, our image and palette)  # noqa: jinja[invalid]  namespace().set is valid in Ansible, lint stub rejects it
   ansible.builtin.copy:
     dest: /usr/share/sddm/themes/sddm-astronaut-theme/Themes/astronaut.conf.user
     mode: "0644"
@@ -161,13 +162,13 @@
   ansible.builtin.file: { path: "{{ boottheme_grub_dir }}", state: directory, mode: "0755" }
 
 # Everything but theme.txt and the fonts, which are rebuilt for the screen below.
-- name: GRUB theme files
+- name: GRUB theme files  # noqa: command-instead-of-module  rsync --itemize-changes drives changed_when
   ansible.builtin.command: >-
     rsync -a --delete --itemize-changes --exclude theme.txt --exclude '*.pf2'
     {{ boottheme_grub_src }}/{{ boottheme_grub_variant }}/ {{ boottheme_grub_dir }}/
   register: boottheme_grub_rsync
   changed_when: boottheme_grub_rsync.stdout | length > 0
-  notify: boottheme update grub
+  notify: Boottheme update grub
 
 - name: GRUB theme.txt, scaled for the screen
   ansible.builtin.script:
@@ -177,7 +178,7 @@
     executable: python3
   register: boottheme_grub_txt
   changed_when: "'CHANGED' in boottheme_grub_txt.stderr"
-  notify: boottheme update grub
+  notify: Boottheme update grub
 
 # The script prints the font sizes the scaled theme names ("JetBrains Mono Regular <size>").
 - name: GRUB fonts at the scaled sizes
@@ -186,9 +187,9 @@
     /usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Regular.ttf
   args: { creates: "{{ boottheme_grub_dir }}/JetBrainsMono-{{ item }}.pf2" }
   loop: "{{ boottheme_grub_txt.stdout_lines }}"
-  notify: boottheme update grub
+  notify: Boottheme update grub
 
-- name: grub drop-in directory
+- name: Grub drop-in directory
   ansible.builtin.file: { path: /etc/default/grub.d, state: directory, mode: "0755" }
 
 - name: GRUB uses the theme
@@ -197,7 +198,7 @@
     mode: "0644"
     content: |
       GRUB_THEME={{ boottheme_grub_dir }}/theme.txt
-  notify: boottheme update grub
+  notify: Boottheme update grub
 
 # ---------------------------------------------------------------- Plymouth (boot splash)
 - name: Plymouth theme dir
@@ -216,14 +217,14 @@
     - file: track.png
       cmd: magick -size 8x8 xc:"{{ boottheme_accent }}66" /usr/share/plymouth/themes/{{ boottheme_name }}/track.png
   loop_control: { label: "{{ item.file }}" }
-  notify: boottheme update initramfs
+  notify: Boottheme update initramfs
 
 - name: Plymouth script
   ansible.builtin.template:
     src: astronaut.script.j2
     dest: "/usr/share/plymouth/themes/{{ boottheme_name }}/astronaut.script"
     mode: "0644"
-  notify: boottheme update initramfs
+  notify: Boottheme update initramfs
 
 - name: Plymouth theme definition
   ansible.builtin.copy:
@@ -238,7 +239,7 @@
       [script]
       ImageDir=/usr/share/plymouth/themes/{{ boottheme_name }}
       ScriptFile=/usr/share/plymouth/themes/{{ boottheme_name }}/astronaut.script
-  notify: boottheme update initramfs
+  notify: Boottheme update initramfs
 
 - name: Plymouth default theme
   ansible.builtin.shell: |
@@ -246,7 +247,7 @@
     plymouth-set-default-theme {{ boottheme_name }} && echo CHANGED
   register: boottheme_plymouth
   changed_when: "'CHANGED' in boottheme_plymouth.stdout"
-  notify: boottheme update initramfs
+  notify: Boottheme update initramfs
 
 - name: Plymouth at 2x on Retina screens
   community.general.ini_file:
@@ -257,7 +258,7 @@
     no_extra_spaces: true
     mode: "0644"
   when: hidpi | default(false) | bool
-  notify: boottheme update initramfs
+  notify: Boottheme update initramfs
 
 - name: Show the splash at boot (kernel command line)
   ansible.builtin.copy:
@@ -265,7 +266,7 @@
     mode: "0644"
     content: |
       GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT splash"
-  notify: boottheme update grub
+  notify: Boottheme update grub
 
 # ---------------------------------------------------------------- cleanup
 # update-grub / update-initramfs first, so nothing still points at a theme that is about to go.

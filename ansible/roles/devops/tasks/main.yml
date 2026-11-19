@@ -50,7 +50,7 @@
     - name: Tailscale package
       ansible.builtin.apt: { name: tailscale, update_cache: true }
 
-- name: macOS casks
+- name: MacOS casks
   when: is_mac
   community.general.homebrew_cask:
     name: "{{ (['docker'] if 'docker' in devops else []) + (['tailscale'] if 'tailscale' in devops else []) }}"

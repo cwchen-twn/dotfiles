@@ -1,5 +1,5 @@
 ---
-- name: Claude Code (native installer, self-updating, ~/.local/bin)
+- name: Claude Code (native installer, self-updating, ~/.local/bin)  # noqa: command-instead-of-module risky-shell-pipe  upstream installer script
   become: false
   ansible.builtin.shell: curl -fsSL https://claude.ai/install.sh | bash
   args: { creates: "{{ home }}/.local/bin/claude" }

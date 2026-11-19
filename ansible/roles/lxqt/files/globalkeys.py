@@ -7,6 +7,7 @@ disabled, so a key does one thing. Matched by key, not section number (lxqt-glob
 Exec compared without quotes, so the file stays unchanged once it is right. Prints CHANGED when the file differs
 (with --check: would differ; nothing is written).
 """
+
 import json
 import re
 import sys
@@ -38,6 +39,7 @@ for line in text.splitlines():
         cur[1].append(line)
 blocks.append(cur)
 
+
 def norm(option, value):
     """lxqt-globalkeysd re-quotes Exec arguments on save ("--min-value=1%"); compare without quotes."""
     if option == "Exec":
@@ -46,7 +48,7 @@ def norm(option, value):
 
 
 def parse(body):
-    return dict(l.split("=", 1) for l in body if "=" in l)
+    return dict(line.split("=", 1) for line in body if "=" in line)
 
 
 # Matched by KEY, not by section number (lxqt-globalkeysd renumbers on save). Per managed key, the first section
@@ -67,11 +69,11 @@ for i, (name, body) in enumerate(blocks):
         if ours.get(key) == i:
             opts = want[key][1]
             if any(norm(k, have.get(k, "")) != norm(k, v) for k, v in opts.items()):
-                kept = [l for l in body if l.strip() and l.split("=", 1)[0] not in opts]
+                kept = [line for line in body if line.strip() and line.split("=", 1)[0] not in opts]
                 body = kept + [f"{k}={v}" for k, v in opts.items()] + [""]
         elif have.get("Enabled", "true") != "false":
-            body = [l for l in body if not l.startswith("Enabled=")]
-            body = (["Enabled=false"] + [l for l in body if l.strip()]) + [""]
+            body = [line for line in body if not line.startswith("Enabled=")]
+            body = (["Enabled=false"] + [line for line in body if line.strip()]) + [""]
     out.append((name, body))
 for key, (section, opts) in want.items():
     if key not in ours:

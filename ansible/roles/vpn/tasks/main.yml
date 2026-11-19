@@ -4,13 +4,13 @@
   block:
     # Profiles come from chezmoi (encrypted) into /etc/openvpn/client/<name>.conf; run as openvpn-client@<name>.
     # update-systemd-resolved: the up/down script that hands pushed DNS to systemd-resolved.
-    - name: openvpn
+    - name: Openvpn
       ansible.builtin.apt: { name: [openvpn, openvpn-systemd-resolved, systemd-resolved] }
       register: ovpn_pkgs
     # Debian doesn't ship systemd-resolved by default; installing it switches /etc/resolv.conf to the 127.0.0.53 stub
     # at once. Until dbus loads resolve1's policy and NetworkManager (started before resolved existed) hands it the
     # uplink DNS, resolved has no upstream servers and name resolution is dead until a reboot.
-    - name: Bring up systemd-resolved after first install
+    - name: Bring up systemd-resolved after first install  # noqa: no-handler  block runs only on first install
       when: ovpn_pkgs is changed
       block:
         - name: Reload dbus (resolve1 policy)
@@ -29,7 +29,7 @@
     - name: /etc/resolv.conf is the systemd-resolved stub
       ansible.builtin.file: { src: /run/systemd/resolve/stub-resolv.conf, dest: /etc/resolv.conf, state: link, force: true }
       register: resolv_link
-    - name: tailscaled present?
+    - name: Tailscaled present?
       ansible.builtin.stat: { path: /usr/sbin/tailscaled }
       register: tailscaled_bin
     - name: Restart tailscaled (DNS through resolved)
@@ -46,10 +46,10 @@
         - /etc/apt/keyrings/openvpn3.asc
         - /var/lib/openvpn3
     # Legacy umbrella unit for /etc/openvpn/*.conf; unused (template units only), nothing to start at boot.
-    - name: openvpn.service off at boot
+    - name: Openvpn.service off at boot
       ansible.builtin.systemd_service: { name: openvpn.service, enabled: false }
 
-- name: openfortivpn
+- name: Openfortivpn
   ansible.builtin.apt: { name: openfortivpn }
   when: is_debian and 'openfortivpn' in extras
 
@@ -69,13 +69,13 @@
       until: repo_key is succeeded
       retries: 3
       delay: 10
-    - name: nordvpn
+    - name: Nordvpn
       ansible.builtin.apt: { name: nordvpn, update_cache: true }
     - name: User in nordvpn group
       ansible.builtin.user: { name: "{{ user }}", groups: nordvpn, append: true }
     # Off until needed (~100 MB): its socket unit has BindsTo=nordvpnd.service, so even the socket starts the daemon
     # at boot. `nordvpnstart` / `nordvpnstop` (fish) start and stop both; then `nordvpn connect` as usual.
-    - name: nordvpnd off at boot (service and socket)
+    - name: Nordvpnd off at boot (service and socket)
       ansible.builtin.systemd_service: { name: "{{ item }}", enabled: false }
       loop: [nordvpnd.socket, nordvpnd.service]
 

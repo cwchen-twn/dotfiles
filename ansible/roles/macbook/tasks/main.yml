@@ -59,7 +59,7 @@
 # Mac-like touchpad for every X session (login screen included). Overrides the libinput defaults from
 # /usr/share/X11/xorg.conf.d/40-libinput.conf; needs an X restart (log out/in). LXQt's touchpad settings
 # override these if you change them there. Gestures: libinput-gestures (desktop role).
-- name: xorg.conf.d directory
+- name: Xorg.conf.d directory
   ansible.builtin.file: { path: /etc/X11/xorg.conf.d, state: directory, mode: "0755" }
 
 - name: Touchpad behaves like macOS (tap, natural scrolling, two-finger right-click)
@@ -93,7 +93,7 @@
     - name: Build dependencies and uinput access (input group)
       ansible.builtin.apt: { name: [pkg-config, libinput-dev, libudev-dev] }
 
-    - name: uinput writable by the input group
+    - name: Uinput writable by the input group
       ansible.builtin.copy:
         dest: /etc/udev/rules.d/60-uinput.rules
         content: |
@@ -104,12 +104,12 @@
     - name: Load uinput at boot
       ansible.builtin.copy: { dest: /etc/modules-load.d/uinput.conf, content: "uinput\n", mode: "0644" }
 
-    - name: Load uinput now and apply the rule
+    - name: Load uinput now and apply the rule  # noqa: no-handler  inline on purpose
       ansible.builtin.shell: modprobe uinput && udevadm control --reload && udevadm trigger --sysname-match=uinput
       when: uinput_rule.changed
       changed_when: true
 
-    - name: Installed version
+    - name: Installed version  # noqa: risky-shell-pipe  grep -q early exit would SIGPIPE cargo under pipefail
       become: false
       ansible.builtin.shell: "{{ cargo }} install --list 2>/dev/null | grep -q '^linux-3-finger-drag {{ tfd_version }}:'"
       register: tfd_installed
@@ -120,11 +120,12 @@
       become: false
       ansible.builtin.command: >-
         {{ cargo }} install --locked --git https://github.com/lmr97/linux-3-finger-drag --tag {{ tfd_version }}
+      changed_when: true
       when: tfd_installed.rc != 0 and (cargo is file)
 
 # FaceTime HD camera: firmware extracted from Apple's update package + out-of-tree driver built with DKMS
 # (rebuilt automatically on kernel upgrades). https://github.com/patjak/facetimehd
-- name: FaceTime HD firmware source
+- name: FaceTime HD firmware source  # noqa: latest[git]  tracks upstream HEAD on purpose
   ansible.builtin.git:
     repo: https://github.com/patjak/facetimehd-firmware.git
     dest: /usr/local/src/facetimehd-firmware
@@ -137,7 +138,7 @@
     chdir: /usr/local/src/facetimehd-firmware
     creates: /lib/firmware/facetimehd/firmware.bin
 
-- name: FaceTime HD driver source
+- name: FaceTime HD driver source  # noqa: latest[git]  tracks upstream HEAD on purpose
   ansible.builtin.git:
     repo: https://github.com/patjak/facetimehd.git
     dest: /usr/local/src/facetimehd
@@ -159,7 +160,7 @@
     remote_src: true
     mode: preserve
 
-- name: Build and install the driver for every kernel with headers
+- name: Build and install the driver for every kernel with headers  # noqa: risky-shell-pipe  grep -q early exit would SIGPIPE dkms under pipefail
   ansible.builtin.shell: |
     set -e
     m=facetimehd v={{ facetimehd_ver }}
@@ -197,7 +198,7 @@
 - name: Virtual camera relay (v4l2loopback via DKMS)
   ansible.builtin.apt: { name: [v4l2loopback-dkms, ffmpeg] }
 
-- name: v4l2loopback device for the relay
+- name: V4l2loopback device for the relay
   ansible.builtin.copy:
     dest: "{{ item.dest }}"
     content: "{{ item.content }}"
@@ -210,7 +211,7 @@
         options v4l2loopback video_nr=10 card_label="FaceTime HD (relay)" exclusive_caps=1
   register: v4l2loopback_conf
 
-- name: Load v4l2loopback now
+- name: Load v4l2loopback now  # noqa: no-handler  inline on purpose
   ansible.builtin.shell: modprobe -r v4l2loopback 2>/dev/null; modprobe v4l2loopback
   when: v4l2loopback_conf.changed
   changed_when: true
@@ -265,6 +266,7 @@
 # The touchpad comes back as a new input device after any sleep; linux-3-finger-drag keeps reading the old one
 # (no error, so Restart=on-failure never fires). Restart it once user sessions are thawed: a unit ordered after
 # the sleep targets runs after resume (the system-sleep hook above runs while user sessions are still frozen).
+# yamllint disable rule:line-length
 - name: Restart three-finger drag after sleep
   ansible.builtin.copy:
     dest: /etc/systemd/system/dotfiles-after-sleep.service
@@ -282,6 +284,7 @@
       [Install]
       WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
   register: after_sleep
+# yamllint enable rule:line-length
 
 - name: Enable it
   ansible.builtin.systemd_service: { name: dotfiles-after-sleep.service, enabled: true, daemon_reload: "{{ after_sleep.changed }}" }

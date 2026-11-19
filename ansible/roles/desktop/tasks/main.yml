@@ -177,7 +177,7 @@
       loop: [ModemManager.service, cups-browsed.service, NetworkManager-wait-online.service]
       when: item in ansible_facts.services
 
-    - name: alacritty via cargo on older releases (jammy/bookworm lack it)
+    - name: Alacritty via cargo on older releases (jammy/bookworm lack it)
       become: false
       ansible.builtin.command: "{{ home }}/.cargo/bin/cargo install alacritty"
       args: { creates: "{{ home }}/.cargo/bin/alacritty" }
@@ -185,7 +185,7 @@
 
     # Not packaged in Debian/Ubuntu. Gestures: ~/.config/libinput-gestures.conf; started from
     # ~/.config/autostart/libinput-gestures.desktop (both chezmoi). Bump the tag to upgrade.
-    - name: libinput-gestures (from source)
+    - name: Libinput-gestures (from source)
       when: "'libinput-gestures' in desktop"
       block:
         - name: Clone libinput-gestures
@@ -198,8 +198,9 @@
         - name: Install libinput-gestures
           ansible.builtin.command: make install
           args: { chdir: /usr/local/src/libinput-gestures }
+          changed_when: true
           when: gestures_src.changed or not ('/usr/bin/libinput-gestures' is file)
-        - name: xinput (inspect/tweak touchpad settings)
+        - name: Xinput (inspect/tweak touchpad settings)
           ansible.builtin.apt: { name: xinput }
         - name: User in input group
           ansible.builtin.user: { name: "{{ user }}", groups: input, append: true }
@@ -208,7 +209,7 @@
       ansible.builtin.apt: { deb: "https://dbeaver.io/files/dbeaver-ce_latest_amd64.deb" }
       when: "'dbeaver' in desktop and arch_deb == 'amd64'"
 
-    - name: balenaEtcher
+    - name: BalenaEtcher
       when: "'balena-etcher' in desktop and arch_deb == 'amd64'"
       block:
         - name: Latest balenaEtcher release
@@ -239,7 +240,7 @@
           register: obsidian_rel
         # No mode: chezmoi also manages ~/.local/share/applications (umask 0775); forcing 0755 here made the two
         # flip it back and forth and chezmoi ask "has changed since chezmoi last wrote it".
-        - name: Applications dirs
+        - name: Applications dirs  # noqa: risky-file-permissions  mode left to chezmoi, see comment above
           ansible.builtin.file: { path: "{{ item }}", state: directory }
           loop: ["{{ home }}/Applications", "{{ home }}/.local/share/applications"]
         - name: Download AppImage

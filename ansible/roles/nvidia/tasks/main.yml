@@ -1,5 +1,5 @@
 ---
-- name: ubuntu-drivers
+- name: Ubuntu-drivers
   ansible.builtin.apt: { name: ubuntu-drivers-common }
   when: ansible_distribution == 'Ubuntu'
 
@@ -11,7 +11,8 @@
 
 - name: CUDA keyring
   ansible.builtin.apt:
-    deb: "https://developer.download.nvidia.com/compute/cuda/repos/{{ ansible_distribution | lower }}{{ ansible_distribution_version | replace('.', '') }}/x86_64/cuda-keyring_1.1-1_all.deb"
+    deb: "https://developer.download.nvidia.com/compute/cuda/repos/{{ ansible_distribution | lower }}{{ ansible_distribution_version | replace('.', '') }}\
+      /x86_64/cuda-keyring_1.1-1_all.deb"
   when: ansible_architecture == 'x86_64'
 
 - name: CUDA toolkit

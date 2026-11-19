@@ -20,13 +20,13 @@
       retries: 3
       delay: 10
 
-    - name: fish PPA (Ubuntu only; Debian uses the distro package)
+    - name: Fish PPA (Ubuntu only; Debian uses the distro package)
       ansible.builtin.apt_repository:
         repo: ppa:fish-shell/release-4
         codename: "{{ ansible_distribution_release }}"
       when: ansible_distribution == 'Ubuntu'
 
-    - name: tshark installs without asking about non-root capture (no)
+    - name: Tshark installs without asking about non-root capture (no)
       ansible.builtin.debconf:
         name: wireshark-common
         question: wireshark-common/install-setuid
@@ -93,10 +93,10 @@
 - name: Memory (zram + earlyoom)
   when: is_debian
   block:
-    - name: zram and earlyoom packages
+    - name: Zram and earlyoom packages
       ansible.builtin.apt: { name: [systemd-zram-generator, earlyoom] }
 
-    - name: zram swap device
+    - name: Zram swap device
       ansible.builtin.copy:
         dest: /etc/systemd/zram-generator.conf
         mode: "0644"
@@ -107,7 +107,7 @@
           swap-priority = 100
       register: zram_conf
 
-    - name: Start zram swap
+    - name: Start zram swap  # noqa: no-handler  restart only when the config changed, inline on purpose
       ansible.builtin.systemd_service: { name: systemd-zram-setup@zram0, state: restarted, daemon_reload: true }
       when: zram_conf.changed
 
@@ -121,14 +121,14 @@
           vm.page-cluster = 0
       register: zram_sysctl
 
-    - name: Apply sysctl
+    - name: Apply sysctl  # noqa: no-handler  inline on purpose
       ansible.builtin.command: sysctl --system
       when: zram_sysctl.changed
       changed_when: true
 
     # Debian defaults: act below 10% free RAM and 10% free swap. Chromium/Electron renderers already have a high
     # oom_score_adj, so a heavy tab goes first; never the display server or the session.
-    - name: earlyoom options
+    - name: Earlyoom options
       ansible.builtin.copy:
         dest: /etc/default/earlyoom
         mode: "0644"
@@ -136,7 +136,7 @@
           EARLYOOM_ARGS="-r 0 --avoid (^|/)(Xorg|sddm|sddm-helper|lxqt-session|xfwm4|systemd|sshd)$"
       register: earlyoom_conf
 
-    - name: earlyoom running
+    - name: Earlyoom running
       ansible.builtin.systemd_service:
         name: earlyoom
         enabled: true
@@ -150,7 +150,7 @@
 - name: Automatic security updates
   when: is_debian
   block:
-    - name: unattended-upgrades
+    - name: Unattended-upgrades
       ansible.builtin.apt: { name: [unattended-upgrades, apt-listchanges] }
 
     - name: Run apt update and unattended-upgrade daily (apt-daily timers)
@@ -173,10 +173,12 @@
           Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
           Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
 
-- name: macOS base
+- name: MacOS base
   when: is_mac
   community.general.homebrew:
-    name: [git, gh, fish, tmux, vim, ripgrep, fd, jq, tree, smartmontools, nmap, mtr, swaks, iperf3, whois, testssl, sslscan, ipcalc, wget, p7zip, zstd, shellcheck, mise]
+    name:
+      [git, gh, fish, tmux, vim, ripgrep, fd, jq, tree, smartmontools, nmap, mtr, swaks, iperf3, whois, testssl, sslscan, ipcalc, wget,
+       p7zip, zstd, shellcheck, mise]
 
 - name: Register fish as a login shell
   ansible.builtin.lineinfile:
