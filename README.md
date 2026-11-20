@@ -219,9 +219,10 @@ Stability first: one reviewed batch a month, not a stream of PRs.
 | nvim plugins (`lazy-lock.json`) and Mason's packages | `make nvim/update` (Lazy sync, Mason upgrade, `lazy-lock.json` copied back here). Renovate can't read them; its monthly PR is the reminder |
 | apt packages | below |
 
-The runner is `hcloud/.gitea/workflows/renovate.yaml` (daily; it autodiscovers every `cwchen-twn` repo with a
-`renovate.json`). Apps and infra (rigel-ledger, hcloud, projects from `project-template`) use the weekly
-`renovate-config:fast` preset instead, where patch bumps of mise and CI version pins merge themselves on green CI.
+Everything Renovate needs lives in `cwchen-twn/renovate-config`: the presets, the pinned Renovate version and the runner
+(daily; it autodiscovers every `cwchen-twn` repo with a `renovate.json`). Apps and infra (rigel-ledger, hcloud, projects
+from `project-template`) use the weekly `renovate-config:fast` preset instead, where patch bumps of mise and CI version
+pins merge themselves on green CI.
 
 ## OS updates (Debian)
 
