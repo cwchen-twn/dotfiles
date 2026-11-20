@@ -1,0 +1,5 @@
+# rtk config. Only the keys that differ from the defaults (`rtk config` prints them all).
+[hooks]
+# cat becomes `rtk read`, which drops lines from structured files; df and wc save next to nothing, and every
+# rewrite makes Claude Code's auto mode ask for the call again. head/tail can't be excluded (rtk 0.42.4).
+exclude_commands = ["cat", "df", "wc"]
