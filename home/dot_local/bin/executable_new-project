@@ -64,6 +64,25 @@ body=$(python3 -c 'import json,sys; print(json.dumps({"owner": sys.argv[1], "nam
 clone_url=$(tea api -X POST "repos/$owner/$TEMPLATE/generate" -d "$body" | json clone_url)
 [ -n "$clone_url" ] || die "generating from $owner/$TEMPLATE failed (is it a template repo?)"
 
+# Generating does not copy the template's pull-request settings; the new repo gets Gitea's defaults. Our server config
+# sets the two that app.ini can (default merge style, delete branch after merge), but the allowed merge styles (all
+# five on) and the update style (merge) are hardcoded in Gitea, so apply the full git-flow set here. Keep it in step
+# with hcloud's k3s/helm/gitea/repo-defaults.sh, which applies it to existing repos.
+# allow_rebase is "Rebase, then fast-forward"; allow_rebase_explicit is "Rebase, then create merge commit" (off).
+echo "Setting pull-request merge styles on $owner/$name"
+tea api -X PATCH "repos/$owner/$name" -d '{
+  "allow_merge_commits": false,
+  "allow_rebase": true,
+  "allow_rebase_explicit": false,
+  "allow_squash_merge": true,
+  "allow_fast_forward_only_merge": true,
+  "allow_rebase_update": true,
+  "default_merge_style": "fast-forward-only",
+  "default_update_style": "rebase",
+  "default_delete_branch_after_merge": true
+}' | json default_merge_style | grep -qx fast-forward-only \
+    || die "could not set the pull-request settings on $owner/$name; run hcloud's repo-defaults.sh $owner/$name"
+
 mkdir -p "$ROOT/$owner"
 git clone "$clone_url" "$dir"
 cd "$dir"
