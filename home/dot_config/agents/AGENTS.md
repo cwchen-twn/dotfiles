@@ -34,6 +34,10 @@ Every project is driven the same way. Follow it unless the repo's CLAUDE.md/AGEN
   - issue → `<issue>-<slug>` branch → draft PR/MR → fast-forward merge;
   - the repo's `## Git profile` overrides the defaults.
   - Commit, push, open PRs, merge or tag only when asked.
+- **Releases are a tag, and CI publishes them:** `make release version=X.Y.Z` tags `main`, and the tag's CI builds the
+  image and the release page. Renovate opens the bump PR in the infra repo, and a human merges and deploys.
+  Images that carry personal data go to a private org: Gitea package visibility follows the owner, not the repo.
+  Details in git-flow §4.
 - **A new project starts with `new-project <name> [description]`:** it generates the repo from the Gitea
   `project-template`, clones it, runs `make init` and opens Claude on `/kickoff` (the `kickoff` skill), which takes the
   idea and hands off to `product-docs`.

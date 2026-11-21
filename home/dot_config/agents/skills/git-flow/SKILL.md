@@ -1,6 +1,6 @@
 ---
 name: git-flow
-description: Git workflow for every repository, on any forge (Gitea via tea, GitLab via glab, GitHub via gh). It covers the issue → branch → draft PR/MR → fast-forward merge flow that must exist before development starts, commit messages, and annotated release/deploy tags, with per-repo overrides from a "Git profile" block. Use before starting any code or config change; when creating an issue, branch, PR or MR; when committing or writing a commit message; and when merging, tagging or releasing. A repo-specific git or commit skill, if present, takes precedence for whatever it covers.
+description: Git workflow for every repository, on any forge (Gitea via tea, GitLab via glab, GitHub via gh). It covers the issue → branch → draft PR/MR → fast-forward merge flow that must exist before development starts, commit messages, annotated release/deploy tags, and what a tag sets off (CI release pages, images, the Renovate hand-off to an infra repo), with per-repo overrides from a "Git profile" block. Use before starting any code or config change; when creating an issue, branch, PR or MR; when committing or writing a commit message; and when merging, tagging, releasing or publishing an image. A repo-specific git or commit skill, if present, takes precedence for whatever it covers.
 ---
 
 # Git flow
@@ -40,8 +40,10 @@ branch: <issue>-<slug>           # or <type>/<slug>
 merge: fast-forward-only         # fast-forward-only | merge | squash
 commit-style: reasoned-list      # reasoned-list | finding-prose | <path to repo skill>
 tags: none                       # none | vX.Y.Z | <env>.<app>.<X.Y.Z>
+release: none                    # none | page | goreleaser: what CI makes of a vX.Y.Z tag (§4)
+image: none                      # or <registry>/<owner>/<name>, pushed by CI on tags and main
 gate: make audit                 # the check run before commit and in CI
-deploy: <how a change reaches production, if not by tag>
+deploy: <how a change reaches production, e.g. "infra repo chart, via a Renovate PR">
 rust-analyzer: mason             # or rustup, for pinned/nightly toolchains
 ```
 
@@ -97,6 +99,8 @@ Rules for every style:
 - **Run the gate** (profile `gate:`, default `make audit`) before committing.
   - A pre-commit hook usually runs it.
   - Fix any failure. **Never use `--no-verify`.**
+  - If the gate needs mise's `[env]` (sops-decrypted credentials, say for `terraform init`) and the shell isn't
+    mise-activated (an agent's bash), commit with `mise exec -- git commit …`.
 - Each commit must stand on its own: with fast-forward merges, `main` gets the branch's commits as they are.
 - End with the Co-Authored-By line the session asks for.
 
@@ -116,17 +120,40 @@ Rules for every style:
 - After the merge, delete the branch. Then `git switch main && git pull --ff-only`, and archive any OpenSpec change:
   `openspec archive <change>`.
 
+**Stacked PRs** (work that splits into dependent changes):
+
+- Branch each one from the previous branch's tip, not from `main`. Every PR still targets `main`; its body says
+  `Stacked on #<n>, merge after it`.
+- Merge in order. Each branch already sits on the previous one, so each fast-forwards with no rebase.
+
+**When force-push isn't allowed** (a permission check refuses it, branch protection, or the user said no):
+
+- Never rewrite pushed history to fix a branch. Add a follow-up commit; it must still stand on its own.
+- If `main` moved and the fast-forward fails, ask the user to run the `--force-with-lease` push, or merge with
+  Gitea's `--style rebase` fallback (`forges.md`), which rebases on the server.
+
 **Renovate PRs/MRs** (`renovate/*` branches, opened by the bot):
 
 - No issue needed; the Dependency Dashboard tracks them.
 - Review, merge, and deploy the way the repo deploys.
 - Don't push to a Renovate branch unless you need to: Renovate stops rebasing a branch once a human commits to it.
 
-## 4. Tags (profile `tags:` ≠ `none`)
+## 4. Release and deliver (profile `tags:` ≠ `none`)
 
-See [references/release-tags.md](references/release-tags.md). The non-negotiables:
+See [references/release-tags.md](references/release-tags.md) for tagging and release pages, and
+[references/delivery.md](references/delivery.md) for images and the hand-off to an infra repo. The non-negotiables:
 
+- Tag with `make release version=X.Y.Z summary="…"` where the repo has it (makefile skill). It previews the message;
+  `confirm=yes` tags and pushes. It only makes the tag: **CI publishes**, the image (profile `image:`) and the
+  release page (profile `release:`).
 - Tags are always annotated (`git tag -a`), and the message lists the changes since the previous tag of the same series.
 - Production or release tags go only on commits that are on `main`.
 - **Never move, delete or re-push an existing tag.** Fix forward with the next version.
-- After pushing, watch the pipeline and report the deploy or release **result**, not just that the tag was pushed.
+- After pushing, watch every run the tag started and report the **result**: image tags, release page URL, the bump
+  PR in the infra repo. Not just that the tag was pushed.
+
+What the agent does unasked, and what waits for the user:
+
+| Unasked | Only when asked |
+|---|---|
+| issue, branch, local commits, `make release` preview, watching CI, reporting | push, open or merge a PR, `make release … confirm=yes`, merge an infra bump PR, deploy |

@@ -43,6 +43,8 @@ Every repo provides the targets that apply to it, under exactly these names:
 | `upgradeable` | list what could be updated | no |
 | `test/e2e` | Playwright specs (web apps) | no |
 | `clean` | remove build output | yes |
+| `release` | preview the `vX.Y.Z` tag message; with `confirm=yes`, tag `main` and push (CI then publishes) | tag |
+| `dist` | the files a `release: page` release attaches, in `dist/` | yes |
 | infra: `plan`, `diff` | `terraform plan`, `helm diff`: read-only | no |
 | infra: `deploy …` | applies changes. **Requires `confirm=yes`** | yes |
 
@@ -90,6 +92,10 @@ Start from [templates/Makefile.base](templates/Makefile.base), then add a snippe
   `make test/e2e` and `make build` where relevant. CI does nothing that isn't a make target.
 - **The repo's CLAUDE.md** lists the main targets, with one line each, under a "Commands" heading.
 - **Git profile:** `gate: make audit`. See the git-flow skill.
+- **Releases** (profile `tags: vX.Y.Z`): copy [templates/release.sh](templates/release.sh) to `scripts/release.sh`
+  and paste [templates/release.mk](templates/release.mk). `make release` only tags; the tag push starts CI, which
+  builds the image and creates the release page (git-flow, `references/release-tags.md`). Add `dist` only for
+  `release: page` with files to attach.
 
 ## Retrofitting a repo
 
