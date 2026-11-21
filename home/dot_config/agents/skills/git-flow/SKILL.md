@@ -147,7 +147,7 @@ See [references/release-tags.md](references/release-tags.md) for tagging and rel
   `confirm=yes` tags and pushes. It only makes the tag: **CI publishes**, the image (profile `image:`) and the
   release page (profile `release:`).
 - Tags are always annotated (`git tag -a`), and the message lists the changes since the previous tag of the same series.
-- Production or release tags go only on commits that are on `main`.
+- Production or release tags go only on commits that are on `main`, and whose CI run passed.
 - **Never move, delete or re-push an existing tag.** Fix forward with the next version.
 - After pushing, watch every run the tag started and report the **result**: image tags, release page URL, the bump
   PR in the infra repo. Not just that the tag was pushed.

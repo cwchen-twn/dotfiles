@@ -32,6 +32,8 @@ make release version=1.4.0 summary="Faster DC lookups and no more worker timeout
 
 - It refuses unless HEAD is a clean `main` in sync with `origin/main`, the tag is new (locally and on origin), and
   the Git profile sets `tags: vX.Y.Z`.
+- **Tag only a commit whose CI passed.** The script doesn't check it: look at the `main` run for HEAD first
+  (`forges.md`, "CI status"). A tag on a red commit publishes a broken release and can't be moved.
 - The preview is what to show the user before asking for `confirm=yes`. The push starts CI: it may publish and
   deploy.
 - **It only makes the tag.** It never builds or uploads anything; CI does (below).

@@ -4,6 +4,8 @@
 release:
 	@test -n "$(version)" || { echo 'usage: make release version=X.Y.Z summary="..." [confirm=yes]'; exit 1; }
 	./scripts/release.sh "$(version)" "$(summary)" "$(confirm)"
+# If the Makefile already has a dist target, make that one fill dist/ instead of pasting this one: make keeps
+# only the last recipe for a target, with no more than a warning.
 ##dist: Build the files the release page attaches into dist/ (for release page; set the recipe per stack)
 .PHONY: dist
 dist: build
