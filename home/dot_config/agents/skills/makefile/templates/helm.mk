@@ -1,4 +1,4 @@
-# ---- helm: needs helm (mise) + the helm-diff plugin; one dir per chart under CHARTS_DIR ----
+# ---- helm: needs helm (mise) + the helm-diff plugin (dotfiles installs it); one dir per chart under CHARTS_DIR ----
 CHARTS_DIR := charts
 .PHONY: helm/init helm/tidy helm/lint helm/test helm/audit helm/build helm/updatedep
 helm/init:

@@ -1,0 +1,64 @@
+{{ if has "kubernetes" .devops -}}
+#!/usr/bin/env bash
+# Install the helm-diff plugin, pinned, so `helm diff upgrade` is the real per-object diff: the infra repo's
+# upgrade script, the makefile skill's `make diff` and the infra-reviewer agent all call it. Runs after mise
+# (20), which installs helm; reruns when the pin or the key below changes. Plugins are per user
+# (~/.local/share/helm/plugins), so one install serves every helm version mise has.
+#
+# Helm 4 verifies plugin signatures by default, and helm-diff signs its release tarballs (.prov). The keyring is
+# the maintainer's public key, committed in .chezmoitemplates/helm-diff-release-key.asc and checked against the
+# fingerprint helm-diff's README and release notes publish:
+#   C5645EF47482257A1F806D2BEA17A2A206AFF8CD  Fabian Ruff (helm-diff release key)
+# So no gpg and no key download at install time. A rotated key fails the install with "signature made by unknown
+# entity": replace the .asc after checking the new fingerprint, never pass --verify=false.
+set -euo pipefail
+export PATH="$HOME/.local/share/mise/shims:$PATH"
+
+# renovate: datasource=github-releases depName=databus23/helm-diff
+HELM_DIFF_VERSION="v3.15.15"
+
+command -v helm >/dev/null 2>&1 || {
+    echo "helm not installed, skipping helm-diff"
+    exit 0
+}
+
+installed=$(helm plugin list 2>/dev/null | awk '$1 == "diff" { print $2 }')
+if [ "$installed" = "${HELM_DIFF_VERSION#v}" ]; then
+    exit 0
+fi
+if [ -n "$installed" ]; then
+    helm plugin uninstall diff
+fi
+
+case "$(uname -s)" in
+    Linux) os=linux ;;
+    Darwin) os=macos ;;
+    *)
+        echo "helm-diff: unsupported OS $(uname -s)" >&2
+        exit 1
+        ;;
+esac
+case "$(uname -m)" in
+    x86_64 | amd64) arch=amd64 ;;
+    aarch64 | arm64) arch=arm64 ;;
+    *)
+        echo "helm-diff: unsupported architecture $(uname -m)" >&2
+        exit 1
+        ;;
+esac
+
+keyring=$(mktemp)
+trap 'rm -f "$keyring"' EXIT
+cat >"$keyring" <<'KEY'
+{{ template "helm-diff-release-key.asc" }}
+KEY
+
+url="https://github.com/databus23/helm-diff/releases/download/$HELM_DIFF_VERSION/helm-diff-$os-$arch.tgz"
+if ! helm plugin install "$url" --keyring "$keyring"; then
+    printf '\n\033[1;31mhelm-diff %s was NOT installed.\033[0m See the error above; a signature error means the\n' \
+        "$HELM_DIFF_VERSION" >&2
+    echo "release key changed (see this script's header)." >&2
+    exit 1
+fi
+helm diff version
+{{ end -}}

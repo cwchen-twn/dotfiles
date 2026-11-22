@@ -135,6 +135,7 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 |---|---|
 | apt / Homebrew (Ansible) | shell + base CLI, docker, tailscale, GUI apps, postgres, VPNs, CUDA |
 | mise (`~/.config/mise/config.toml`) | node, pnpm, go, java, maven, gradle, kubectl, helm, kubectx, terraform, hcloud (Hetzner), wrangler (Cloudflare), lazygit, neovim, glab, tea, sops, age, rtk, ... |
+| chezmoi script (`run_onchange_after_21-helm-plugins`) | the helm-diff plugin, pinned and signature-verified (Helm 4), bumped by Renovate |
 | own installers | rustup (`~/.cargo`), bun (`~/.bun`), uv and claude (`~/.local/bin`) |
 | Mason (nvim, `~/.local/share/nvim/mason/bin`) | every language server, plus tflint, actionlint, ansible-lint, shellcheck, ruff, prettier. Shared with Claude Code, never installed twice |
 

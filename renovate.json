@@ -24,6 +24,17 @@
         "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>\\S+?)(?: extractVersion=(?<extractVersion>\\S+?))?(?: versioning=(?<versioning>\\S+?))?\\s+\\S+ = \"(?<currentValue>[^\"]+)\""
       ],
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+    },
+    {
+      "description": "Pins in chezmoi scripts (helm-diff) are shell assignments, NAME=\"version\", with the same renovate annotation on the line above.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^home/\\.chezmoiscripts/.+\\.sh\\.tmpl$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>\\S+?)(?: extractVersion=(?<extractVersion>\\S+?))?(?: versioning=(?<versioning>\\S+?))?\\s+[A-Z_]+=\"(?<currentValue>[^\"]+)\""
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     }
   ],
   "packageRules": [
