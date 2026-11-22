@@ -36,9 +36,10 @@ Every project is driven the same way. Follow it unless the repo's CLAUDE.md/AGEN
   - Commit, push, open PRs, merge or tag only when asked.
 - **Releases are a tag, and CI publishes them:** `make release version=X.Y.Z` tags `main`, and the tag's CI builds the
   image and the release page. Renovate opens the bump PR in the infra repo, and a human merges and deploys.
-  Images that carry personal data go to a private org: Gitea package visibility follows the owner, not the repo.
-  Details in git-flow §4.
-- **A new project starts with `new-project <name> [description]`:** it generates the repo from the Gitea
+  Images that carry personal data go to a private org (`catopia`), and so does the repo that builds them: Gitea
+  package visibility follows the owner, and a package links only to a repo of the same owner. Open code and shared
+  tooling stay on `cwchen-twn`. Details in git-flow §4.
+- **A new project starts with `new-project <name> [description] [--owner <org>]`:** it generates the repo from the Gitea
   `project-template`, clones it, runs `make init` and opens Claude on `/kickoff` (the `kickoff` skill), which takes the
   idea and hands off to `product-docs`.
 - **New apps or UI features start with the `product-docs` skill:** PRD → Mermaid flows and sitemap → HTML mockups

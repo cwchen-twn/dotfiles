@@ -27,11 +27,16 @@ The agent watches steps 3–5 and reports each result (image tags, release URL, 
 Gitea's package visibility follows the **owner** (user or org), not the repository. Everything under a public user
 can be pulled anonymously, **even when the repo that built it is private**.
 
-- **Images that carry personal, household or customer data go to a private org.** Code-only images may stay under
-  the user.
+- **Images that carry personal, household or customer data go to a private org** (on git.chenantunez.com:
+  `catopia`). Code-only images may stay under the user.
+- **The repo moves with its image.** A repo lives with the owner its packages must have, so a repo that publishes a
+  private image lives in that org too: the package links only to a repo of the same owner, and the org's boards
+  (projects) only collect that org's issues. Open code and shared tooling with no private packages stay on the user.
+  Start one there with `new-project <name> --owner <org>`.
 - Check it, don't assume it: an anonymous token request for the image's tags must get `401`.
 - What a private org costs:
-  - a package links only to a repo of the same owner, so it won't show on a user-owned repo's page;
+  - Actions runners must be registered instance-wide (or to the org); a user-scoped runner never picks up the org's
+    jobs;
   - CI needs `REGISTRY_USER` / `REGISTRY_TOKEN` repository secrets with package write on that org (the per-job token
     doesn't reliably cover packages);
   - the cluster needs an imagePullSecret (sops-encrypted in the infra repo);

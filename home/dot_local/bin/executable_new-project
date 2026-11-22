@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # new-project: start a new project from the project-template repo on Gitea, then open Claude on /kickoff.
 #
-#   new-project <name> [description] [--public] [--no-claude]
+#   new-project <name> [description] [--owner <org>] [--public] [--no-claude]
 #
-# 1. Generates <owner>/<name> from <owner>/project-template through the Gitea API (default tea login).
+# 1. Generates <owner>/<name> from <you>/project-template through the Gitea API (default tea login). The owner is
+#    you unless --owner names an org: a repo whose images must stay private goes to a private org (catopia), since
+#    Gitea package visibility follows the owner and a package can only be linked to a repo of the same owner.
 #    Gitea fills $REPO_NAME and $REPO_DESCRIPTION in the template's CLAUDE.md and README.
 # 2. Clones it over HTTPS into ~/Documents/Gitea/<owner>/<name> and runs `make init`.
 # 3. Starts an interactive `claude "/kickoff"` there: you explain the idea, and the product-docs flow begins.
@@ -22,11 +24,17 @@ die() {
     exit 1
 }
 
-name='' description='' private=true claude=true
+name='' description='' owner='' private=true claude=true
 while [ $# -gt 0 ]; do
     case $1 in
         -h | --help) usage ;;
         --public) private=false ;;
+        --owner)
+            [ $# -ge 2 ] || die "--owner needs an org name"
+            owner=$2
+            shift
+            ;;
+        --owner=*) owner=${1#--owner=} ;;
         --no-claude) claude=false ;;
         -*) die "unknown option $1" ;;
         *)
@@ -49,20 +57,24 @@ done
 
 json() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get(sys.argv[1]) or "")' "$1"; }
 
-owner=$(tea api user | json login)
-[ -n "$owner" ] || die "no Gitea login: run 'tea login add' first"
+me=$(tea api user | json login)
+[ -n "$me" ] || die "no Gitea login: run 'tea login add' first"
+owner=${owner:-$me}
+if [ "$owner" != "$me" ] && [ -z "$(tea api "orgs/$owner" 2>/dev/null | json username)" ]; then
+    die "$owner is not an org you can see"
+fi
 dir=$ROOT/$owner/$name
 [ ! -e "$dir" ] || die "$dir already exists"
 if [ -n "$(tea api "repos/$owner/$name" 2>/dev/null | json name)" ]; then
     die "$owner/$name already exists on Gitea"
 fi
 
-echo "Generating $owner/$name from $owner/$TEMPLATE"
+echo "Generating $owner/$name from $me/$TEMPLATE"
 body=$(python3 -c 'import json,sys; print(json.dumps({"owner": sys.argv[1], "name": sys.argv[2],
     "description": sys.argv[3], "private": sys.argv[4] == "true", "git_content": True}))' \
     "$owner" "$name" "$description" "$private")
-clone_url=$(tea api -X POST "repos/$owner/$TEMPLATE/generate" -d "$body" | json clone_url)
-[ -n "$clone_url" ] || die "generating from $owner/$TEMPLATE failed (is it a template repo?)"
+clone_url=$(tea api -X POST "repos/$me/$TEMPLATE/generate" -d "$body" | json clone_url)
+[ -n "$clone_url" ] || die "generating from $me/$TEMPLATE failed (is it a template repo?)"
 
 # Generating does not copy the template's pull-request settings; the new repo gets Gitea's defaults. Our server config
 # sets the two that app.ini can (default merge style, delete branch after merge), but the allowed merge styles (all
