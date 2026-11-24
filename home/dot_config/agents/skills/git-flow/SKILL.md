@@ -103,8 +103,11 @@ Rules for every style:
 - **Run `make lint` before committing, and the gate** (profile `gate:`, default `make audit`) **before pushing.**
   - The pre-commit and pre-push hooks usually run them (makefile skill, "Wiring").
   - Fix any failure. **Never use `--no-verify`.**
-  - If the gate needs mise's `[env]` (sops-decrypted credentials, say for `terraform init`) and the shell isn't
-    mise-activated (an agent's bash), commit with `mise exec -- git commit …`.
+  - If the hooks need mise's `[env]` (sops-decrypted credentials, say for `terraform init`) and the shell isn't
+    mise-activated (an agent's bash), run them under it: `mise exec -- git commit …` and, now that the gate runs on
+    push, `mise exec -- git push …`.
+  - The pre-push gate can take minutes (database tests). Give the push a long timeout rather than reading a slow
+    hook as a hang.
 - Each commit must stand on its own: with fast-forward merges, `main` gets the branch's commits as they are.
 - End with the Co-Authored-By line the session asks for.
 

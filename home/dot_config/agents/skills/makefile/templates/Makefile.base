@@ -22,7 +22,7 @@ help:
 .PHONY: init
 init: $(addsuffix /init,$(STACKS))
 	mise install
-	@if command -v pre-commit >/dev/null 2>&1; then pre-commit install; else echo "pre-commit not installed: skipping hooks"; fi
+	@if command -v pre-commit >/dev/null 2>&1; then pre-commit install --hook-type pre-commit --hook-type pre-push; else echo "pre-commit not installed: skipping hooks"; fi
 
 ##tidy: Format code and tidy modules/lockfiles (writes files)
 .PHONY: tidy

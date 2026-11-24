@@ -82,6 +82,7 @@ Start from [templates/Makefile.base](templates/Makefile.base), then add a snippe
 
   ```yaml
   default_install_hook_types: [pre-commit, pre-push]
+  default_stages: [pre-commit]   # the file-check hooks run on commit only, not again on push
 
   repos:
     - repo: local
