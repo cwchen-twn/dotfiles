@@ -42,7 +42,7 @@ commit-style: reasoned-list      # reasoned-list | finding-prose | <path to repo
 tags: none                       # none | vX.Y.Z | <env>.<app>.<X.Y.Z>
 release: none                    # none | page | goreleaser: what CI makes of a vX.Y.Z tag (§4)
 image: none                      # or <registry>/<owner>/<name>, pushed by CI on tags and main
-gate: make audit                 # the check run before commit and in CI
+gate: make audit                 # the check run before push and in CI (make lint runs on commit)
 deploy: <how a change reaches production, e.g. "infra repo chart, via a Renovate PR">
 rust-analyzer: mason             # or rustup, for pinned/nightly toolchains
 ```
@@ -100,8 +100,8 @@ Rules for every style:
 - Conventional type: `feat` `fix` `perf` `refactor` `chore` (and `docs`, where the repo uses it).
 - **No scope.** `chore(deps):` is Renovate's only.
 - No trailing period. Exactly one type.
-- **Run the gate** (profile `gate:`, default `make audit`) before committing.
-  - A pre-commit hook usually runs it.
+- **Run `make lint` before committing, and the gate** (profile `gate:`, default `make audit`) **before pushing.**
+  - The pre-commit and pre-push hooks usually run them (makefile skill, "Wiring").
   - Fix any failure. **Never use `--no-verify`.**
   - If the gate needs mise's `[env]` (sops-decrypted credentials, say for `terraform init`) and the shell isn't
     mise-activated (an agent's bash), commit with `mise exec -- git commit …`.

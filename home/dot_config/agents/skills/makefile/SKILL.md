@@ -21,7 +21,8 @@ description: The Makefile is every project's single task interface, with the sam
 
 1. Run `make help`.
 2. Use the targets: `make test`, not `go test ./...`.
-3. **`make audit` is the gate**, run before every commit and in CI. Fix what it reports; never bypass it (`--no-verify`).
+3. **`make audit` is the gate**, run before every push (pre-push hook) and in CI; `make lint` runs on every commit.
+   Fix what they report; never bypass them (`--no-verify`).
 4. A new script or recurring command becomes a target with a `##` help line, not a loose shell file. A long script can
    live in `scripts/`, with a target that calls it.
 
@@ -32,9 +33,9 @@ Every repo provides the targets that apply to it, under exactly these names:
 | Target | Meaning | Writes files? |
 |---|---|---|
 | `help` | default goal; lists `##` lines | no |
-| `init` | `mise install`, dependency install, `pre-commit install`. Idempotent | yes |
+| `init` | `mise install`, dependency install, `pre-commit install --hook-type pre-commit --hook-type pre-push`. Idempotent | yes |
 | `tidy` | format code, tidy modules and lockfiles | yes |
-| `lint` | static checks only | no |
+| `lint` | static checks only, quick enough for every commit (seconds): formatters' check mode, linters, file hygiene | no |
 | `test` | unit and integration tests | no |
 | `audit` | **the gate**: `lint` + `test` + vulnerability and secret scans + "is it tidy" checks (`go mod tidy -diff`, `gofmt -l`, `cargo fmt --check`) | no |
 | `build` | build artifacts (`build/dev`, `build/prod` when they differ) | yes |
@@ -76,22 +77,43 @@ Start from [templates/Makefile.base](templates/Makefile.base), then add a snippe
 
 ## Wiring
 
-- **pre-commit** (`.pre-commit-config.yaml`), as a local hook:
+- **pre-commit** (`.pre-commit-config.yaml`): `make lint` on commit, `make audit` on push, as local hooks. The gate's
+  tests (a database, a browser) can take minutes, too long to pay on every commit, docs-only ones included.
 
   ```yaml
-  - repo: local
-    hooks:
-      - id: make-audit
-        name: make audit
-        entry: make audit
-        language: system
-        pass_filenames: false
+  default_install_hook_types: [pre-commit, pre-push]
+
+  repos:
+    - repo: local
+      hooks:
+        - id: make-lint
+          name: make lint
+          entry: make lint
+          language: system
+          stages: [pre-commit]
+          pass_filenames: false   # one run per commit, not one per batch of files
+          require_serial: true
+          always_run: true
+        - id: make-audit
+          name: make audit
+          entry: make audit
+          language: system
+          stages: [pre-push]
+          pass_filenames: false
+          require_serial: true
+          always_run: true
   ```
+
+  A `lint/hygiene` target that runs the file hooks on every file skips both (`SKIP=make-lint,make-audit,...`), or
+  they recurse.
 
 - **CI** (Gitea, GitHub or GitLab): the job runs `mise install` (or the setup actions), then `make audit`, plus
   `make test/e2e` and `make build` where relevant. CI does nothing that isn't a make target.
+  - Trigger on `push: branches: [main]` and `pull_request`, not on every push: a PR branch push would run twice.
+  - Docs-only changes may skip it (`paths-ignore`: `"*.md"`, `"**/*.md"`, `docs/**`) when no branch protection
+    requires the check; the pre-commit `make lint` still covers markdown.
 - **The repo's CLAUDE.md** lists the main targets, with one line each, under a "Commands" heading.
-- **Git profile:** `gate: make audit`. See the git-flow skill.
+- **Git profile:** `gate: make audit` (pre-push and CI; `make lint` on commit). See the git-flow skill.
 - **Releases** (profile `tags: vX.Y.Z`): copy [templates/release.sh](templates/release.sh) to `scripts/release.sh`
   and paste [templates/release.mk](templates/release.mk). `make release` only tags; the tag push starts CI, which
   builds the image and creates the release page (git-flow, `references/release-tags.md`). Add `dist` only for

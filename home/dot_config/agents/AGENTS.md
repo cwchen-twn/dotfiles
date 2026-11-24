@@ -27,8 +27,9 @@ Skills live in ~/.config/agents/skills/<name>/SKILL.md and are symlinked into ea
 
 Every project is driven the same way. Follow it unless the repo's CLAUDE.md/AGENTS.md says otherwise.
 
-- **Tasks run through make.** Run `make help` first. `make audit` is the gate before every commit and in CI, and it is
-  never bypassed (no `--no-verify`). A new script or recurring command becomes a make target. See the `makefile` skill.
+- **Tasks run through make.** Run `make help` first. `make lint` runs on every commit (seconds); `make audit`, the
+  gate, runs before every push and in CI, and it is never bypassed (no `--no-verify`). A new script or recurring
+  command becomes a make target. See the `makefile` skill.
 - **Dependencies move through Renovate.** Every repo carries a `renovate.json` extending
   `local>cwchen-twn/renovate-config:fast` (apps, infra: weekly, mise and CI-pin patches automerge) or `:stable`
   (slow-moving config: one grouped PR a month). The self-hosted runner in `renovate-config` finds it by itself. Its PRs
