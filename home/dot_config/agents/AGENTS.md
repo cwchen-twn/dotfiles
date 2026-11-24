@@ -15,6 +15,9 @@ Managed by chezmoi: edit with `chezmoi edit ~/.config/agents/AGENTS.md`.
 - Dotfiles are managed by chezmoi (source: ~/Documents/Gitea/cwchen-twn/dotfiles, public repo). Edit the source, not the
   target file, and never put secrets, internal hostnames or IPs in it. Secrets go in age-encrypted chezmoi files.
 - Git forges: GitHub (`gh`), GitLab (`glab`), self-hosted Gitea at git.chenantunez.com (`tea`).
+- Gitea boards, one per owner (owner → project ID): `catopia` → Homelab (1), `cwchen-twn` → Workbench (2). Every new
+  issue goes on its owner's board (git-flow §1). The Gitea API can't list projects, so the IDs live here; a new
+  owner's board is one more entry.
 
 ## Shared skills
 

@@ -7,6 +7,7 @@ never breaks.
 |---|---|---|---|
 | Find issue | `tea issues ls --keyword "<words>" --state all` | `glab issue list --search "<words>" --all` | `gh issue list --search "<words>" --state all` |
 | Create issue | `tea issues create -t "<title>" --description-file issue.md -a <me>` | `glab issue create --assignee @me -t "<title>" -d "$(cat issue.md)"` | `gh issue create --assignee @me -t "<title>" -F issue.md` |
+| Add to board | `tea api -X PATCH "repos/{owner}/{repo}/issues/<n>" -d '{"projects":[<id>]}'` | none: boards are label views, the issue's labels place it | `gh issue edit <n> --add-project "<title>"` |
 | Draft PR/MR | `tea pulls create --draft --head <branch> -b main -t "<type>: <Subject>" --description-file pr.md` | `glab mr create --draft --source-branch <branch> --target-branch main --assignee @me --remove-source-branch -t "<type>: <Subject>" -d "$(cat pr.md)"` | `gh pr create --draft --base main -t "<type>: <Subject>" -F pr.md` |
 | Mark ready | `tea pulls edit <n> -t "<title without WIP:>"` | `glab mr update <n> --ready` | `gh pr ready <n>` |
 | Update body | `tea pulls edit <n> --description-file pr.md` | `glab mr update <n> -d "$(cat pr.md)"` | `gh pr edit <n> -F pr.md` |
@@ -27,6 +28,9 @@ never breaks.
 - **GitLab** fast-forwards only when the project's `merge_method` is `ff`. If `glab mr merge` refuses, rebase first, as
   above.
 - **GitHub** `--rebase` replays the commits onto `main`. With a branch already rebased, the result is the fast-forward equivalent.
+- **Gitea boards.** `tea issues create` takes no project, hence the separate call. `projects` *replaces* the issue's
+  list, so read `.projects` first if it may already be on one. The 1.27 API can't list projects (IDs are in AGENTS.md)
+  or move a card between columns: closing the issue marks the card done, and moving columns is manual in the UI.
 - **Push mirrors.** If a repo's GitHub copy is a push mirror of Gitea, all issue, PR and merge work happens on Gitea;
   the mirror follows by itself.
 - **Closing keywords** (`Closes #N`, `Fixes #N`) work on all three forges when they appear in the PR body or in a

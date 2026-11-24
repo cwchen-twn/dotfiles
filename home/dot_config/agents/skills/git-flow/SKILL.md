@@ -65,6 +65,10 @@ Every change goes through an issue and a PR or MR. That includes config, CI, doc
    | `## Challenge` | Risks, manual steps, open questions |
    | `## Reference` | Related issues, PRs/MRs, docs, links |
 
+   Then put the issue on its owner's board when AGENTS.md names one (forges.md, "Add to board"): the forge doesn't
+   do it by itself. Only the issue goes on the board. Its PR is linked by `Closes #N`, and Renovate PRs stay off
+   boards (§3).
+
 2. **Branch.** Create it from an up-to-date default branch and name it `<issue>-<short-slug>`:
 
    ```bash
