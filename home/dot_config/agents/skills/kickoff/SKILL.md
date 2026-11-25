@@ -37,7 +37,8 @@ Follow the **git-flow** skill and the repo's Git profile:
    - `## Plan`: the product-docs stages: PRD → flows and sitemap → mockups → OpenSpec proposal.
 2. Branch `<issue>-product-docs` from `main`.
 
-Creating the issue and branch is part of kickoff. Commit, push and open a PR only when the user asks.
+Creating the issue and branch is part of kickoff. Commit, push and open the draft PR once the work is ready to push
+(git-flow, "Ready to push").
 
 ## 4. Record the idea
 

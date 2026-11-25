@@ -4,6 +4,42 @@
     "SG_AGENTIC_MODEL": "sonnet"
   },
   "model": "opus",
+  "permissions": {
+    "allow": [
+      "Bash(git push -u origin *)",
+      "Bash(git push origin *)",
+      "Bash(mise exec -- git push -u origin *)",
+      "Bash(mise exec -- git push origin *)",
+      "Bash(tea pulls create *)",
+      "Bash(glab mr create *)",
+      "Bash(gh pr create *)"
+    ],
+    "ask": [
+      "Bash(*git push * main)",
+      "Bash(*git push *:main)",
+      "Bash(*git push *refs/heads/main*)",
+      "Bash(*git push *--tags*)",
+      "Bash(*git push *--force*)",
+      "Bash(*git push * -f*)",
+      "Bash(*git push *+*)",
+      "Bash(*git push *--delete*)",
+      "Bash(*git push * -d *)",
+      "Bash(*git push *--mirror*)",
+      "Bash(*git push *--no-verify*)",
+      "Bash(tea pulls merge *)",
+      "Bash(glab mr merge *)",
+      "Bash(gh pr merge *)",
+      "Bash(git tag *)",
+      "Bash(make release *)",
+      "Bash(make deploy*)"
+    ]
+  },
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "Source control: the user's own forges (self-hosted Gitea via tea, GitLab via glab, GitHub via gh). Pushing an <issue>-<slug> feature branch and opening a draft PR/MR on it is routine once make audit passes, which the pre-push hook enforces. Merging, marking ready, force-pushing, pushing to main, tags and deploys are not routine."
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

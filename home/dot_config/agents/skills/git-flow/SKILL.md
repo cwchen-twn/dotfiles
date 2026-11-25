@@ -11,7 +11,19 @@ description: Git workflow for every repository, on any forge (Gitea via tea, Git
 2. the repo's **Git profile** (below);
 3. these defaults.
 
-**Ask first:** commit, push, open a PR or MR, merge, and push tags only when the user asks. A pushed tag may **deploy**.
+**Ready to push.** Commit, push the issue branch and open its **draft** PR/MR without asking, once all of these hold:
+
+1. `make lint` passed on every commit (pre-commit hook), and the gate passes on the push (pre-push hook).
+2. The reviews the change needs found no blockers: `/code-review` on the diff; `infra-reviewer` for infra or CI;
+   `/security-review` when auth, input handling, secrets or crypto changed. Every finding is fixed, or listed in the
+   PR body.
+3. The branch is the issue's branch, never the default one; the push is a plain push (no `--force*`); and nothing
+   stray or secret is committed.
+
+Then report the PR link. If any condition fails, stop and report instead of pushing.
+
+**Ask first:** force-push (even `--force-with-lease`), any push to `main`, marking a PR ready, merging, tags,
+`make release … confirm=yes` and deploys. A pushed tag may **deploy**.
 
 ## 0. Detect the forge and the profile
 
@@ -75,7 +87,8 @@ Every change goes through an issue and a PR or MR. That includes config, CI, doc
    git switch main && git pull --ff-only && git switch -c 48-git-flow
    ```
 
-3. **Draft PR/MR.** Open it once the first commit is pushed, and keep it a draft until it is ready.
+3. **Draft PR/MR.** Push and open it as soon as the work is "ready to push" (top of this skill), and keep it a draft
+   until the user marks it ready.
    - **Title:** the conventional subject of the main change, in commit-subject format (§2).
    - **Body:** use [templates/pr.md](templates/pr.md):
      - `Closes #<issue>`;
@@ -163,4 +176,4 @@ What the agent does unasked, and what waits for the user:
 
 | Unasked | Only when asked |
 |---|---|
-| issue, branch, local commits, `make release` preview, watching CI, reporting | push, open or merge a PR, `make release … confirm=yes`, merge an infra bump PR, deploy |
+| issue, branch, commits, push the issue branch and open its draft PR once ready to push, `make release` preview, watching CI, reporting | force-push, push to `main`, mark a PR ready, merge a PR, `make release … confirm=yes`, merge an infra bump PR, deploy |
