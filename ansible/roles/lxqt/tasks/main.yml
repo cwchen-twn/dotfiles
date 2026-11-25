@@ -433,10 +433,14 @@
       register: lxqt_dbus
       changed_when: "'CHANGED' in lxqt_dbus.stdout"
 
-# LibreOffice's dark icon set (Colibre Dark, installed with LO) as a system default: LO reads every .xcd in its share
-# registry as a shared layer, and its own user profile (registrymodifications.xcu) is rewritten by LO itself, so it
-# can't be a chezmoi file. Tools > Options > View can still override it per user.
-- name: LibreOffice dark icons by default
+# LibreOffice defaults, system-wide: LO reads every .xcd in its share registry as a shared layer, and its own user
+# profile (registrymodifications.xcu) is rewritten by LO itself, so it can't be a chezmoi file. Both stay overridable
+# per user in Tools > Options.
+# - Colibre Dark icons (installed with LO).
+# - Appearance "Light": on the Qt6 backend the UI keeps the LXQt dark palette, and only the document goes light
+#   (white page, black automatic text). With "System" the page went dark too, and documents' own black or dark-gray
+#   text and table borders were near-invisible on it.
+- name: LibreOffice dark icons and light pages by default
   ansible.builtin.copy:
     dest: /usr/lib/libreoffice/share/registry/zz-dark.xcd
     mode: "0644"
@@ -448,6 +452,9 @@
         <dependency file="main"/>
         <oor:component-data oor:package="org.openoffice.Office" oor:name="Common">
           <node oor:name="Misc"><prop oor:name="SymbolStyle" oor:op="fuse"><value>colibre_dark</value></prop></node>
+          <node oor:name="Appearance">
+            <prop oor:name="ApplicationAppearance" oor:op="fuse"><value>1</value></prop>
+          </node>
         </oor:component-data>
       </oor:data>
   when: lxqt_dark | bool and 'libreoffice' in desktop and lxqt_detect.results[3].stat.exists
