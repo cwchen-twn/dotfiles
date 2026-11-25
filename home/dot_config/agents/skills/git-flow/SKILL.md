@@ -17,8 +17,8 @@ description: Git workflow for every repository, on any forge (Gitea via tea, Git
 2. The reviews the change needs found no blockers: `/code-review` on the diff; `infra-reviewer` for infra or CI;
    `/security-review` when auth, input handling, secrets or crypto changed. Every finding is fixed, or listed in the
    PR body.
-3. The branch is the issue's branch, never the default one; the push is a plain push (no `--force*`); and nothing
-   stray or secret is committed.
+3. The branch is the issue's branch, never the default one, and the push names it: `git push -u origin <branch>`,
+   not `HEAD` or `@` (those prompt). It is a plain push (no `--force*`), and nothing stray or secret is committed.
 
 Then report the PR link. If any condition fails, stop and report instead of pushing.
 
