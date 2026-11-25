@@ -1,9 +1,11 @@
-# User-level LXQt settings: HiDPI, dark mode, default browser/terminal, favorites, panel widgets, keyboard-backlight keys.
+# User-level LXQt settings: HiDPI, dark mode, default browser/terminal/office apps, favorites, panel widgets,
+# keyboard-backlight keys; LibreOffice on its Qt6 backend with dark icons.
 # LXQt rewrites its own .conf files, so only the keys below are managed (community.general.ini_file);
 # everything else stays editable in the LXQt settings UI. Takes effect on the next login.
 - name: Detect LXQt and the MacBook keyboard backlight
   ansible.builtin.stat: { path: "{{ item }}" }
-  loop: [/usr/bin/startlxqt, /sys/class/leds/smc::kbd_backlight, /usr/bin/playerctl]
+  loop: [/usr/bin/startlxqt, /sys/class/leds/smc::kbd_backlight, /usr/bin/playerctl,
+         /usr/lib/libreoffice/program/libvclplug_qt6lo.so]
   register: lxqt_detect
 
 - name: Find a screen backlight (laptops)
@@ -17,6 +19,7 @@
     kbd_backlight: "{{ lxqt_detect.results[1].stat.exists }}"
     playerctl: "{{ lxqt_detect.results[2].stat.exists }}"
     screen_backlight: "{{ lxqt_backlight.matched > 0 }}"
+    lo_qt6: "{{ lxqt_detect.results[3].stat.exists }}"
     cfg: "{{ home }}/.config"
   block:
     - name: Find the favorites' desktop files
@@ -28,6 +31,13 @@
       ansible.builtin.slurp: { src: "/usr/share/lxqt/palettes/{{ lxqt_dark_palette }}" }
       register: lxqt_palette
       when: lxqt_dark | bool
+
+    - name: Read LibreOffice's MIME types (Writer, Calc, Impress; Draw would claim PDFs)
+      ansible.builtin.slurp: { src: "/usr/share/applications/libreoffice-{{ item }}.desktop" }
+      loop: [writer, calc, impress]
+      register: lxqt_lo_desktop
+      failed_when: false
+      when: "'libreoffice' in desktop"
 
     - name: Build the managed key list  # noqa: jinja[invalid]  lint renders the nested vars as strings; Ansible renders lists
       ansible.builtin.set_fact:
@@ -42,7 +52,7 @@
         # panel.conf rows go to the guarded panel step below (the running panel saves over that file); the rest here.
         lxqt_ini: >-
           {%- set out = [] -%}
-          {%- for r in panel_ini + hidpi_ini + dark_ini + browser_ini + terminal_ini + lock_ini -%}
+          {%- for r in panel_ini + hidpi_ini + dark_ini + browser_ini + office_ini + terminal_ini + lock_ini -%}
             {%- if r[0] != 'lxqt/panel.conf' -%}{%- set _ = out.append(r) -%}{%- endif -%}
           {%- endfor -%}
           {{ out }}
@@ -99,6 +109,27 @@
             {%- for f in ['mimeapps.list', 'lxqt-mimeapps.list'] -%}
               {%- for m in lxqt_browser_mimetypes -%}
                 {%- set _ = out.append([f, 'Default Applications', m, 'brave-browser.desktop']) -%}
+              {%- endfor -%}
+            {%- endfor -%}
+          {%- endif -%}
+          {{ out }}
+        # LibreOffice: the Qt6 backend gets the LXQt palette (Qt5 has no LXQt platform theme in LXQt 2.x, so LO stayed
+        # light), and it is the default for every office type it opens: Calibre claims .docx and .odt too.
+        office_ini: >-
+          {%- set out = [] -%}
+          {%- if 'libreoffice' in desktop -%}
+            {%- if lo_qt6 | bool -%}
+              {%- set _ = out.append(['lxqt/session.conf', 'Environment', 'SAL_USE_VCLPLUGIN', 'qt6']) -%}
+            {%- endif -%}
+            {%- set seen = [] -%}
+            {%- for r in lxqt_lo_desktop.results | selectattr('content', 'defined') -%}
+              {%- for line in (r.content | b64decode) | regex_findall('(?m)^MimeType=(.*)$') | first | default('') | split(';') -%}
+                {%- if line and line not in lxqt_office_mime_exclude and line not in seen -%}
+                  {%- set _ = seen.append(line) -%}
+                  {%- for f in ['mimeapps.list', 'lxqt-mimeapps.list'] -%}
+                    {%- set _ = out.append([f, 'Default Applications', line, 'libreoffice-' ~ r.item ~ '.desktop']) -%}
+                  {%- endfor -%}
+                {%- endif -%}
               {%- endfor -%}
             {%- endfor -%}
           {%- endif -%}
@@ -401,3 +432,22 @@
       args: { executable: /bin/bash }
       register: lxqt_dbus
       changed_when: "'CHANGED' in lxqt_dbus.stdout"
+
+# LibreOffice's dark icon set (Colibre Dark, installed with LO) as a system default: LO reads every .xcd in its share
+# registry as a shared layer, and its own user profile (registrymodifications.xcu) is rewritten by LO itself, so it
+# can't be a chezmoi file. Tools > Options > View can still override it per user.
+- name: LibreOffice dark icons by default
+  ansible.builtin.copy:
+    dest: /usr/lib/libreoffice/share/registry/zz-dark.xcd
+    mode: "0644"
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xmlns:oor="http://openoffice.org/2001/registry">
+        <dependency file="main"/>
+        <oor:component-data oor:package="org.openoffice.Office" oor:name="Common">
+          <node oor:name="Misc"><prop oor:name="SymbolStyle" oor:op="fuse"><value>colibre_dark</value></prop></node>
+        </oor:component-data>
+      </oor:data>
+  when: lxqt_dark | bool and 'libreoffice' in desktop and lxqt_detect.results[3].stat.exists

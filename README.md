@@ -90,9 +90,11 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
 - The `lxqt` Ansible role sets only specific keys in `~/.config/lxqt/*.conf` (LXQt rewrites those files, so chezmoi
   doesn't own them): on Retina MacBooks 2x scaling (`Xft.dpi: 192` in `~/.Xresources`, which Qt, Brave, GTK via
   `GDK_SCALE` and Alacritty all follow); system-wide dark mode (LXQt theme/palette, GTK, freedesktop color-scheme);
-  Brave as default browser; Alacritty as terminal (Ctrl+Alt+T); panel quick launch + menu favorites (file manager,
-  Brave, Alacritty, VS Code, Obsidian, DBeaver, Shutter, as selected); panel widgets (`lxqt_panel_plugins`: Debian
-  default minus mount, plus the CPU monitor). Also 4 workspaces in a row for the gestures.
+  Brave as default browser; LibreOffice as default for office documents (Calibre claims .docx/.odt too), on its Qt6
+  backend (`SAL_USE_VCLPLUGIN=qt6`: LXQt 2.x themes only Qt6, so the Qt5 backend stayed light) with Colibre Dark
+  icons (`/usr/lib/libreoffice/share/registry/zz-dark.xcd`); Alacritty as terminal (Ctrl+Alt+T); panel quick launch and
+  menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, Shutter, as selected); panel widgets
+  (`lxqt_panel_plugins`: Debian default minus mount, plus the CPU monitor). Also 4 workspaces in a row for the gestures.
 - Retina boot and login (macbook role): GRUB console font at 36 px, console in Terminus 16x32, SDDM greeter at 2x.
 - Look (`boottheme` role, desktop machines), Catppuccin Mocha throughout:
   - GRUB: [AstronautGrub](https://github.com/Flava-Clown/AstronautGrub) (pinned; `boottheme_grub_variant` astronaut

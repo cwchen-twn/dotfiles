@@ -39,6 +39,9 @@ lxqt_panel_plugins: [mainmenu, showdesktop, desktopswitch, quicklaunch, taskbar,
 lxqt_panel_plugin_sections:
   cpuload: { type: cpuload, alignment: Right }
 
+# Types the LibreOffice .desktop files list that stay with other apps (editor, browser, PDF viewer).
+lxqt_office_mime_exclude: [text/plain, text/html, application/xhtml+xml, application/pdf]
+
 lxqt_browser_mimetypes:
   - text/html
   - application/xhtml+xml
