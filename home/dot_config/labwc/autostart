@@ -1,6 +1,11 @@
 # Managed by chezmoi. Run by labwc at the start of the "LXQt (labwc)" session, before LXQt's own autostart
 # (lxqt-session: panel, desktop, notifications, ~/.config/autostart). Only what the Wayland session needs instead of
-# the X11 tools: monitors, idle and lock.
+# the X11 tools: input method, monitors, idle and lock.
+
+# Input method: Debian's im-launch (autostart) starts fcitx5 only while the input-method variables are as
+# im-config set them, and this session unsets GTK_IM_MODULE (GTK uses labwc's text-input; fcitx5 warns otherwise),
+# so it is started here. X11 sessions keep im-launch.
+command -v fcitx5 >/dev/null && fcitx5 -d --replace >/dev/null 2>&1
 
 # Monitors: per-output scale and layout, reapplied on plug/unplug (~/.config/kanshi/config).
 kanshi >/dev/null 2>&1 &
