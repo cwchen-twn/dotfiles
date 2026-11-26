@@ -253,18 +253,15 @@ end
 return function(alignment, names)
 	conky.config = {
 		-- A normal window kept below everything: pcmanfm-qt's desktop is itself a window, so a 'desktop'-type
-		-- Conky would be drawn under it. Real transparency comes from xfwm4's compositor (ARGB visual).
+		-- Conky would be drawn under it. Real transparency comes from the compositor (xfwm4 or labwc).
 		own_window = true,
 		own_window_type = "normal",
 		own_window_hints = "undecorated,below,sticky,skip_taskbar,skip_pager",
 		own_window_class = "Conky",
 		own_window_title = "conky-" .. alignment,
-		own_window_argb_visual = true,
-		own_window_argb_value = 179, -- 70% dark backing: mutes the wallpaper's stars behind the text
-		own_window_colour = "11111b", -- crust
+		own_window_color = "#B311111b", -- crust at 70% (alpha first): mutes the wallpaper's stars behind the text
 		double_buffer = true,
-		out_to_x = not wayland,
-		out_to_wayland = wayland,
+		output_backend = wayland and "wayland" or "x11",
 
 		alignment = alignment,
 		gap_x = gap,

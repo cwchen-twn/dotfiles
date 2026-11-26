@@ -110,6 +110,7 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
     quarter of the screen. Right: CPU (per core, temperature, top apps) and memory (swap, top apps; processes summed
     per app as in `cpu-stat`/`mem-stat`). Left: disk and network I/O, GPU busy % (from i915 RC6 residency, no root)
     and battery draw in watts. About 2.5% of one core for both. Hide with `pkill conky`, restart with `conky-desktop`.
+    Conky is upstream's AppImage through mise (one build for X11 and Wayland; Debian 13's 1.22 draws badly on Wayland).
   - Screen lock: i3lock on the login screen's astronaut background (`~/.local/bin/lock-screen`), run by xss-lock after
     10 min idle, before suspend/hibernate and on LXQt's Lock screen (`loginctl lock-session`). There is no password box:
     type the password and press Enter; the ring turns red on a wrong one. xscreensaver is no longer autostarted.

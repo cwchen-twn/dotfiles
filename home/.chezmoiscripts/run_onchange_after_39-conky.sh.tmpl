@@ -1,7 +1,7 @@
 {{ if and (eq .chezmoi.os "linux") .desktop -}}
 #!/usr/bin/env bash
 # Linux desktops: (re)start the desktop system monitor (~/.local/bin/conky-desktop) when its files change, so a
-# layout change shows without logging out. conky-std comes from the ansible desktop role (script 10, before this).
+# layout change shows without logging out. conky comes from mise (script 20, before this; upstream's AppImage).
 # Outside a graphical session (ssh, the first install from a console) the autostart entry starts it at next login.
 # conky hash: {{ range (glob (joinPath .chezmoi.sourceDir "dot_config/conky/*")) }}{{ include . | sha256sum }}{{ end }}
 # script hash: {{ include "dot_local/bin/executable_conky-desktop" | sha256sum }}

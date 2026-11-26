@@ -77,7 +77,7 @@
           - libnotify-bin  # notify-send: the volume popup of ~/.local/bin/vol (volume keys)
           - pasystray      # tray volume icon that follows the default output (~/.config/autostart/pasystray.desktop)
           - mpv            # video player; YouTube via yt-dlp from mise and VA-API (~/.config/mpv/mpv.conf)
-          - conky-std      # system monitor on the desktop (~/.config/conky, autostarted)
+          - libfuse2t64    # runs the conky AppImage (mise): the desktop system monitor, ~/.config/conky
           - i3lock         # screen lock on the login background (~/.local/bin/lock-screen)
           - xss-lock       # runs it on idle, before sleep and on LXQt's Lock screen (autostarted)
           - imagemagick    # lock-screen scales the background to the screen
@@ -94,6 +94,9 @@
           Pin-Priority: -1
     - name: Debian yt-dlp removed
       ansible.builtin.apt: { name: yt-dlp, state: absent }
+    # Conky comes from mise (upstream's AppImage): Debian 13's 1.22 draws badly on Wayland ("LXQt (labwc)").
+    - name: Debian conky removed (mise provides it)
+      ansible.builtin.apt: { name: [conky-std, conky-all, conky], state: absent }
 
     - name: Manage printers and scanners without sudo
       ansible.builtin.user: { name: "{{ user }}", groups: [lpadmin, scanner, bluetooth], append: true }

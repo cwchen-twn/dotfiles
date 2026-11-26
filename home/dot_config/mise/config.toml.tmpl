@@ -40,6 +40,11 @@ hcloud = "latest"        # Hetzner Cloud; token from HCLOUD_TOKEN (hcloud repo's
 wrangler = "latest"      # Cloudflare (npm): Workers, R2, DNS; token from CLOUDFLARE_API_TOKEN
 {{- end }}
 {{- end }}
+{{- if and (eq .chezmoi.os "linux") .desktop }}
+# Desktop system monitor (~/.config/conky, autostarted): upstream's AppImage, one build for X11 and Wayland. Debian 13's
+# conky 1.22 draws badly on Wayland (no background, no bars, broken columns); the AppImage needs libfuse2 (desktop role).
+"github:brndnmtthws/conky" = { version = "latest", asset_pattern = "conky-x86_64-v*.AppImage", bin = "conky" }
+{{- end }}
 {{- if and (eq .chezmoi.os "linux") (has "supersonic" .desktop) }}
 # Navidrome/Subsonic music player (Go + libmpv from apt, desktop role); menu entry in ~/.local/share/applications
 "github:dweymouth/supersonic" = { version = "latest", asset_pattern = "*linux-x64-libmpv2.tar.xz", bin_path = "supersonic/usr/local/bin" }

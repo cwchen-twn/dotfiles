@@ -192,6 +192,12 @@ local function rescan()
 			local statm = read("/proc/" .. pid .. "/statm")
 			if stat and statm then
 				local name, rest = stat:match("%((.*)%)%s+(.*)")
+				-- AppImages (conky itself, from mise) run as "AppRun": name them after their program instead.
+				if name == "AppRun" then
+					local exe = (read("/proc/" .. pid .. "/cmdline") or ""):match("^[^\0]*")
+					name = exe and exe:match("([^/]+)$") or name
+					name = name:gsub("%-x86_64.*$", ""):gsub("%.AppImage$", "")
+				end
 				if name then
 					local f = {}
 					for x in rest:gmatch("%S+") do
