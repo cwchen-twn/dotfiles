@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# wl-copy wrapper: data piped in without --type is typed here, text as text/plain and the rest by file(1). wl-copy's
+# own guess asks xdg-mime, which on LXQt runs qtxdg-mat: it matches by file extension only, so text from a pipe
+# (wl-copy's temp file has none) becomes application/octet-stream and apps paste nothing (Claude Code's
+# copy-on-select, #73).
+set -eu
+real=/usr/bin/wl-copy
+skip=
+for a in "$@"; do
+    [ -z "$skip" ] || {
+        skip=
+        continue
+    }
+    case $a in
+        -s | --seat) skip=1 ;;
+        -t | --type | --type=* | -c | --clear | -h | --help | -v | --version) exec "$real" "$@" ;;
+        -*) ;;
+        *) exec "$real" "$@" ;; # text given as arguments: wl-copy types it as text itself
+    esac
+done
+tmp=$(mktemp)
+cat >"$tmp"
+# Text: valid UTF-8 without NUL bytes (file(1) calls a single character binary).
+if ! LC_ALL=C grep -qaP '\x00' "$tmp" && iconv -f UTF-8 -t UTF-8 "$tmp" >/dev/null 2>&1; then
+    type="text/plain;charset=utf-8"
+else
+    type=$(file -b --mime-type "$tmp")
+fi
+exec 3<"$tmp"
+rm -f "$tmp"
+exec "$real" "$@" --type "$type" <&3
