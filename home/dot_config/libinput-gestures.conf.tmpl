@@ -19,9 +19,8 @@ gesture swipe up     4 {{ $k }} ctrl+alt+d
 # 4 fingers down: LXQt's main menu, the closest thing to Launchpad.
 gesture swipe down   4 {{ $k }} alt+F1
 
-# Pinch: zoom in/out (browsers, editors, image viewers). Browser back/forward: Alt+Left/Right.
-gesture pinch out    {{ $k }} ctrl+plus
-gesture pinch in     {{ $k }} ctrl+minus
+# No pinch gesture: it fired during two-finger scrolling. Zoom is Ctrl+plus/minus/0 (Brave's own pinch zoom is off
+# too, desktop role). Browser back/forward: Alt+Left/Right.
 
 # Ignore short accidental swipes.
 swipe_threshold 50
