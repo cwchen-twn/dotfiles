@@ -4,7 +4,7 @@
 {{- if lookPath "labwc" }}{{ $labwc = output "labwc" "--version" | regexFind "[0-9]+\\.[0-9]+(\\.[0-9]+)?" | default "0.0.0" }}{{ end }}
 <!--
   Managed by chezmoi. labwc, the compositor of the "LXQt (labwc)" Wayland session (ansible labwc role); the X11
-  "LXQt" session keeps xfwm4. Reference: /usr/share/doc/labwc/rc.xml.all.gz, labwc-config(5), labwc-actions(5).
+  desktop is Wayland only. Reference: /usr/share/doc/labwc/rc.xml.all.gz, labwc-config(5), labwc-actions(5).
   Reload after editing: `labwc -r`. Monitors (scale, layout) are kanshi's: ~/.config/kanshi/config.
 -->
 <labwc_config>
@@ -22,7 +22,7 @@
     <font place=""><name>sans</name><size>10</size></font>
   </theme>
 
-  <!-- One row of 4, like the X11 session (keep in sync with lxqt_workspaces, ansible lxqt role). -->
+  <!-- One row of 4 (the 4-finger swipes, ~/.config/libinput-gestures.conf, move along it). -->
   <!-- The panel can't show the current one under labwc (lxqt-panel 2.1's wlroots backend), so labwc's own popup
        names it on every switch, long enough to read. -->
   <desktops>
@@ -41,8 +41,8 @@
   </focus>
 
   <!--
-    Keys: labwc's defaults (Alt+Tab, Super+arrows snap, Alt+F4, ...) plus the ones the X11 session gets from xfwm4
-    and lxqt-globalkeysd (ansible lxqt role), which does not grab keys on Wayland. Same commands as there.
+    Keys: labwc's defaults (Alt+Tab, Super+arrows snap, Alt+F4, ...) plus brightness, keyboard backlight, media,
+    volume, terminal, lock and screenshots (lxqt-globalkeysd grabs no keys on Wayland).
     Panel actions (main menu, show desktop) go over D-Bus to the panel plugin's shortcut object, as upstream's
     lxqt-qdbus does; gdbus needs no extra package.
   -->
@@ -106,7 +106,7 @@
     <keybind key="XF86_AudioMute"><action name="Execute" command="~/.local/bin/vol mute" /></keybind>
   </keyboard>
 
-  <!-- Touchpads as the X11 session has them (/etc/X11/xorg.conf.d/50-macbook-touchpad.conf). -->
+  <!-- Touchpads like macOS: tap, tap-and-drag, natural scrolling, clickfinger (3-finger drag: linux-3-finger-drag). -->
   <libinput>
     <device category="touchpad">
       <naturalScroll>yes</naturalScroll>

@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# MacBook keyboard backlight: off after KBD_IDLE_SECS of no input, back to the previous level on the next input.
-# - X11: no argument, a loop on xprintidle, started from ~/.config/autostart (needs brightnessctl + xprintidle,
-#   ansible macbook role). Exits at once in a Wayland session.
-# - Wayland: `off` / `on`, run by swayidle's timeout/resume (~/.config/labwc/autostart); the level is kept in
-#   $XDG_RUNTIME_DIR between the two.
+# kbd-backlight-idle off|on: the MacBook keyboard backlight off when idle, back to the previous level on the next
+# input. Run by swayidle's timeout/resume (~/.config/labwc/autostart, 60 s); the level is kept in $XDG_RUNTIME_DIR
+# between the two. Needs brightnessctl (ansible macbook role).
 set -u
 dev=smc::kbd_backlight
 [ -e "/sys/class/leds/$dev" ] || exit 0
@@ -14,29 +12,14 @@ case ${1:-} in
         cur=$(brightnessctl -d "$dev" get) || exit 0
         [ "$cur" -gt 0 ] || exit 0
         echo "$cur" >"$state" && brightnessctl -q -d "$dev" set 0
-        exit 0
         ;;
     on)
         [ -s "$state" ] || exit 0
         brightnessctl -q -d "$dev" set "$(cat "$state")"
         rm -f "$state"
-        exit 0
+        ;;
+    *)
+        echo "usage: kbd-backlight-idle off|on" >&2
+        exit 2
         ;;
 esac
-
-[ -n "${WAYLAND_DISPLAY:-}" ] && exit 0 # swayidle runs the off/on above
-limit=$((${KBD_IDLE_SECS:-60} * 1000))
-saved=
-while sleep 2; do
-    idle=$(xprintidle 2>/dev/null) || continue
-    if [ "$idle" -ge "$limit" ]; then
-        if [ -z "$saved" ]; then
-            cur=$(brightnessctl -d "$dev" get) || continue
-            [ "$cur" -gt 0 ] || continue
-            brightnessctl -q -d "$dev" set 0 && saved=$cur
-        fi
-    elif [ -n "$saved" ]; then
-        brightnessctl -q -d "$dev" set "$saved"
-        saved=
-    fi
-done

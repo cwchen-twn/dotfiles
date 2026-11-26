@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # conky-desktop [DELAY]: (re)start the system monitor on the desktop, two Conky windows (~/.config/conky): CPU and
 # memory in the right quarter of the screen, disk, network, GPU and battery in the left quarter. DELAY seconds before
-# drawing (autostart passes 5, so pcmanfm-qt's desktop and xfwm4's compositor are up first). Hide: pkill conky.
+# drawing (autostart passes 5, so pcmanfm-qt's desktop is up first). Hide: pkill conky.
 set -eu
 delay=${1:-0}
 pkill -x conky || true

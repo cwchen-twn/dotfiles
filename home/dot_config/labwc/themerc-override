@@ -1,5 +1,5 @@
-# Managed by chezmoi. Added to labwc's theme (labwc-theme(5)): Catppuccin Mocha, dark like the X11 session's xfwm4
-# title bars (labwc's built-in theme is light). Shadows from upstream LXQt's labwc config; rc.xml turns them on.
+# Managed by chezmoi. Added to labwc's theme (labwc-theme(5)): Catppuccin Mocha (labwc's built-in theme
+# is light). Shadows from upstream LXQt's labwc config; rc.xml turns them on.
 
 # Title bars and borders: the focused window on base, others on mantle.
 window.active.title.bg.color: #1e1e2e

@@ -43,7 +43,6 @@
 {{ end }}
 {{ if not (stat "/sys/class/leds/smc::kbd_backlight") }}
 .local/bin/kbd-backlight-idle
-.config/autostart/kbd-backlight-idle.desktop
 .config/systemd/user/three-finger-drag.service
 .config/linux-3-finger-drag
 .config/systemd/user/camera-relay.service
@@ -86,8 +85,6 @@
 .config/autostart/conky.desktop
 .local/bin/conky-desktop
 .local/bin/lock-screen
-.config/autostart/xss-lock.desktop
-.config/autostart/lxqt-xscreensaver-autostart.desktop
 .config/labwc
 .config/kanshi
 .local/bin/screenshot

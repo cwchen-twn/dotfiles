@@ -16,17 +16,13 @@ local function read(path)
 	return s
 end
 
--- Sizes are pixels at 96 dpi: Conky scales them by Xft.dpi itself (2x on Retina). Fonts are in points, which
--- Xft scales by the same dpi (a font pixelsize would not be scaled).
+-- Sizes are in the compositor's scaled (logical) pixels: labwc scales the windows with the monitor (2x on Retina).
 -- Conky's gap_x/gap_y reach the text, not the window edge: the inner margin and 2 px of border are taken off them.
 local edge, margin = 24, 14 -- screen edge to window, window edge to text
 local gap = edge + margin + 2
 local W = 264 -- content width; replaced below so the window plus `edge` is a quarter of the primary monitor
-local dpi = 96
--- Wayland session ("LXQt (labwc)"): a layer-shell surface instead of an X window. Sizes are in the compositor's
--- scaled (logical) pixels, so no dpi factor: the width is the first monitor's mode width over its scale (wlr-randr).
-local wayland = os.getenv("WAYLAND_DISPLAY") ~= nil
-if wayland then
+-- The first monitor's mode width over its scale (wlr-randr).
+do
 	local p = io.popen("wlr-randr 2>/dev/null")
 	if p then
 		local out = p:read("*a")
@@ -36,18 +32,6 @@ if wayland then
 		local scale = tonumber(first:match("Scale: ([%d.]+)") or "") or 1
 		if mw then
 			W = math.floor(mw / scale / 4) - edge - 2 * margin - 4
-		end
-	end
-end
-if not wayland then
-	local p = io.popen("xrandr --listactivemonitors 2>/dev/null; xrdb -get Xft.dpi 2>/dev/null")
-	if p then
-		local out = p:read("*a")
-		p:close()
-		dpi = tonumber(out:match("\n(%d+)%s*$") or "") or 96
-		local sw = tonumber(out:match("%+%*%S+%s+(%d+)/") or out:match("%s(%d+)/%d+x") or "")
-		if sw then
-			W = math.floor(sw / 4 / (dpi / 96)) - edge - 2 * margin - 4
 		end
 	end
 end
@@ -252,8 +236,7 @@ end
 -- left.conf / right.conf: build('top_left', {'disk', 'net', ...})
 return function(alignment, names)
 	conky.config = {
-		-- A normal window kept below everything: pcmanfm-qt's desktop is itself a window, so a 'desktop'-type
-		-- Conky would be drawn under it. Real transparency comes from the compositor (xfwm4 or labwc).
+		-- A layer-shell surface under the windows, above pcmanfm-qt's desktop; labwc composites the transparency.
 		own_window = true,
 		own_window_type = "normal",
 		own_window_hints = "undecorated,below,sticky,skip_taskbar,skip_pager",
@@ -261,7 +244,7 @@ return function(alignment, names)
 		own_window_title = "conky-" .. alignment,
 		own_window_color = "#B311111b", -- crust at 70% (alpha first): mutes the wallpaper's stars behind the text
 		double_buffer = true,
-		output_backend = wayland and "wayland" or "x11",
+		output_backend = "wayland",
 
 		alignment = alignment,
 		gap_x = gap,
@@ -283,8 +266,7 @@ return function(alignment, names)
 		format_human_readable = true,
 		if_up_strictness = "address",
 
-		use_xft = not wayland, -- Xft is X11 only; on Wayland Conky draws text with Pango
-		font = "JetBrains Mono:size=12", -- 16 px at 96 dpi
+		font = "JetBrains Mono:size=12", -- 16 logical px
 		font1 = "JetBrains Mono:bold:size=12",
 		default_color = "cdd6f4", -- text: values
 		color1 = "89b4fa", -- blue: section titles

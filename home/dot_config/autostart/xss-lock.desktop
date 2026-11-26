@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Screen lock (xss-lock + i3lock)
-Comment=Locks with ~/.local/bin/lock-screen on idle (10 min), before sleep and on LXQt's Lock screen
-TryExec=xss-lock
-# X11 only: the Wayland session ("LXQt (labwc)") locks through swayidle (~/.config/labwc/autostart).
-Exec=sh -c '[ -z "$WAYLAND_DISPLAY" ] || exit 0; xset s 600 600; exec xss-lock --transfer-sleep-lock -- "$HOME/.local/bin/lock-screen"'
-OnlyShowIn=LXQt;
-X-LXQt-Need-Tray=false

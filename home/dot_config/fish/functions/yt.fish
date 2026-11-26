@@ -1,11 +1,7 @@
 function yt --description 'Play a YouTube (or any yt-dlp) URL in mpv, GPU-decoded H.264: yt [URL]; no URL = the clipboard'
     set -l url $argv[1]
-    if test -z "$url"
-        if set -q WAYLAND_DISPLAY; and command -q wl-paste
-            set url (wl-paste --no-newline 2>/dev/null)
-        else if command -q xsel
-            set url (xsel -bo 2>/dev/null)
-        end
+    if test -z "$url"; and command -q wl-paste
+        set url (wl-paste --no-newline 2>/dev/null)
     end
     if not string match -qr '^https?://' -- "$url"
         echo "usage: yt URL   (or copy a link and run yt)" >&2

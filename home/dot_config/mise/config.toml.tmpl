@@ -41,8 +41,8 @@ wrangler = "latest"      # Cloudflare (npm): Workers, R2, DNS; token from CLOUDF
 {{- end }}
 {{- end }}
 {{- if and (eq .chezmoi.os "linux") .desktop }}
-# Desktop system monitor (~/.config/conky, autostarted): upstream's AppImage, one build for X11 and Wayland. Debian 13's
-# conky 1.22 draws badly on Wayland (no background, no bars, broken columns); the AppImage needs libfuse2 (desktop role).
+# Desktop system monitor (~/.config/conky, autostarted): upstream's AppImage, which draws fully on Wayland; Debian 13's
+# conky 1.22 drew no background, no bars and broken columns there. The AppImage needs libfuse2 (desktop role).
 "github:brndnmtthws/conky" = { version = "latest", asset_pattern = "conky-x86_64-v*.AppImage", bin = "conky" }
 {{- end }}
 {{- if and (eq .chezmoi.os "linux") (has "supersonic" .desktop) }}

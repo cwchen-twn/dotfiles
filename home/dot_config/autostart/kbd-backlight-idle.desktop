@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Keyboard backlight idle-off
-Comment=Turn the MacBook keyboard backlight off when idle
-Exec=sh -c 'exec "$HOME/.local/bin/kbd-backlight-idle"'
-NoDisplay=true
-X-LXQt-Need-Tray=false

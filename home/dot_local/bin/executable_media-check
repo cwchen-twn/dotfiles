@@ -6,17 +6,16 @@
 set -u
 
 # ---------------------------------------------------------------- the decisions (change here when they change)
-BT_POLICY_ARG="auto_switch=2"                                                       # headphones switch to the headset profile (mic) when any app records
-BT_AVOID_CODEC="ldac"                                                               # LDAC costs about half a core to encode on a 2015 dual-core: bt-codec / WirePlumber avoid it
-BT_WP_CODECS="sbc_xq sbc"                                                           # under PipeWire: WirePlumber's A2DP codec list (no LDAC)
-SUPERSONIC_TRANSCODE=(RequestTranscode=true Codec=opus MaxBitRateKBPS=192)          # Opus instead of raw FLAC
-MEDIA_KEYS=(XF86AudioPlay=playerctl XF86AudioNext=playerctl XF86AudioPrev=playerctl # key=command it must run,
-    XF86AudioRaiseVolume=vol XF86AudioLowerVolume=vol XF86AudioMute=vol)            # as its only enabled binding
-VAAPI_NEED="VideoProc"                                                              # Chromium's VA-API decoder on older Intel needs the driver's post-processing (non-free iHD)
-BRAVE_VULKAN="Vulkan,DefaultANGLEVulkan,VulkanFromANGLE"                            # X11 only: Brave composites with Vulkan (GL conversion corrupted frames); Wayland has EGL
-BRAVE_H264IFY="omkfmpieigblcllmkgbflkikinpkodlk"                                    # enhanced-h264ify
-BRAVE_DARK="WebContentsForceDark"                                                   # Blink darkens pages: Dark Reader's per-page script cost CPU
-BRAVE_NO_EXT="eimadpbcbfnmbkopoojfekhnkhdbieeh"                                     # Dark Reader, replaced by BRAVE_DARK
+BT_POLICY_ARG="auto_switch=2"                                                          # headphones switch to the headset profile (mic) when any app records
+BT_AVOID_CODEC="ldac"                                                                  # LDAC costs about half a core to encode on a 2015 dual-core: bt-codec / WirePlumber avoid it
+BT_WP_CODECS="sbc_xq sbc"                                                              # under PipeWire: WirePlumber's A2DP codec list (no LDAC)
+SUPERSONIC_TRANSCODE=(RequestTranscode=true Codec=opus MaxBitRateKBPS=192)             # Opus instead of raw FLAC
+MEDIA_KEYS=(XF86_AudioPlay=playerctl XF86_AudioNext=playerctl XF86_AudioPrev=playerctl # key=command it must run,
+    XF86_AudioRaiseVolume=vol XF86_AudioLowerVolume=vol XF86_AudioMute=vol)            # as its only binding (labwc)
+VAAPI_NEED="VideoProc"                                                                 # Chromium's VA-API decoder on older Intel needs the driver's post-processing (non-free iHD)
+BRAVE_H264IFY="omkfmpieigblcllmkgbflkikinpkodlk"                                       # enhanced-h264ify
+BRAVE_DARK="WebContentsForceDark"                                                      # Blink darkens pages: Dark Reader's per-page script cost CPU
+BRAVE_NO_EXT="eimadpbcbfnmbkopoojfekhnkhdbieeh"                                        # Dark Reader, replaced by BRAVE_DARK
 # --------------------------------------------------------------------------------------------------------------
 
 fails=0
@@ -112,21 +111,16 @@ if command -v playerctl >/dev/null 2>&1; then
     players=$(playerctl -l 2>/dev/null | paste -sd, -)
     ok "playerctl" "players: ${players:-none running}"
 else bad "playerctl" "missing" "chezmoi apply (apt playerctl, desktop role)"; fi
-keys=$HOME/.config/lxqt/globalkeyshortcuts.conf
+keys=$HOME/.config/labwc/rc.xml
 for kv in "${MEDIA_KEYS[@]}"; do
     k=${kv%%=*} want=${kv#*=}
-    # every ENABLED binding of this key, as "Exec ..." or "path ..." (the panel volume widget registers its own)
-    bound=$(awk -v k="$k" '
-        /^\[/ { flush(); s = ($0 ~ "^\\[" k "\\."); en = 1; act = ""; next }
-        s && /^Enabled=false/ { en = 0 }
-        s && /^(Exec|path)=/ { act = $0 }
-        function flush() { if (s && en && act != "") print act }
-        END { flush() }' "$keys" 2>/dev/null)
+    # every Execute command bound to this key in labwc's rc.xml
+    bound=$(grep -oE "<keybind key=\"$k\">.*</keybind>" "$keys" 2>/dev/null | grep -oE 'command="[^"]*"' | sed 's/^command="//; s/"$//')
     n=$(grep -c . <<<"$bound")
     case "$n:$bound" in
-        "1:Exec="*"$want"*) ok "key $k" "${bound#Exec=}" ;;
-        0:*) bad "key $k" "unbound" "chezmoi apply (lxqt role), then log in again" ;;
-        *) bad "key $k" "$n binding(s): $(tr '\n' ';' <<<"$bound")" "chezmoi apply (lxqt role: one enabled binding per key)" ;;
+        "1:"*"$want"*) ok "key $k" "$bound" ;;
+        0:*) bad "key $k" "unbound" "chezmoi apply ~/.config/labwc/rc.xml; labwc -r" ;;
+        *) bad "key $k" "$n binding(s): $(tr '\n' ';' <<<"$bound")" "$keys: one binding per key" ;;
     esac
 done
 
@@ -150,20 +144,16 @@ if command -v vainfo >/dev/null 2>&1; then
         ok "VA-API post-processing" "$VAAPI_NEED (Brave can decode on the GPU)"
     else bad "VA-API post-processing" "no $VAAPI_NEED: Brave falls back to CPU decoding" "Intel: apt install intel-media-va-driver-non-free (desktop role)"; fi
 fi
-# Brave's flags (desktop role): force-dark everywhere, Vulkan on Intel graphics in X11 sessions only. The wrapper picks
-# them per session; the menu entry starts the wrapper.
-want_x11=$BRAVE_DARK
-grep -qsx 0x8086 /sys/class/drm/card*/device/vendor && want_x11="$BRAVE_VULKAN,$BRAVE_DARK"
-if [ -n "${WAYLAND_DISPLAY:-}" ]; then want=$BRAVE_DARK; else want=$want_x11; fi
+# Brave's flags (desktop role): force-dark everywhere, in the wrapper the menu entry starts.
+want=$BRAVE_DARK
 launcher=$HOME/.local/share/applications/brave-browser.desktop
 wrapper=$HOME/.local/bin/brave-browser
 if grep -q "^Exec=$wrapper" "$launcher" 2>/dev/null; then
     ok "Brave menu entry" "starts the wrapper"
 else bad "Brave menu entry" "doesn't start $wrapper" "chezmoi apply (desktop role generates it)"; fi
-w=$(cat "$wrapper" 2>/dev/null)
-if grep -q 'WAYLAND_DISPLAY' <<<"$w" && grep -q "features=$want_x11\b" <<<"$w" && grep -q "features=$BRAVE_DARK\b" <<<"$w"; then
-    ok "brave-browser wrapper" "X11 $want_x11; Wayland $BRAVE_DARK"
-else bad "brave-browser wrapper" "not the per-session flags in $wrapper" "chezmoi apply (desktop role generates it)"; fi
+if has_features "$(cat "$wrapper" 2>/dev/null)" "$want"; then
+    ok "brave-browser wrapper" "flags $want (\$BROWSER, terminals)"
+else bad "brave-browser wrapper" "missing $want in $wrapper" "chezmoi apply (desktop role generates it)"; fi
 if grep -q "$BRAVE_NO_EXT" "$pol" 2>/dev/null; then
     bad "Dark Reader (policy)" "still force-installed (per-page CPU)" "chezmoi apply (desktop role)"
 elif [ -d "$HOME/.config/BraveSoftware/Brave-Browser/Default/Extensions/$BRAVE_NO_EXT" ]; then
@@ -176,12 +166,6 @@ else
     if has_features "$(tr '\0' ' ' </proc/"$main"/cmdline)" "$want"; then
         ok "running Brave" "started with $want"
     else bad "running Brave" "started without some of $want" "quit Brave (menu > Exit) and start it again"; fi
-    gpu=$(pgrep -u "$(id -u)" -f -- '--type=gpu-process' | head -1)
-    if [ -n "${WAYLAND_DISPLAY:-}" ]; then
-        [ -n "$gpu" ] && ok "Brave GPU process" "EGL on Wayland (no Vulkan needed)"
-    elif [ -n "$gpu" ] && grep -q 'libvulkan_intel' /proc/"$gpu"/maps 2>/dev/null; then
-        ok "Brave GPU process" "Vulkan ($(grep -oE 'libvulkan_intel[a-z_]*' /proc/"$gpu"/maps | head -1))"
-    elif [ -n "$gpu" ]; then bad "Brave GPU process" "not using Vulkan" "brave://gpu: check Vulkan / ANGLE backend"; fi
 fi
 if [ "${1:-}" = --decode ]; then
     if command -v brave-decode-test >/dev/null 2>&1; then

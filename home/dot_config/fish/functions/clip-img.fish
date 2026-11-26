@@ -12,13 +12,6 @@ function clip-img --description "Copy an image file to the clipboard: clip-img F
         echo "clip-img: $file is $type, not an image" >&2
         return 1
     end
-    if set -q WAYLAND_DISPLAY; and command -q wl-copy
-        wl-copy --type $type <"$file"
-    else if command -q xclip
-        xclip -selection clipboard -target $type -i "$file"
-    else
-        echo "clip-img: needs wl-copy (Wayland) or xclip (X11)" >&2
-        return 1
-    end
+    wl-copy --type $type <"$file"
     and echo "copied $type: paste with Ctrl+V"
 end

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # screenshot [region]: save the whole screen (or a region picked with the mouse) to ~/Pictures/Screenshots and copy
-# it to the clipboard. Wayland session only (grim, slurp, wl-copy); bound to Print / Shift+Print in
-# ~/.config/labwc/rc.xml. The X11 session uses Shutter.
+# it to the clipboard (grim, slurp, wl-copy); bound to Print / Shift+Print in ~/.config/labwc/rc.xml.
 set -eu
 dir=${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots
 mkdir -p "$dir"

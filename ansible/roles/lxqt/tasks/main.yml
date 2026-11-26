@@ -1,25 +1,18 @@
-# User-level LXQt settings: HiDPI, dark mode, default browser/terminal/office apps, favorites, panel widgets,
-# keyboard-backlight keys; LibreOffice on its Qt6 backend with dark icons.
+# User-level LXQt settings: dark mode, default browser/terminal/office apps, favorites, panel widgets; LibreOffice on
+# its Qt6 backend with dark icons. The session is Wayland only (labwc role, #66): scale is the compositor's (kanshi),
+# keys are labwc's (~/.config/labwc/rc.xml), so nothing here sets a DPI or global shortcuts.
 # LXQt rewrites its own .conf files, so only the keys below are managed (community.general.ini_file);
 # everything else stays editable in the LXQt settings UI. Takes effect on the next login.
-- name: Detect LXQt and the MacBook keyboard backlight
+- name: Detect LXQt and LibreOffice's Qt6 backend
   ansible.builtin.stat: { path: "{{ item }}" }
-  loop: [/usr/bin/startlxqt, /sys/class/leds/smc::kbd_backlight, /usr/bin/playerctl,
-         /usr/lib/libreoffice/program/libvclplug_qt6lo.so]
+  loop: [/usr/bin/startlxqt, /usr/lib/libreoffice/program/libvclplug_qt6lo.so]
   register: lxqt_detect
-
-- name: Find a screen backlight (laptops)
-  ansible.builtin.find: { paths: /sys/class/backlight, file_type: any }
-  register: lxqt_backlight
 
 - name: LXQt user settings
   when: lxqt_detect.results[0].stat.exists
   become: false
   vars:
-    kbd_backlight: "{{ lxqt_detect.results[1].stat.exists }}"
-    playerctl: "{{ lxqt_detect.results[2].stat.exists }}"
-    screen_backlight: "{{ lxqt_backlight.matched > 0 }}"
-    lo_qt6: "{{ lxqt_detect.results[3].stat.exists }}"
+    lo_qt6: "{{ lxqt_detect.results[1].stat.exists }}"
     cfg: "{{ home }}/.config"
   block:
     - name: Find the favorites' desktop files
@@ -62,10 +55,9 @@
             {%- if r[0] == 'lxqt/panel.conf' -%}{%- set _ = out.append(r[1:]) -%}{%- endif -%}
           {%- endfor -%}
           {{ out }}
-        lxqt_keys: "{{ kbd_ini + screen_ini + media_ini + volume_ini }}"
       vars:
-        # preferred_backend: in the Wayland session (labwc role) the panel's auto-detection loads every backend to
-        # score it, and the X11 one crashes it (lxqt-panel 2.1.4); naming wlroots for labwc skips that. X11 keeps xcb.
+        # preferred_backend: under labwc the panel's auto-detection loads every backend to score it, and the X11 one
+        # crashed lxqt-panel 2.1.4; naming wlroots for labwc skips that.
         panel_ini: >-
           {%- set out = [['lxqt/panel.conf', 'panel1', 'plugins', lxqt_panel_plugins | join(', ')],
                          ['lxqt/panel.conf', 'General', 'preferred_backend', 'labwc:wlroots']] -%}
@@ -73,13 +65,10 @@
             {%- for k, v in keys.items() -%}{%- set _ = out.append(['lxqt/panel.conf', name, k, v]) -%}{%- endfor -%}
           {%- endfor -%}
           {{ out }}
-        # Xft.dpi itself goes to ~/.Xresources and the GTK scale to ~/.xsessionrc (below, X11 only); these keep
-        # LXQt's own settings consistent with it.
+        # The panel's sizes on Retina (kanshi scales the session 2x; these are LXQt's defaults made a bit roomier).
         hidpi_ini: |-
           {{ (
               [
-                  ['lxqt/session.conf', 'Font', 'dpi', lxqt_dpi],
-                  ['lxqt/session.conf', 'Mouse', 'cursor_size', lxqt_cursor_size],
                   ['lxqt/panel.conf', 'panel1', 'panelSize', 32],
                   ['lxqt/panel.conf', 'panel1', 'iconSize', 22],
               ]
@@ -136,112 +125,27 @@
             {%- endfor -%}
           {%- endif -%}
           {{ out }}
-        # Screen lock: i3lock on the login screen's background (~/.local/bin/lock-screen), run by xss-lock, which also
-        # locks on idle and before sleep (~/.config/autostart/xss-lock.desktop; xscreensaver's autostart is hidden).
-        # LXQt's "Lock screen" asks logind, and xss-lock answers. xss-lock already locks before sleep, so LXQt doesn't.
+        # Screen lock: swaylock on the login screen's background (~/.local/bin/lock-screen), run by swayidle
+        # (~/.config/labwc/autostart) on idle, before sleep and when logind asks: LXQt's "Lock screen" asks logind.
+        # swayidle already locks before sleep, so LXQt doesn't.
         lock_ini:
           - ['lxqt/lxqt.conf', 'Screensaver', 'lock_command', 'loginctl lock-session']
           - ['lxqt/session.conf', 'General', 'lock_screen_before_power_actions', 'false']
-        terminal_ini: |-
-          {{ (
-              [
-                  ['lxqt/session.conf', 'Environment', 'TERM', 'alacritty'],
-                  ['lxqt/globalkeyshortcuts.conf', 'Control%2BAlt%2BT.1', 'Comment', 'Alacritty'],
-                  ['lxqt/globalkeyshortcuts.conf', 'Control%2BAlt%2BT.1', 'Enabled', 'true'],
-                  ['lxqt/globalkeyshortcuts.conf', 'Control%2BAlt%2BT.1', 'Exec', 'alacritty'],
-              ]
-              if 'alacritty' in desktop
-              else []
-          ) }}
-        # Screen brightness keys (MacBook: Fn+F1/F2). LXQt's own bindings only live in /etc/xdg, which lxqt-globalkeysd
-        # ignores once ~/.config/lxqt/globalkeyshortcuts.conf exists; its 2% steps are also too small to notice.
-        # 5% steps, never below 1% (fully dark looks like a dead screen). brightnessctl's udev rule: video group.
-        screen_ini: |-
-          {{ (
-              [
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessUp.103', 'Comment', 'Screen brighter'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessUp.103', 'Enabled', 'true'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessUp.103', 'Exec', 'brightnessctl, -q, -c, backlight, --min-value=1%, set, 5%+'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessDown.104', 'Comment', 'Screen darker'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessDown.104', 'Enabled', 'true'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86MonBrightnessDown.104', 'Exec', 'brightnessctl, -q, -c, backlight, --min-value=1%, set, 5%-'],
-              ]
-              if screen_backlight | bool
-              else []
-          ) }}
-        # Media keys (Fn+F7/F8/F9 on a MacBook, whose F-row is function keys) for whichever player is active: MPRIS
-        # via playerctl, so Supersonic, Brave and others alike. playerctl comes with the supersonic desktop app.
-        media_ini: |-
-          {{ (
-              [
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86AudioPlay.105', 'Comment', 'Play / pause'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86AudioPlay.105', 'Enabled', 'true'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86AudioPlay.105', 'Exec', 'playerctl, play-pause'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86AudioNext.106', 'Comment', 'Next track'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86AudioNext.106', 'Enabled', 'true'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86AudioNext.106', 'Exec', 'playerctl, next'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86AudioPrev.107', 'Comment', 'Previous track'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86AudioPrev.107', 'Enabled', 'true'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86AudioPrev.107', 'Exec', 'playerctl, previous'],
-              ]
-              if playerctl | bool
-              else []
-          ) }}
-        # Volume keys (Fn+F10/F11/F12) for the CURRENT default output via ~/.local/bin/vol (chezmoi): LXQt's own
-        # bindings go to the panel volume widget, which controls one fixed device (the laptop speakers), so with
-        # Bluetooth headphones they muted and raised the speakers instead.
-        volume_ini: "{{ [
-            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioRaiseVolume.108', 'Comment', 'Volume up (default output)'],
-            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioRaiseVolume.108', 'Enabled', 'true'],
-            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioRaiseVolume.108', 'Exec', home ~ '/.local/bin/vol, up'],
-            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioLowerVolume.109', 'Comment', 'Volume down (default output)'],
-            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioLowerVolume.109', 'Enabled', 'true'],
-            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioLowerVolume.109', 'Exec', home ~ '/.local/bin/vol, down'],
-            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioMute.110', 'Comment', 'Mute (default output)'],
-            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioMute.110', 'Enabled', 'true'],
-            ['lxqt/globalkeyshortcuts.conf', 'XF86AudioMute.110', 'Exec', home ~ '/.local/bin/vol, mute'],
-          ] }}"
-        # Fn+F6 / Fn+F5 (XF86KbdBrightnessUp/Down); brightnessctl is installed by the macbook role.
-        kbd_ini: |-
-          {{ (
-              [
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessUp.101', 'Comment', 'Keyboard backlight up'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessUp.101', 'Enabled', 'true'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessUp.101', 'Exec', 'brightnessctl, -q, -d, smc::kbd_backlight, set, +10%'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessDown.102', 'Comment', 'Keyboard backlight down'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessDown.102', 'Enabled', 'true'],
-                  ['lxqt/globalkeyshortcuts.conf', 'XF86KbdBrightnessDown.102', 'Exec', 'brightnessctl, -q, -d, smc::kbd_backlight, set, 10%-'],
-              ]
-              if kbd_backlight | bool
-              else []
-          ) }}
+        terminal_ini: "{{ [['lxqt/session.conf', 'Environment', 'TERM', 'alacritty']] if 'alacritty' in desktop else [] }}"
 
     - name: Config dirs
       ansible.builtin.file: { path: "{{ cfg }}/{{ item }}", state: directory, mode: "0755" }
       loop: [lxqt, gtk-3.0, gtk-4.0]
 
-    - name: HiDPI X resources (merged at login by /etc/X11/Xsession; read by Qt, Chromium, GTK, alacritty)
+    # X11 leftovers (#66): the 2x X resources and GTK scale that X sessions read.
+    - name: No X11 HiDPI resources
       ansible.builtin.lineinfile:
-        path: "{{ home }}/.Xresources"
-        regexp: '^{{ item.key | regex_escape }}:'
-        line: "{{ item.key }}: {{ item.value }}"
-        create: true
-        mode: "0644"
-      loop: "{{ {'Xft.dpi': lxqt_dpi, 'Xcursor.size': lxqt_cursor_size} | dict2items }}"
-      when: lxqt_hidpi | bool
-
-    # GTK's 2x on X11 (GDK_SCALE doubles the UI, GDK_DPI_SCALE halves the fonts Xft.dpi already doubled). Only X11
-    # sessions source ~/.xsessionrc (/etc/X11/Xsession.d); in LXQt's session.conf it also reached the Wayland
-    # session ("LXQt (labwc)", labwc role), where the compositor scales and GTK text came out half size.
-    - name: GTK HiDPI for X11 sessions only (~/.xsessionrc)
-      ansible.builtin.lineinfile:
-        path: "{{ home }}/.xsessionrc"
-        regexp: '^export {{ item.key }}='
-        line: "export {{ item.key }}={{ item.value }}"
-        create: true
-        mode: "0644"
-      loop: "{{ {'GDK_SCALE': 2, 'GDK_DPI_SCALE': 0.5} | dict2items }}"
-      when: lxqt_hidpi | bool
+        path: "{{ home }}/{{ item.file }}"
+        regexp: "{{ item.re }}"
+        state: absent
+      loop:
+        - { file: .Xresources, re: '^(Xft\.dpi|Xcursor\.size):' }
+        - { file: .xsessionrc, re: '^export GDK_(DPI_)?SCALE=' }
 
     - name: GTK HiDPI no longer in LXQt's session environment (both sessions read it)
       community.general.ini_file:
@@ -262,39 +166,6 @@
         mode: "0644"
       loop: "{{ lxqt_ini }}"
       loop_control: { label: "{{ item[0] }} [{{ item[1] }}] {{ item[2] }}" }
-
-    # Global shortcuts: like the panel, a running lxqt-globalkeysd saves its in-memory list over
-    # globalkeyshortcuts.conf, which dropped the media keys once. Dry run; only on a change stop it, write, start it.
-    # files/globalkeys.py sets each shortcut by key name: other sections for the same key (LXQt renumbers them, and its
-    # defaults bind the volume keys to the panel widget) are removed, so every key is bound exactly once.
-    - name: Shortcuts changed? (dry run)
-      ansible.builtin.script:
-        cmd: globalkeys.py --check {{ (cfg ~ '/lxqt/globalkeyshortcuts.conf') | quote }} {{ lxqt_keys | to_json | quote }}
-        executable: python3
-      register: lxqt_keys_check
-      changed_when: "'CHANGED' in lxqt_keys_check.stdout"
-
-    - name: Stop the shortcut daemon (inside the session only)  # noqa: no-handler  dry-run then act, inline on purpose
-      ansible.builtin.shell: |
-        # -f with a full match: the name is 16 characters, and -x alone only sees the first 15
-        [ -n "${DISPLAY:-}" ] && pgrep -u "$(id -u)" -fx '(/usr/bin/)?lxqt-globalkeysd' >/dev/null || exit 0
-        pkill -u "$(id -u)" -fx '(/usr/bin/)?lxqt-globalkeysd' && sleep 1 && echo RUNNING
-      register: lxqt_keys_stop
-      when: lxqt_keys_check is changed
-      changed_when: "'RUNNING' in lxqt_keys_stop.stdout"
-
-    - name: Global shortcuts (brightness, media and volume keys)  # noqa: no-handler  dry-run then act, inline on purpose
-      ansible.builtin.script:
-        cmd: globalkeys.py {{ (cfg ~ '/lxqt/globalkeyshortcuts.conf') | quote }} {{ lxqt_keys | to_json | quote }}
-        executable: python3
-      register: lxqt_keys_write
-      changed_when: "'CHANGED' in lxqt_keys_write.stdout"
-      when: lxqt_keys_check is changed
-
-    - name: Start the shortcut daemon again
-      ansible.builtin.shell: setsid -f lxqt-globalkeysd >/dev/null 2>&1
-      when: lxqt_keys_stop is not skipped and 'RUNNING' in lxqt_keys_stop.stdout
-      changed_when: true
 
     # A running lxqt-panel saves its in-memory settings over panel.conf, which once left the menu at the old favorites
     # count while the quick launch had the new one. So every panel.conf key (favorites, widgets, sizes) goes here:
@@ -320,7 +191,7 @@
 
     - name: Stop the panel (inside the session only)  # noqa: no-handler  dry-run then act, inline on purpose
       ansible.builtin.shell: |
-        [ -n "${DISPLAY:-}" ] && pgrep -u "$(id -u)" -x lxqt-panel >/dev/null || exit 0
+        [ -n "${WAYLAND_DISPLAY:-}" ] && pgrep -u "$(id -u)" -x lxqt-panel >/dev/null || exit 0
         pkill -u "$(id -u)" -x lxqt-panel && sleep 1 && echo RUNNING
       register: lxqt_panel_stop
       when: lxqt_fav_check is changed
@@ -352,7 +223,7 @@
     # login (~/.config/autostart/pasystray.desktop, chezmoi); start it now so the tray is not empty until then.
     - name: Volume tray running (inside the session only)
       ansible.builtin.shell: |
-        command -v pasystray >/dev/null && [ -n "${DISPLAY:-}" ] || exit 0
+        command -v pasystray >/dev/null && [ -n "${WAYLAND_DISPLAY:-}" ] || exit 0
         pgrep -u "$(id -u)" -x pasystray >/dev/null && exit 0
         setsid -f pasystray --volume-max=100 --volume-inc=5 >/dev/null 2>&1 && echo STARTED
       register: lxqt_pasystray
@@ -377,10 +248,10 @@
       when: lxqt_wallpaper_stat.stat.exists
 
     # A running pcmanfm-qt keeps the old wallpaper in memory and saves it back over the file; tell it directly.
-    # Only inside the desktop session (like the xfwm4 task below); otherwise the next login reads the file.
+    # Only inside the desktop session; otherwise the next login reads the file.
     - name: Show the new wallpaper now  # noqa: no-handler  dry-run then act, inline on purpose
       ansible.builtin.shell: |
-        [ -n "${DISPLAY:-}" ] && pgrep -u "$(id -u)" -x pcmanfm-qt >/dev/null || exit 0
+        [ -n "${WAYLAND_DISPLAY:-}" ] && pgrep -u "$(id -u)" -x pcmanfm-qt >/dev/null || exit 0
         pcmanfm-qt --set-wallpaper '{{ lxqt_wallpaper }}' --wallpaper-mode zoom
       when: lxqt_wallpaper_ini is changed
       changed_when: true
@@ -402,7 +273,7 @@
         - name: Stop the desktop (inside the session only)
           ansible.builtin.shell: |
             # -fx: the whole command line must match, so this shell (which contains the text) is not counted
-            [ -n "${DISPLAY:-}" ] && pgrep -u "$(id -u)" -fx '(/usr/bin/)?pcmanfm-qt --desktop( .*)?' >/dev/null || exit 0
+            [ -n "${WAYLAND_DISPLAY:-}" ] && pgrep -u "$(id -u)" -fx '(/usr/bin/)?pcmanfm-qt --desktop( .*)?' >/dev/null || exit 0
             pcmanfm-qt --desktop-off && sleep 1 && echo RUNNING
           register: lxqt_desktop_stop
           changed_when: "'RUNNING' in lxqt_desktop_stop.stdout"
@@ -425,24 +296,11 @@
           when: "'RUNNING' in lxqt_desktop_stop.stdout"
           changed_when: true
 
-    # xfwm4 keeps this in xfconf (needs the running session's D-Bus); skipped when run outside the desktop.
-    - name: Workspaces (xfwm4), one row like macOS Spaces; 3-finger swipes switch between them
-      ansible.builtin.shell: |
-        command -v xfconf-query >/dev/null && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || exit 0
-        [ "$(xfconf-query -c xfwm4 -p /general/workspace_count 2>/dev/null)" = "{{ lxqt_workspaces }}" ] && exit 0
-        xfconf-query -c xfwm4 -p /general/workspace_count -n -t int -s {{ lxqt_workspaces }} && echo CHANGED
-      register: lxqt_ws
-      changed_when: "'CHANGED' in lxqt_ws.stdout"
-
-    # gsettings/xfconf live behind the session's D-Bus: skipped when run outside the desktop session.
-    - name: Window manager theme and freedesktop dark color-scheme
+    # gsettings lives behind the session's D-Bus: skipped when run outside the desktop session.
+    - name: Freedesktop dark color-scheme
       ansible.builtin.shell: |
         [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || exit 0
         set_if() { [ "$(sh -c "$1" 2>/dev/null)" = "$2" ] || { sh -c "$3" && echo CHANGED; }; }
-        {% if lxqt_hidpi | bool %}
-        command -v xfconf-query >/dev/null && set_if "xfconf-query -c xfwm4 -p /general/theme" "{{ lxqt_xfwm4_theme }}" \
-            "xfconf-query -c xfwm4 -p /general/theme -n -t string -s {{ lxqt_xfwm4_theme }}"
-        {% endif %}
         {% if lxqt_dark | bool %}
         command -v gsettings >/dev/null || exit 0
         set_if "gsettings get org.gnome.desktop.interface color-scheme" "'prefer-dark'" \
@@ -481,4 +339,4 @@
           </node>
         </oor:component-data>
       </oor:data>
-  when: lxqt_dark | bool and 'libreoffice' in desktop and lxqt_detect.results[3].stat.exists
+  when: lxqt_dark | bool and 'libreoffice' in desktop and lxqt_detect.results[1].stat.exists

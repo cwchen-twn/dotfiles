@@ -7,6 +7,6 @@
 # script hash: {{ include "dot_local/bin/executable_conky-desktop" | sha256sum }}
 set -euo pipefail
 command -v conky >/dev/null 2>&1 || { echo "conky not installed, skipping"; exit 0; }
-[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] || { echo "no graphical session: conky starts at next login"; exit 0; }
+[ -n "${WAYLAND_DISPLAY:-}" ] || { echo "no graphical session: conky starts at next login"; exit 0; }
 "$HOME/.local/bin/conky-desktop"
 {{ end -}}

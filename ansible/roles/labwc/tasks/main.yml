@@ -1,8 +1,8 @@
 # LXQt on Wayland: labwc (the compositor upstream LXQt defaults to) running the usual LXQt session, picked as
-# "LXQt (labwc)" on the login screen next to the X11 "LXQt". Wayland scales each monitor on its own (kanshi, chezmoi
-# ~/.config/kanshi/config), which X11's single DPI can't. The user side (~/.config/labwc, kanshi, swayidle) is
-# chezmoi. Debian 13 has no lxqt-wayland-session, so there the session start script is ours (files/startlxqt-labwc);
-# where Debian packages it (forky and later, #57) it starts the session, and our entry only adds the fcitx5 fix.
+# "LXQt (labwc)" on the login screen; the desktop is Wayland only (#66). Wayland scales each monitor on its own
+# (kanshi, chezmoi ~/.config/kanshi/config). The user side (~/.config/labwc, kanshi, swayidle) is chezmoi.
+# Debian 13 has no lxqt-wayland-session, so there the session start script is ours (files/startlxqt-labwc); where
+# Debian packages it (forky and later, #57) it starts the session, and our entry only adds the fcitx5 fix.
 - name: Debian packages LXQt's Wayland session?
   ansible.builtin.command: apt-cache show lxqt-wayland-session
   register: labwc_official
@@ -30,6 +30,17 @@
       - wtype                  # key presses for touchpad gestures
       - xdg-desktop-portal-wlr # screen sharing and screenshots for browsers
       - xdg-desktop-portal-gtk # file chooser portal
+      - weston                 # the SDDM greeter's compositor (kiosk shell)
+
+# Wayland only (#66): the X server, xfwm4 and the X11 lock/idle/input tools go. Xwayland stays for X11-only apps.
+- name: No X11
+  ansible.builtin.apt:
+    state: absent
+    name: [xserver-xorg, xserver-xorg-core, xserver-xorg-legacy, xserver-xorg-input-all, xserver-xorg-input-libinput,
+           xserver-xorg-input-wacom, xserver-xorg-video-all, xserver-xorg-video-amdgpu, xserver-xorg-video-ati,
+           xserver-xorg-video-fbdev, xserver-xorg-video-intel, xserver-xorg-video-nouveau, xserver-xorg-video-qxl,
+           xserver-xorg-video-radeon, xserver-xorg-video-vesa, xserver-xorg-video-vmware, xfwm4, xfwm4-theme-breeze,
+           xss-lock, i3lock, xprintidle, xscreensaver, xscreensaver-data, xscreensaver-gl, xinput, wmctrl, xdotool]
 
 - name: Session start script (ours on Debian 13)
   ansible.builtin.copy:
@@ -76,3 +87,36 @@
       Exec=/usr/local/bin/startlxqt-labwc
       TryExec=labwc
       DesktopNames=LXQt
+
+# Login screen on Wayland too: SDDM runs its greeter inside weston's kiosk shell (SDDM's own default compositor)
+# instead of an X server, which is no longer installed (#66). On Retina (`hidpi`) weston scales the panel 2x, and Qt
+# follows it natively. Locked out by a greeter that doesn't start: Ctrl+Alt+F2, log in, remove 10-wayland.conf, then
+# sudo systemctl restart sddm.
+- name: SDDM config dir
+  ansible.builtin.file: { path: /etc/sddm.conf.d, state: directory, mode: "0755" }
+
+- name: SDDM greeter's weston config
+  ansible.builtin.copy:
+    dest: /etc/sddm/weston.ini
+    mode: "0644"
+    content: |
+      # Managed by ansible (dotfiles labwc role): the compositor of the SDDM greeter.
+      [core]
+      idle-time=0
+      {% if hidpi | bool %}
+      [output]
+      name=eDP-1
+      scale=2
+      {% endif %}
+
+- name: SDDM greeter on Wayland
+  ansible.builtin.copy:
+    dest: /etc/sddm.conf.d/10-wayland.conf
+    mode: "0644"
+    content: |
+      # Managed by ansible (dotfiles labwc role).
+      [General]
+      DisplayServer=wayland
+
+      [Wayland]
+      CompositorCommand=weston --shell=kiosk --config=/etc/sddm/weston.ini

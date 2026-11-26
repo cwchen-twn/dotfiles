@@ -21,7 +21,7 @@
       delay: 10
 
     # Ubuntu's own tool, which also fetches the PPA's signing key (ansible's apt_repository goes in ansible-core 2.25).
-    # Minimal and cloud images lack it; the Shutter PPA (desktop role, later) uses it too.
+    # Minimal and cloud images lack it.
     - name: Add-apt-repository (Ubuntu only)
       ansible.builtin.apt: { name: software-properties-common }
       when: ansible_facts['distribution'] == 'Ubuntu'
@@ -139,7 +139,7 @@
         dest: /etc/default/earlyoom
         mode: "0644"
         content: |
-          EARLYOOM_ARGS="-r 0 --avoid (^|/)(Xorg|Xwayland|labwc|sddm|sddm-helper|lxqt-session|xfwm4|systemd|sshd)$"
+          EARLYOOM_ARGS="-r 0 --avoid (^|/)(Xwayland|labwc|weston|sddm|sddm-helper|lxqt-session|systemd|sshd)$"
       register: earlyoom_conf
 
     - name: Earlyoom running

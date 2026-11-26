@@ -21,3 +21,7 @@
 .config/picom
 # camera: PipeWire attempt replaced by the v4l2loopback relay (2026-11)
 .config/wireplumber/wireplumber.conf.d/90-camera-only.conf
+# X11 session autostarts: the desktop is Wayland only, locking and idle are swayidle's (2026-11, #66)
+.config/autostart/xss-lock.desktop
+.config/autostart/lxqt-xscreensaver-autostart.desktop
+.config/autostart/kbd-backlight-idle.desktop

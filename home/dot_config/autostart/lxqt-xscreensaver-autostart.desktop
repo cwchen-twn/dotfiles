@@ -1,6 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=XScreenSaver
-Comment=Disabled by the dotfiles: the screen lock is xss-lock + i3lock (xss-lock.desktop)
-Exec=xscreensaver -no-splash
-Hidden=true

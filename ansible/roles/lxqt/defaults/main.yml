@@ -1,10 +1,5 @@
-# HiDPI (the `hidpi` var from setup.yml): 2x via Xft.dpi in ~/.Xresources; Qt6, Chromium, GTK (GDK_SCALE) and alacritty
-# all scale from it. The panel keeps LXQt's default sizes because Qt doubles them.
+# HiDPI (the `hidpi` var from setup.yml): the compositor scales the session (kanshi); only the panel's sizes follow it.
 lxqt_hidpi: "{{ hidpi | default(false) }}"
-lxqt_dpi: 192
-lxqt_cursor_size: 48
-lxqt_xfwm4_theme: Default-xhdpi   # xfwm4 title bars don't scale with Xft.dpi
-lxqt_workspaces: 4  # keep in sync with --cols in ~/.config/libinput-gestures.conf
 # Desktop icons pcmanfm-qt generates for its DesktopShortcuts setting (Home, Trash, Computer, Network); removed, with
 # the setting emptied: the file manager's side pane has them all.
 lxqt_desktop_shortcut_files: "{{ ['user-home', 'trash-can', 'computer', 'network']
@@ -27,14 +22,13 @@ lxqt_favorites:
   - { app: vscode, files: [/usr/share/applications/com.microsoft.VSCode.desktop, /usr/share/applications/code.desktop] }
   - { app: obsidian, files: ["{{ home }}/.local/share/applications/obsidian.desktop"] }
   - { app: dbeaver, files: [/usr/share/applications/dbeaver-ce.desktop] }
-  - { app: shutter, files: [/usr/share/applications/shutter.desktop] }
   - { app: supersonic, files: ["{{ home }}/.local/share/applications/supersonic.desktop"] }
 
-# Panel widgets, left to right: Debian's default minus `mount` (removable media) and `volume` (it controls one fixed
+# Panel widgets, left to right: Debian's default minus `mount` (removable media), `volume` (it controls one fixed
 # device, so it showed the speakers while sound played on Bluetooth headphones: pasystray in the tray instead, desktop
-# role), plus `cpuload` (CPU monitor).
-lxqt_panel_plugins: [mainmenu, showdesktop, desktopswitch, quicklaunch, taskbar, kbindicator, tray, statusnotifier,
-                     worldclock, cpuload, quicklaunch2]
+# role) and the X11-only `kbindicator` and `tray` (Wayland tray icons are `statusnotifier`), plus `cpuload`.
+lxqt_panel_plugins: [mainmenu, showdesktop, desktopswitch, quicklaunch, taskbar, statusnotifier, worldclock, cpuload,
+                     quicklaunch2]
 # Sections for widgets the distro default doesn't define.
 lxqt_panel_plugin_sections:
   cpuload: { type: cpuload, alignment: Right }

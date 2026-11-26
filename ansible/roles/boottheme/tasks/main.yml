@@ -141,6 +141,9 @@
       HoverSessionButtonTextColor: "{{ boottheme_accent }}"
       HoverVirtualKeyboardButtonTextColor: "{{ boottheme_accent }}"
 
+- name: SDDM config dir
+  ansible.builtin.file: { path: /etc/sddm.conf.d, state: directory, mode: "0755" }
+
 - name: SDDM uses the theme
   ansible.builtin.copy:
     dest: /etc/sddm.conf.d/20-theme.conf

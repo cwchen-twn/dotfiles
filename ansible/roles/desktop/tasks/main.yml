@@ -34,12 +34,6 @@
       delay: 10
       when: "'vscode' in desktop"
 
-    - name: Shutter PPA (Ubuntu)
-      ansible.builtin.command:
-        cmd: add-apt-repository --yes ppa:shutter/ppa
-        creates: /etc/apt/sources.list.d/shutter-ubuntu-ppa-*
-      when: "'shutter' in desktop and ansible_facts['distribution'] == 'Ubuntu'"
-
     - name: Apt desktop packages
       ansible.builtin.apt:
         update_cache: true
@@ -49,8 +43,7 @@
           brave: [brave-browser, vainfo]   # vainfo: which codecs the GPU decodes (media-check)
           vscode: [code]
           alacritty: "{{ ['alacritty'] if ansible_facts['distribution_release'] not in ['jammy', 'bookworm'] else [] }}"
-          libinput-gestures: [wmctrl, xdotool, libinput-tools]
-          shutter: [shutter]
+          libinput-gestures: [libinput-tools]
           # libreoffice-qt6: LXQt 2.x themes only Qt6 apps, so LO's Qt5 backend stays light (lxqt role picks qt6)
           libreoffice: "{{ ['libreoffice'] + (['libreoffice-qt6'] if ansible_facts['distribution_release'] not in ['jammy', 'bookworm'] else []) }}"
           calibre: [calibre]
@@ -79,13 +72,9 @@
           - ipp-usb        # USB printers as driverless IPP
           - simple-scan
           - libnotify-bin  # notify-send: the volume popup of ~/.local/bin/vol (volume keys)
-          - xclip          # images to the clipboard in X11 sessions (fish clip-img; Wayland uses wl-copy)
           - pasystray      # tray volume icon that follows the default output (~/.config/autostart/pasystray.desktop)
           - mpv            # video player; YouTube via yt-dlp from mise and VA-API (~/.config/mpv/mpv.conf)
           - libfuse2t64    # runs the conky AppImage (mise): the desktop system monitor, ~/.config/conky
-          - i3lock         # screen lock on the login background (~/.local/bin/lock-screen)
-          - xss-lock       # runs it on idle, before sleep and on LXQt's Lock screen (autostarted)
-          - imagemagick    # lock-screen scales the background to the screen
     # yt-dlp comes from mise (YouTube breaks old versions within weeks; Debian stable's is months old). mpv only
     # Recommends Debian's, so remove it and pin it out so a later mpv install does not bring it back.
     - name: No Debian yt-dlp (mise provides it)
@@ -150,42 +139,35 @@
                 # No Dark Reader: it restyles from a script in every tab on each DOM change, a steady CPU cost on
                 # busy pages. Pages are darkened by Blink's WebContentsForceDark instead (launcher flags below).
                 # enhanced-h264ify: YouTube serves H.264 (up to 1080p), which older Intel GPUs decode in hardware
-                # (VA-API + Vulkan, see "Hardware video decoding in Brave" below); VP9/AV1 would be decoded on the CPU
+                # (VA-API, see "Hardware video decoding in Brave" below); VP9/AV1 would be decoded on the CPU
                 - omkfmpieigblcllmkgbflkikinpkodlk;https://clients2.google.com/service/update2/crx   # enhanced-h264ify
 
-    # Hardware video decoding in Brave on Intel graphics (found on the 2015 MacBook Pro, Broadwell / Iris 6100, X11,
-    # Brave 157; README "YouTube (Brave)" has the whole story). Three parts, all needed:
+    # Hardware video decoding in Brave on Intel graphics (found on the 2015 MacBook Pro, Broadwell / Iris 6100, then
+    # X11, Brave 157; README "YouTube (Brave)" has the whole story). Two parts, both needed:
     #   1. enhanced-h264ify (policy above): YouTube sends H.264, which Broadwell decodes in hardware (no VP9/AV1).
     #   2. intel-media-va-driver-non-free: Chromium's VA-API decoder needs the driver's video post-processing
     #      (VAEntrypointVideoProc), which Debian's free build leaves out -> every video fell back to CPU decoding
     #      (renderer ~120% of a core) while brave://gpu still said "Hardware accelerated".
-    #   3. Vulkan for Brave's compositing (ANGLE on Vulkan, Mesa hasvk on Broadwell): on X11 Chromium can't hand decoded
-    #      frames over zero-copy (that needs EGL, blocked for Intel on X11), and its GL format conversion corrupted
-    #      frames: coloured squares with the iHD driver, black areas/squares with the patched i965 fork. Not the
-    #      compositor's sync mode, not the X driver (intel SNA + TearFree changed nothing). With Vulkan: clean picture,
-    #      YouTube tab ~5% of a core. Suggested by the i965 fork's maintainer (issue #26).
+    # On X11 a third part was Vulkan compositing (Chromium's GL conversion corrupted frames there, and zero-copy needs
+    # EGL, blocked for Intel on X11). The Wayland session has EGL: VaapiVideoDecoder, no Vulkan (#66).
     # Check: media-check (--decode).
     - name: Intel graphics?
       ansible.builtin.shell: grep -qx 0x8086 /sys/class/drm/card*/device/vendor 2>/dev/null && echo yes || true
       register: intel_gpu
       changed_when: false
-    - name: Intel video decoding with post-processing, and Vulkan for Brave
-      ansible.builtin.apt: { name: [intel-media-va-driver-non-free, mesa-vulkan-drivers] }
+    - name: Intel video decoding with post-processing
+      ansible.builtin.apt: { name: [intel-media-va-driver-non-free] }
       when: "'yes' in intel_gpu.stdout"
 
-    # Brave's flags: native dark pages everywhere (instead of Dark Reader, see the policy), Vulkan on Intel graphics
-    # in X11 sessions only: under Wayland ("LXQt (labwc)", labwc role) Chromium rejects Vulkan ("--ozone-platform=
-    # wayland is not compatible with Vulkan") and has EGL, so zero-copy works without it. Debian's Brave launcher
-    # reads no flags file, so a ~/.local/bin/brave-browser wrapper (ahead of /usr/bin in PATH: $BROWSER, terminals)
-    # picks them per session, and a user copy of Brave's menu entry, regenerated from the packaged one each run (menu,
-    # panel, links via mimeapps), starts the wrapper. Chromium honours only the last --enable-features: one list.
+    # Brave's flags: native dark pages everywhere (instead of Dark Reader, see the policy). Debian's Brave launcher reads
+    # no flags file, so a ~/.local/bin/brave-browser wrapper (ahead of /usr/bin in PATH: $BROWSER, terminals) carries
+    # them, and a user copy of Brave's menu entry, regenerated from the packaged one each run (menu, panel, links via
+    # mimeapps), starts the wrapper. Chromium honours only the last --enable-features: one list.
     - name: Brave launchers with its flags
       when: "'brave' in desktop"
       become: false
       vars:
-        brave_features_x11: "{{ ((['Vulkan', 'DefaultANGLEVulkan', 'VulkanFromANGLE'] if 'yes' in intel_gpu.stdout
-                                  else []) + ['WebContentsForceDark']) | join(',') }}"
-        brave_features_wayland: WebContentsForceDark
+        brave_features: WebContentsForceDark
       block:
         - name: Read Brave's packaged menu entry
           ansible.builtin.slurp: { src: /usr/share/applications/brave-browser.desktop }
@@ -203,13 +185,8 @@
             mode: "0755"
             content: |
               #!/usr/bin/env bash
-              # Generated by the dotfiles desktop role (ansible/roles/desktop): Brave with its flags for this session.
-              if [ -n "${WAYLAND_DISPLAY:-}" ]; then
-                  features={{ brave_features_wayland }}
-              else
-                  features={{ brave_features_x11 }}
-              fi
-              exec /usr/bin/brave-browser-stable --enable-features="$features" "$@"
+              # Generated by the dotfiles desktop role (ansible/roles/desktop): Brave with its flags.
+              exec /usr/bin/brave-browser-stable --enable-features={{ brave_features }} "$@"
 
     # Laptops/desktops without a modem or boot-time network dependencies. cups-browsed would add every printer on
     # every network as a queue; `printers` / `printer-add` add only the ones you pick.
@@ -243,8 +220,6 @@
           args: { chdir: /usr/local/src/libinput-gestures }
           changed_when: true
           when: gestures_src.changed or not ('/usr/bin/libinput-gestures' is file)
-        - name: Xinput (inspect/tweak touchpad settings)
-          ansible.builtin.apt: { name: xinput }
         - name: User in input group
           ansible.builtin.user: { name: "{{ user }}", groups: input, append: true }
 

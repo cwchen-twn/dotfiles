@@ -19,7 +19,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
 |---|---|
 | devops | kubernetes (kubectl, helm, kubectx), terraform, docker, tailscale |
 | runtimes | node (+pnpm), go, java (+maven, gradle), rust, bun, python (uv) |
-| desktop | brave, vscode, alacritty, libinput-gestures, shutter, libreoffice, balena-etcher, calibre, obsidian, dbeaver, fcitx5 |
+| desktop | brave, vscode, alacritty, libinput-gestures, libreoffice, balena-etcher, calibre, obsidian, dbeaver, fcitx5 |
 | extras | postgres, openvpn (2.x), openfortivpn, nordvpn, nvidia-cuda, claude-code |
 
 Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age,
@@ -80,23 +80,24 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   `/usr/lib/systemd/system-sleep/50-dotfiles-macbook`: otherwise resume hangs and Wi-Fi doesn't come back after
   suspend), lid closed = suspend, then hibernate after 2 h on battery (plain suspend on AC; logind handles the lid, not
   LXQt), hibernate at 5% battery, three-finger drag restarted after every wake-up, a quieter `mbpfan` curve, a
-  macOS-like touchpad (tap to click, natural scrolling, two-finger right-click:
-  `/etc/X11/xorg.conf.d/50-macbook-touchpad.conf`), and the keyboard backlight (Fn+F5/F6 via `brightnessctl`, off after
-  60 s idle via `~/.local/bin/kbd-backlight-idle`, `KBD_IDLE_SECS` to change).
+  macOS-like touchpad (tap to click, natural scrolling, two-finger right-click: labwc's `rc.xml`), and the keyboard
+  backlight (Fn+F5/F6 via `brightnessctl`, off after 60 s idle: swayidle runs `~/.local/bin/kbd-backlight-idle`).
 - FaceTime camera in browsers/Meet: facetimehd reports its sizes as a range, which Chromium's camera code skips (also
   through PipeWire), so Brave/Chrome see no camera. Before a call run `camera-on` and pick "FaceTime HD (relay)": a
   v4l2loopback camera (`/dev/video10`, fixed 1280x720) fed by ffmpeg. `camera-off` afterwards (the LED goes off).
 - The build asks for the swap partition size (default 16 GB; >= RAM to hibernate).
 - The `lxqt` Ansible role sets only specific keys in `~/.config/lxqt/*.conf` (LXQt rewrites those files, so chezmoi
-  doesn't own them): on Retina MacBooks 2x scaling (`Xft.dpi: 192` in `~/.Xresources`, which Qt, Brave, GTK via
-  `GDK_SCALE` and Alacritty all follow); system-wide dark mode (LXQt theme/palette, GTK, freedesktop color-scheme);
+  doesn't own them): system-wide dark mode (LXQt theme/palette, GTK, freedesktop color-scheme);
   Brave as default browser; LibreOffice as default for office documents (Calibre claims .docx/.odt too), on its Qt6
   backend (`SAL_USE_VCLPLUGIN=qt6`: LXQt 2.x themes only Qt6, so the Qt5 backend stayed light) with Colibre Dark
   icons and a light page in the dark UI (Appearance "Light": documents' own black text and borders stay readable;
   `/usr/lib/libreoffice/share/registry/zz-dark.xcd`); Alacritty as terminal (Ctrl+Alt+T); panel quick launch and
-  menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, Shutter, as selected); panel widgets
-  (`lxqt_panel_plugins`: Debian default minus mount, plus the CPU monitor). Also 4 workspaces in a row for the gestures.
-- Retina boot and login (macbook role): GRUB console font at 36 px, console in Terminus 16x32, SDDM greeter at 2x.
+  menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, as selected); panel widgets
+  (`lxqt_panel_plugins`: Debian default minus mount and the X11-only tray/keyboard widgets, plus the CPU monitor).
+- Retina boot and login: GRUB console font at 36 px and console in Terminus 16x32 (macbook role); the SDDM greeter
+  runs on Wayland inside weston's kiosk shell, 2x on Retina (`/etc/sddm/weston.ini`, labwc role). Locked out by a
+  greeter that doesn't start: Ctrl+Alt+F2, log in, `sudo rm /etc/sddm.conf.d/10-wayland.conf`, then
+  `sudo systemctl restart sddm`.
 - Look (`boottheme` role, desktop machines), Catppuccin Mocha throughout:
   - GRUB: [AstronautGrub](https://github.com/Flava-Clown/AstronautGrub) (pinned; `boottheme_grub_variant` astronaut
     or astronaut_orange). Drawn for 1920x1080, so on Retina its fonts and rows are scaled ×1.6
@@ -110,26 +111,25 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
     quarter of the screen. Right: CPU (per core, temperature, top apps) and memory (swap, top apps; processes summed
     per app as in `cpu-stat`/`mem-stat`). Left: disk and network I/O, GPU busy % (from i915 RC6 residency, no root)
     and battery draw in watts. About 2.5% of one core for both. Hide with `pkill conky`, restart with `conky-desktop`.
-    Conky is upstream's AppImage through mise (one build for X11 and Wayland; Debian 13's 1.22 draws badly on Wayland).
-  - Screen lock: i3lock on the login screen's astronaut background (`~/.local/bin/lock-screen`), run by xss-lock after
-    10 min idle, before suspend/hibernate and on LXQt's Lock screen (`loginctl lock-session`). There is no password box:
-    type the password and press Enter; the ring turns red on a wrong one. xscreensaver is no longer autostarted.
+    Conky is upstream's AppImage through mise (Debian 13's 1.22 drew badly on Wayland).
+  - Screen lock: swaylock on the login screen's astronaut background (`~/.local/bin/lock-screen`), run by swayidle
+    after 10 min idle, before suspend/hibernate and on LXQt's Lock screen or Ctrl+Alt+L (`loginctl lock-session`).
+    There is no password box: type the password and press Enter; the ring turns red on a wrong one.
   - None of this art has a license, so nothing is committed: images are fetched from pinned commits with sha256 checks
     and cropped to the screen in `/usr/local/share/backgrounds/dotfiles/`. Change one in `boottheme_images`
     (`ansible/roles/boottheme/defaults/main.yml`: name, url, sha256); drop an entry and that screen uses the login
     preset's own wallpaper. Preview the login without logging out:
     `sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/sddm-astronaut-theme`. More: gnome-look.org (GRUB
     Themes), store.kde.org (SDDM Login Themes, Qt6 only), r/unixporn.
-- Wayland session (labwc role), "LXQt (labwc)" on the login screen next to the X11 "LXQt": the same LXQt panel,
-  desktop and apps on the [labwc](https://labwc.github.io) compositor (`/usr/local/bin/startlxqt-labwc`; Debian 13
-  has no lxqt-wayland-session). Each monitor gets its own scale, so a 1080p external screen is sharp at 1x next to
+- Wayland only (labwc role, #66): "LXQt (labwc)" on the login screen, the LXQt panel, desktop and apps on the
+  [labwc](https://labwc.github.io) compositor (`/usr/local/bin/startlxqt-labwc`: Debian's lxqt-wayland-session plus
+  the fcitx5 fix; on Debian 13, which lacks that package, our own start script). X11 is not installed; Xwayland
+  stays for X11-only apps. Each monitor gets its own scale, so a 1080p external screen is sharp at 1x next to
   the 2x panel: kanshi profiles in `~/.config/kanshi/config`, reapplied on plug/unplug. labwc's config is
-  `~/.config/labwc/` (`rc.xml`: workspaces, touchpad, the keys LXQt's shortcut daemon binds on X11; `autostart`:
-  kanshi, and swayidle for the keyboard backlight, the lock (swaylock, same `lock-screen`) and screens off;
-  `environment`). Print / Shift+Print: screenshot (`~/.local/bin/screenshot`). Gestures press keys through
-  `~/.local/bin/sendkey` (xdotool or wtype), so the same `libinput-gestures.conf` serves both sessions. GTK's 2x
-  for X11 (`GDK_SCALE`) moved to `~/.xsessionrc`, which only X11 sessions read. Title bars in Catppuccin
-  (`themerc-override`); the panel can't show the workspace there, so labwc names it in a popup on each switch.
+  `~/.config/labwc/` (`rc.xml`: workspaces, touchpad, brightness/backlight/media/volume keys; `autostart`: fcitx5,
+  kanshi, and swayidle for the keyboard backlight, the lock and screens off; `environment`). Print / Shift+Print:
+  screenshot (`~/.local/bin/screenshot`). Gestures press keys through `~/.local/bin/sendkey` (wtype). Title bars in
+  Catppuccin (`themerc-override`).
   alacritty takes no drag-and-drop on Wayland: `clip-img FILE` copies an image to the clipboard for Ctrl+V.
 - fcitx5 (desktop app): US keyboard + Chewing (`~/.config/fcitx5/profile`, chezmoi; stop fcitx5 before editing it by
   hand, it saves its profile on exit). Ctrl+Space toggles, Shift_L switches temporarily. CJK font: `fonts-noto-cjk`.
@@ -137,8 +137,8 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   no password manager, Bitwarden extension forced). Bookmarks, extensions and settings travel with Brave Sync;
   the profile directory is deliberately not in this repo.
 - Three-finger drag (MacBooks): [linux-3-finger-drag](https://github.com/lmr97/linux-3-finger-drag), built by the macbook
-  role into `~/.cargo/bin` (needs the rust runtime), run by the `three-finger-drag` systemd user unit. Xorg's libinput
-  driver can't do it natively; the program grabs the touchpad and mirrors everything else to a clone.
+  role into `~/.cargo/bin` (needs the rust runtime), run by the `three-finger-drag` systemd user unit. libinput can't
+  do it natively; the program grabs the touchpad and mirrors everything else to a clone.
 - `libinput-gestures` (desktop app, autostarted; `~/.config/libinput-gestures.conf`): 4 fingers left/right switch workspace,
   up shows the desktop, down opens the menu; pinch zooms (3 fingers are taken by the drag, as on macOS).
 - Leave the Wi-Fi SSID empty to pick the network and type the passphrase on the target instead (the installer may then
@@ -215,7 +215,7 @@ missing language server.
 ## Performance (8 GB machines)
 
 - Memory: zram swap (zstd, half of RAM up to 4 GB, priority over the disk swap), `vm.swappiness=180`, and `earlyoom`
-  (kills the heaviest browser tab before the machine freezes; never Xorg/SDDM/the session). Check: `zramctl`,
+  (kills the heaviest browser tab before the machine freezes; never labwc/SDDM/the session). Check: `zramctl`,
   `systemctl status earlyoom`.
 - On demand instead of at boot: Docker (`docker.socket`: the first `docker` command starts it; containers don't
   auto-start at boot), VPNs (see [VPNs](#vpns); NordVPN's socket unit can't start it lazily), PostgreSQL (`pgstart` /
@@ -329,39 +329,28 @@ the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you 
 - **Media keys:** Fn+F7 / Fn+F8 / Fn+F9 = previous / play-pause / next for whichever player is active (MPRIS via
   playerctl: Supersonic, Brave, ...). The F-row is function keys on the MacBook, hence Fn.
 - **Volume keys:** Fn+F10 / F11 / F12 = mute / down / up on the *current default output* (`~/.local/bin/vol`, 5% steps,
-  max 100%, with a popup naming the device). LXQt's panel volume widget controls one fixed device (the speakers), so
-  its own bindings changed the speakers while sound played on Bluetooth headphones. The panel re-registers those
-  bindings on every start; the lxqt role keeps them disabled (`files/globalkeys.py`: one enabled binding per key,
-  matched by key since lxqt-globalkeysd renumbers sections). `media-check` verifies all six keys.
+  max 100%, with a popup naming the device), bound in labwc's `rc.xml`. `media-check` verifies all six keys.
 - **Volume icon:** `pasystray` in the tray instead of the panel's volume widget (removed: it controls one fixed
   device). Its icon follows the default output; scroll = volume, middle-click = mute, left-click = pick the output
   or input and move an app's sound to another device. Same 100% cap and 5% steps as the keys
   (`~/.config/autostart/pasystray.desktop`).
-- **YouTube (Brave) on Intel graphics:** hardware video decoding needs three things on this 2015 MacBook Pro
-  (Broadwell / Iris 6100, X11, Brave 157), all set up by the desktop role:
+- **YouTube (Brave) on Intel graphics:** hardware video decoding needs two things on this 2015 MacBook Pro
+  (Broadwell / Iris 6100), both set up by the desktop role:
   1. **enhanced-h264ify** (Brave policy): YouTube sends H.264 (up to 1080p). Broadwell decodes H.264 and VP8 in
      hardware but not the VP9/AV1 YouTube prefers.
   2. **`intel-media-va-driver-non-free`**: Chromium's VA-API decoder needs the driver's video post-processing
      (`VAEntrypointVideoProc`). Debian's free build leaves those GPU kernels out (7 entrypoints instead of 20), so
      every video fell back to CPU decoding (`FFmpegVideoDecoder`, renderer ~120% of a core for 1080p60) while
      `brave://gpu` still said "Hardware accelerated".
-  3. **Vulkan for Brave** (`--enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE`, in a generated copy of Brave's
-     menu entry and a `~/.local/bin/brave-browser` wrapper; Debian's launcher reads no flags file): with hardware
-     decoding on, the picture showed coloured squares (iHD) or black areas and squares (patched i965). On X11 Chromium
-     can't pass decoded frames zero-copy (that needs EGL, which Chrome blocks for Intel on X11), and its OpenGL format
-     conversion corrupts them on this GPU. With ANGLE on Vulkan (Mesa `hasvk`) the picture is clean and the 1080p60 test
-     clip costs GPU process ~19% + renderer ~8% of a core.
 
-  Ruled out along the way (none helped): Chromium VA-API flags (`AcceleratedVideoDecodeLinuxGL`,
-  `...ZeroCopyGL`, `VaapiIgnoreDriverChecks`), xfwm4 sync modes (`glx`, `xpresent`), the Intel X driver (SNA +
-  TearFree), and the [patched i965 driver](https://github.com/irql-notlessorequal/intel-vaapi-driver) (decodes fine
-  but corrupts the same way). Turning the compositor off also hides the corruption, but loses shadows and
-  transparency. Sources: the i965 fork's [Chromium artefacts issue](https://github.com/irql-notlessorequal/intel-vaapi-driver/issues/26)
-  (the Vulkan suggestion) and [known issues](https://github.com/irql-notlessorequal/intel-vaapi-driver/issues/12),
-  [Arch forum VA-API thread](https://bbs.archlinux.org/viewtopic.php?id=244031&p=45), and
-  [brave://gpu false positives](https://forum.manjaro.org/t/hardware-video-acceleration-working-for-firefox-but-not-on-google-chrome-or-brave-or-chromium-browser/189629).
-  `/usr/bin/brave-browser` (what the agents and mockup screenshots use) runs without the flags.
-- **Brave CPU:** with the above, video and page raster run on the GPU (`brave://gpu`: Vulkan); what stays is page
+  On X11 (until #66) a third part was needed, Vulkan compositing (`--enable-features=Vulkan,DefaultANGLEVulkan,
+  VulkanFromANGLE`): Chromium couldn't pass decoded frames zero-copy there (that needs EGL, blocked for Intel on X11)
+  and its OpenGL conversion showed coloured squares. On Wayland Brave has EGL: `VaapiVideoDecoder` with hardware
+  decoding and no extra flags (`media-check --decode`). Sources from that hunt: the i965 fork's
+  [Chromium artefacts issue](https://github.com/irql-notlessorequal/intel-vaapi-driver/issues/26) and
+  [known issues](https://github.com/irql-notlessorequal/intel-vaapi-driver/issues/12), the
+  [Arch forum VA-API thread](https://bbs.archlinux.org/viewtopic.php?id=244031&p=45).
+- **Brave CPU:** with the above, video and page raster run on the GPU; what stays is page
   JavaScript on each tab's main thread. Brave's task manager (Shift+Esc) or `cpu-stat` shows which tab. Dark Reader
   is gone for that reason (it restyles from a script in every tab on each DOM change); pages are darkened natively
   by Blink's `WebContentsForceDark` flag, set on every machine through the same launchers.
