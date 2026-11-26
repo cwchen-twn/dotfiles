@@ -96,7 +96,7 @@
     <keybind key="XF86_KbdBrightnessDown">
       <action name="Execute" command="brightnessctl -q -d smc::kbd_backlight set 10%-" />
     </keybind>
-    <!-- Media keys for whichever player is active (MPRIS). -->
+    <!-- Media and volume keys: one line per keybind, media-check reads them that way. Player: the active one (MPRIS). -->
     <keybind key="XF86_AudioPlay"><action name="Execute" command="playerctl play-pause" /></keybind>
     <keybind key="XF86_AudioNext"><action name="Execute" command="playerctl next" /></keybind>
     <keybind key="XF86_AudioPrev"><action name="Execute" command="playerctl previous" /></keybind>

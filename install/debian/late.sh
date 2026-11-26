@@ -27,7 +27,7 @@ in-target chown "$user:$user" "/home/$user/bootstrap.sh"
 
 # Login screen on Wayland from the first boot (#66): forky's desktop task brings no X server, and SDDM's default
 # greeter needs one. The labwc role writes the same two files on the first chezmoi apply.
-mkdir -p /target/etc/sddm.conf.d /target/etc/sddm
+mkdir -p /target/etc/sddm.conf.d /target/etc/sddm/no-xsessions
 cat >/target/etc/sddm.conf.d/10-wayland.conf <<'SDDM'
 # Managed by ansible (dotfiles labwc role); first written by the installer.
 [General]
@@ -35,6 +35,9 @@ DisplayServer=wayland
 
 [Wayland]
 CompositorCommand=weston --shell=kiosk --config=/etc/sddm/weston.ini
+
+[X11]
+SessionDir=/etc/sddm/no-xsessions
 SDDM
 {
     echo '# Managed by ansible (dotfiles labwc role): the compositor of the SDDM greeter.'

@@ -128,9 +128,11 @@ is the chezmoi one-liner above, and log in again with "LXQt (labwc)".
     Themes), store.kde.org (SDDM Login Themes, Qt6 only), r/unixporn.
 - Wayland only (labwc role, #66): "LXQt (labwc)" on the login screen, the LXQt panel, desktop and apps on the
   [labwc](https://labwc.github.io) compositor (`/usr/local/bin/startlxqt-labwc`: Debian's lxqt-wayland-session plus
-  the fcitx5 fix; on Debian 13, which lacks that package, our own start script). X11 is not installed; Xwayland
-  stays for X11-only apps. Each monitor gets its own scale, so a 1080p external screen is sharp at 1x next to
-  the 2x panel: kanshi profiles in `~/.config/kanshi/config`, reapplied on plug/unplug. labwc's config is
+  the fcitx5 fix; on Debian 13, which lacks that package, our own start script). Nothing runs on X11 and the login
+  screen lists no X11 session; the X server and xfwm4 stay installed only because sddm and the lxqt metapackage
+  depend on them (removing them made apt pull in TigerVNC and 9wm). Xwayland runs X11-only apps. Each monitor gets
+  its own scale, so a 1080p external screen is sharp at 1x next to the 2x panel: kanshi profiles in
+  `~/.config/kanshi/config`, reapplied on plug/unplug. labwc's config is
   `~/.config/labwc/` (`rc.xml`: workspaces, touchpad, brightness/backlight/media/volume keys; `autostart`: fcitx5,
   kanshi, and swayidle for the keyboard backlight, the lock and screens off; `environment`). Print / Shift+Print:
   screenshot (`~/.local/bin/screenshot`). Gestures press keys through `~/.local/bin/sendkey` (wtype). Title bars in
