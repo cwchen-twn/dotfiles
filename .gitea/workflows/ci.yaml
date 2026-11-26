@@ -1,10 +1,9 @@
 # The gate on every PR and on main: install the pinned tools (mise.toml), then `make audit`.
 # CI runs nothing that isn't a make target.
 #
-# Runner facts (shared with hcloud and rigel-ledger):
-#   * ubuntu-latest maps to node:22-bookworm on the act-runner: it has git, make and python3.
-#   * Checkout goes through the in-cluster Service. The public name is behind Cloudflare, which has 403'd
-#     job-container fetches before.
+# Runner facts (labels: catopia/hcloud#212):
+#   * `linux` is the runner pool, off the VPS. It maps to node:22-bookworm: git, make and python3.
+#   * Checkout uses the public name: the in-cluster Service does not exist from the pool.
 #   * There is no cache server, so mise downloads the tools on every run.
 
 name: ci
@@ -17,12 +16,11 @@ on:
 
 jobs:
   audit:
-    runs-on: ubuntu-latest
+    runs-on: linux
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
         with:
-          github-server-url: http://gitea-http.gitea.svc.cluster.local:3000
           fetch-depth: 0 # gitleaks scans the whole history
 
       - name: Install the pinned tools
