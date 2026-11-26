@@ -31,6 +31,10 @@ export QT_ACCESSIBILITY=1
 export XDG_MENU_PREFIX=lxqt-
 export XDG_SESSION_TYPE=wayland
 export XDG_SESSION_DESKTOP=lxqt-labwc
+# Input method: Debian's /etc/profile.d/im-config_wayland.sh sets GTK_IM_MODULE=fcitx, and fcitx5 warns at login
+# that on Wayland GTK should use the compositor's text-input protocol instead (labwc has it). Qt keeps
+# QT_IM_MODULE (~/.config/labwc/environment), Xwayland apps XMODIFIERS.
+unset GTK_IM_MODULE
 # LXQt for the autostart entries (OnlyShowIn=LXQt), wlroots for xdg-desktop-portal-wlr (screen sharing).
 export XDG_CURRENT_DESKTOP=LXQt:labwc:wlroots
 

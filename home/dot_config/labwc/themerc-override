@@ -1,5 +1,29 @@
-# Managed by chezmoi. Added to labwc's theme (~/.config/labwc/rc.xml turns the shadows on). From upstream LXQt's
-# labwc config (lxqt-wayland-session), the snap overlay in Catppuccin Mocha blue.
+# Managed by chezmoi. Added to labwc's theme (labwc-theme(5)): Catppuccin Mocha, dark like the X11 session's xfwm4
+# title bars (labwc's built-in theme is light). Shadows from upstream LXQt's labwc config; rc.xml turns them on.
+
+# Title bars and borders: the focused window on base, others on mantle.
+window.active.title.bg.color: #1e1e2e
+window.inactive.title.bg.color: #181825
+window.active.border.color: #1e1e2e
+window.inactive.border.color: #181825
+window.active.label.text.color: #cdd6f4
+window.inactive.label.text.color: #7f849c
+window.active.button.unpressed.image.color: #cdd6f4
+window.inactive.button.unpressed.image.color: #7f849c
+
+# Menus (window menu, Alt+Space) and the on-screen display (workspace popup, Alt+Tab).
+menu.items.bg.color: #1e1e2e
+menu.items.text.color: #cdd6f4
+menu.items.active.bg.color: #313244
+menu.items.active.text.color: #cdd6f4
+menu.border.color: #313244
+menu.separator.color: #45475a
+menu.title.bg.color: #181825
+menu.title.text.color: #89b4fa
+osd.bg.color: #1e1e2e
+osd.border.color: #89b4fa
+osd.label.text.color: #cdd6f4
+
 window.active.shadow.size: 70
 window.inactive.shadow.size: 60
 window.active.shadow.color: #00000080

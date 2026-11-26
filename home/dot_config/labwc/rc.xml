@@ -20,7 +20,17 @@
   </theme>
 
   <!-- One row of 4, like the X11 session (keep in sync with lxqt_workspaces, ansible lxqt role). -->
-  <desktops number="4" popupTime="500" />
+  <!-- The panel can't show the current one under labwc (lxqt-panel 2.1's wlroots backend), so labwc's own popup
+       names it on every switch, long enough to read. -->
+  <desktops>
+    <popupTime>1200</popupTime>
+    <names>
+      <name>Workspace 1</name>
+      <name>Workspace 2</name>
+      <name>Workspace 3</name>
+      <name>Workspace 4</name>
+    </names>
+  </desktops>
 
   <focus>
     <followMouse>no</followMouse>

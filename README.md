@@ -128,7 +128,9 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
   kanshi, and swayidle for the keyboard backlight, the lock (swaylock, same `lock-screen`) and screens off;
   `environment`). Print / Shift+Print: screenshot (`~/.local/bin/screenshot`). Gestures press keys through
   `~/.local/bin/sendkey` (xdotool or wtype), so the same `libinput-gestures.conf` serves both sessions. GTK's 2x
-  for X11 (`GDK_SCALE`) moved to `~/.xsessionrc`, which only X11 sessions read.
+  for X11 (`GDK_SCALE`) moved to `~/.xsessionrc`, which only X11 sessions read. Title bars in Catppuccin
+  (`themerc-override`); the panel can't show the workspace there, so labwc names it in a popup on each switch.
+  alacritty takes no drag-and-drop on Wayland: `clip-img FILE` copies an image to the clipboard for Ctrl+V.
 - fcitx5 (desktop app): US keyboard + Chewing (`~/.config/fcitx5/profile`, chezmoi; stop fcitx5 before editing it by
   hand, it saves its profile on exit). Ctrl+Space toggles, Shift_L switches temporarily. CJK font: `fonts-noto-cjk`.
 - Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,

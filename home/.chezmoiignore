@@ -16,6 +16,7 @@
 .local/bin/debian-release-upgrade
 .config/fish/conf.d/reboot-needed.fish
 .config/fish/functions/yt.fish
+.config/fish/functions/clip-img.fish
 .config/mpv
 .config/autostart/pasystray.desktop
 .config/pulse
