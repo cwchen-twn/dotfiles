@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Managed by chezmoi. labwc's menus; right-click on the empty desktop opens root-menu (labwc's default binding),
+     in place of pcmanfm-qt's desktop menu. Applications is built from the installed .desktop files each time it opens
+     (labwc-menu-generator, ansible labwc role), so it follows installs. The window menu is labwc's default. -->
+<openbox_menu>
+  <menu id="root-menu">
+    <item label="Terminal" icon="Alacritty"><action name="Execute" command="alacritty" /></item>
+    <item label="File Manager" icon="system-file-manager"><action name="Execute" command="pcmanfm-qt" /></item>
+    <separator />
+    <menu id="apps" label="Applications" icon="applications-other"
+          execute="labwc-menu-generator --pipemenu --icons --no-duplicates --terminal-prefix 'alacritty -e'" />
+    <separator />
+    <item label="LXQt Settings" icon="preferences-desktop"><action name="Execute" command="lxqt-config" /></item>
+    <item label="Lock Screen" icon="system-lock-screen"><action name="Execute" command="loginctl lock-session" /></item>
+    <item label="Log Out…" icon="system-log-out"><action name="Execute" command="lxqt-leave" /></item>
+  </menu>
+</openbox_menu>

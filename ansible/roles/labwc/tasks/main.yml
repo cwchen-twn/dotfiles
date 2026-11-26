@@ -17,9 +17,11 @@
     labwc_packages:
       - labwc
       - qt6-wayland            # Qt 6 (LXQt, pcmanfm-qt) on Wayland instead of Xwayland
-      - layer-shell-qt         # lxqt-panel and the pcmanfm-qt desktop as Wayland layers
+      - layer-shell-qt         # lxqt-panel as a Wayland layer
       - xwayland               # X11-only apps
       - kanshi                 # per-monitor scale and layout, applied on plug/unplug
+      - swaybg                 # wallpaper, each monitor on its own (~/.config/labwc/autostart)
+      - labwc-menu-generator   # the apps in the desktop's right-click menu (~/.config/labwc/menu.xml)
       - wlr-randr              # monitor list (conky's width) and manual changes
       - swayidle               # idle: lock, keyboard backlight; before-sleep and logind lock
       - swaylock               # screen lock on the login background

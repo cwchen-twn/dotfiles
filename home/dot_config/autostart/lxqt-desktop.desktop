@@ -1,0 +1,8 @@
+[Desktop Entry]
+# Managed by chezmoi: pcmanfm-qt's desktop off (it stays the file manager). On Wayland it spread one wallpaper over
+# all monitors and left the external one black; swaybg draws it instead (~/.config/labwc/autostart), and right-click
+# on the desktop opens labwc's app menu (~/.config/labwc/menu.xml).
+Type=Application
+Name=Desktop
+Exec=pcmanfm-qt --desktop --profile=lxqt
+Hidden=true

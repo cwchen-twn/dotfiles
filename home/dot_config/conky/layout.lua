@@ -236,7 +236,7 @@ end
 -- left.conf / right.conf: build('top_left', {'disk', 'net', ...})
 return function(alignment, names)
 	conky.config = {
-		-- A layer-shell surface under the windows, above pcmanfm-qt's desktop; labwc composites the transparency.
+		-- A layer-shell surface under the windows, above swaybg's wallpaper; labwc composites the transparency.
 		own_window = true,
 		own_window_type = "normal",
 		own_window_hints = "undecorated,below,sticky,skip_taskbar,skip_pager",

@@ -9,6 +9,11 @@ command -v fcitx5 >/dev/null && fcitx5 -d --replace >/dev/null 2>&1
 # Monitors: per-output scale and layout, reapplied on plug/unplug (~/.config/kanshi/config).
 kanshi >/dev/null 2>&1 &
 
+# Wallpaper on every monitor, each filled at its own scale, new ones as they are plugged in. The image is the link the
+# ansible lxqt role sets (the boot theme's); without it, the Catppuccin base colour. pcmanfm-qt's desktop is off
+# (~/.config/autostart/lxqt-desktop.desktop).
+swaybg -o '*' -m fill -c '#1e1e2e' -i ~/.local/share/backgrounds/wallpaper >/dev/null 2>&1 &
+
 # Idle and lock:
 # - keyboard backlight off after 60 s idle, back on input (MacBooks; harmless elsewhere);
 # - lock after 10 min, screens off 5 min later;

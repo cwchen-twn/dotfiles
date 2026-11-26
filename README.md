@@ -114,7 +114,11 @@ is the chezmoi one-liner above, and log in again with "LXQt (labwc)".
     [sddm-astronaut](https://github.com/Keyitdev/sddm-astronaut-theme) `black_hole` layout (GPL-3.0, pinned),
     recolored key by key in `Themes/astronaut.conf.user`.
   - Desktop wallpaper (lxqt role): `jellyfish` from
-    [walls-catppuccin-mocha](https://github.com/orangci/walls-catppuccin-mocha).
+    [walls-catppuccin-mocha](https://github.com/orangci/walls-catppuccin-mocha), drawn by swaybg on every monitor
+    (`~/.config/labwc/autostart`, image from the `~/.local/share/backgrounds/wallpaper` link). pcmanfm-qt stays the
+    file manager, but its desktop is off (on Wayland it spread one image over all monitors and left the external one
+    black), so there are no desktop icons: right-click on the desktop opens an app menu instead
+    (`~/.config/labwc/menu.xml`, apps by category from labwc-menu-generator).
   - System monitor on the desktop: two Conky windows (`~/.config/conky/`) under all other windows, one in each outer
     quarter of the screen. Right: CPU (per core, temperature, top apps) and memory (swap, top apps; processes summed
     per app as in `cpu-stat`/`mem-stat`). Left: disk and network I/O, GPU busy % (from i915 RC6 residency, no root)

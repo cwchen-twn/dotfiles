@@ -230,71 +230,45 @@
       changed_when: "'STARTED' in lxqt_pasystray.stdout"
 
     # Desktop wallpaper from the boottheme role (lxqt_wallpaper), so it belongs to the same look as GRUB, Plymouth
-    # and the login. Machines without that role keep their wallpaper.
+    # and the login. swaybg draws it on every monitor (~/.config/labwc/autostart) from this link; pcmanfm-qt's desktop
+    # is off (~/.config/autostart/lxqt-desktop.desktop): on Wayland it spread one image over all monitors and left
+    # the external one black. Machines without the boottheme role keep swaybg's plain colour.
     - name: Boot theme wallpaper present?
       ansible.builtin.stat: { path: "{{ lxqt_wallpaper }}" }
       register: lxqt_wallpaper_stat
 
-    - name: Desktop wallpaper (pcmanfm-qt)
-      community.general.ini_file:
-        path: "{{ cfg }}/pcmanfm-qt/lxqt/settings.conf"
-        section: Desktop
-        option: "{{ item.key }}"
-        value: "{{ item.value }}"
-        no_extra_spaces: true
-        mode: "0644"
-      loop: "{{ {'Wallpaper': lxqt_wallpaper, 'WallpaperMode': 'zoom'} | dict2items }}"
-      register: lxqt_wallpaper_ini
+    - name: Desktop wallpaper
       when: lxqt_wallpaper_stat.stat.exists
-
-    # A running pcmanfm-qt keeps the old wallpaper in memory and saves it back over the file; tell it directly.
-    # Only inside the desktop session; otherwise the next login reads the file.
-    - name: Show the new wallpaper now  # noqa: no-handler  dry-run then act, inline on purpose
-      ansible.builtin.shell: |
-        [ -n "${WAYLAND_DISPLAY:-}" ] && pgrep -u "$(id -u)" -x pcmanfm-qt >/dev/null || exit 0
-        pcmanfm-qt --set-wallpaper '{{ lxqt_wallpaper }}' --wallpaper-mode zoom
-      when: lxqt_wallpaper_ini is changed
-      changed_when: true
-
-    # No desktop icons: Home, Trash, Computer and Network are in the file manager's side pane. pcmanfm-qt writes a
-    # ~/Desktop/<name>.desktop per DesktopShortcuts entry and saves its in-memory settings over the file on exit, so
-    # a running desktop is stopped first, then the setting and the files go, then it starts again.
-    - name: Desktop shortcuts still configured?  # noqa: risky-shell-pipe  pipefail would change the FILES probe (ls fails on missing files)
-      ansible.builtin.shell: |
-        grep -qx 'DesktopShortcuts=' {{ cfg }}/pcmanfm-qt/lxqt/settings.conf 2>/dev/null || echo SETTING
-        ls {{ lxqt_desktop_shortcut_files | map('quote') | join(' ') }} 2>/dev/null | grep -q . && echo FILES
-        exit 0
-      register: lxqt_shortcuts
-      changed_when: false
-
-    - name: Remove the desktop shortcuts
-      when: lxqt_shortcuts.stdout | length > 0
       block:
-        - name: Stop the desktop (inside the session only)
+        - name: Wallpaper dir
+          ansible.builtin.file: { path: "{{ home }}/.local/share/backgrounds", state: directory, mode: "0755" }
+        - name: Wallpaper link (swaybg)
+          ansible.builtin.file:
+            src: "{{ lxqt_wallpaper }}"
+            dest: "{{ home }}/.local/share/backgrounds/wallpaper"
+            state: link
+            force: true
+          register: lxqt_wallpaper_link
+        # Inside the session: swaybg reads the image once, so restart it for a new link, and start it if it isn't
+        # running (the first run, before the next login's autostart). Outside, the next login starts it.
+        - name: Show the wallpaper now
           ansible.builtin.shell: |
-            # -fx: the whole command line must match, so this shell (which contains the text) is not counted
-            [ -n "${WAYLAND_DISPLAY:-}" ] && pgrep -u "$(id -u)" -fx '(/usr/bin/)?pcmanfm-qt --desktop( .*)?' >/dev/null || exit 0
-            pcmanfm-qt --desktop-off && sleep 1 && echo RUNNING
-          register: lxqt_desktop_stop
-          changed_when: "'RUNNING' in lxqt_desktop_stop.stdout"
+            [ -n "${WAYLAND_DISPLAY:-}" ] && command -v swaybg >/dev/null || exit 0
+            if pgrep -u "$(id -u)" -x swaybg >/dev/null; then
+                [ "$NEW" = True ] || exit 0
+                pkill -u "$(id -u)" -x swaybg
+            fi
+            setsid -f swaybg -o '*' -m fill -c '#1e1e2e' -i "$HOME/.local/share/backgrounds/wallpaper" >/dev/null 2>&1
+            echo STARTED
+          environment: { NEW: "{{ lxqt_wallpaper_link is changed }}" }
+          register: lxqt_swaybg
+          changed_when: "'STARTED' in lxqt_swaybg.stdout"
 
-        - name: No shortcuts in the desktop settings
-          community.general.ini_file:
-            path: "{{ cfg }}/pcmanfm-qt/lxqt/settings.conf"
-            section: Desktop
-            option: DesktopShortcuts
-            value: ""
-            no_extra_spaces: true
-            mode: "0644"
-
-        - name: Shortcut files gone
-          ansible.builtin.file: { path: "{{ item }}", state: absent }
-          loop: "{{ lxqt_desktop_shortcut_files }}"
-
-        - name: Start the desktop again
-          ansible.builtin.shell: setsid -f pcmanfm-qt --desktop --profile=lxqt >/dev/null 2>&1
-          when: "'RUNNING' in lxqt_desktop_stop.stdout"
-          changed_when: true
+    # Desktop icons pcmanfm-qt's desktop used to generate (DesktopShortcuts); the desktop is off now, so only old
+    # files go. Home and Trash are in the file manager's side pane.
+    - name: No old desktop shortcut files
+      ansible.builtin.file: { path: "{{ item }}", state: absent }
+      loop: "{{ lxqt_desktop_shortcut_files }}"
 
     # gsettings lives behind the session's D-Bus: skipped when run outside the desktop session.
     - name: Freedesktop dark color-scheme
