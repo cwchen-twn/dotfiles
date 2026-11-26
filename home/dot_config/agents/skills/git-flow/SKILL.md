@@ -31,8 +31,11 @@ Then report the PR link. If any condition fails, stop and report instead of push
   - `docs`: the diff touches only Markdown, `docs/` or comments. No code, config or CI.
   - `deps-minor`: a Renovate PR (`renovate/*`) whose updates are all patch or minor. Never a major.
   - `planned`: the plan the user approved said **Merge: agent**, and the PR body carries the line
-    `Merge: agent (agreed in plan)`. When a task looks minor (a small fix, a chore, a doc-like config tweak), say
-    so in the plan with a one-line reason; without that line the merge asks.
+    `Merge: agent (agreed in plan)`. **Every plan that ends in a PR carries a `Merge:` line**, whatever the task:
+    `Merge: agent (<one-line reason>)` for a small fix, a chore or a doc-like config tweak, otherwise
+    `Merge: ask (<reason>)`. Decide it while planning: approving the plan is the user's confirmation, and a missing
+    line means ask. A PreToolUse hook on ExitPlanMode (`~/.claude/hooks/plan-merge-line.sh`) denies a plan
+    without it.
 - CI passed on the PR's head commit, and the "Ready to push" reviews left nothing open.
 
 Then mark it ready (Gitea: drop `WIP:`), merge it as in §3, clean up, and report the merged commit.

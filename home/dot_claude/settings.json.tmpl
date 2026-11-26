@@ -59,6 +59,16 @@
         ]
       },
       {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/plan-merge-line.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
         "matcher": "Grep|Glob|Bash",
         "hooks": [
           {
