@@ -65,7 +65,7 @@ pnpm = "latest"
 go = "latest"
 {{- end }}
 {{- if has "java" .runtimes }}
-java = "jetbrains-21"
+java = "jetbrains-25"           # jdtls (Mason) needs Java 25 to run; projects pin their own
 maven = "latest"
 gradle = "latest"
 {{- end }}
