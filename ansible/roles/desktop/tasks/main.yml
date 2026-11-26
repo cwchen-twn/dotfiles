@@ -75,6 +75,66 @@
           - pasystray      # tray volume icon that follows the default output (~/.config/autostart/pasystray.desktop)
           - mpv            # video player; YouTube via yt-dlp from mise and VA-API (~/.config/mpv/mpv.conf)
           - libfuse2t64    # runs AppImages: conky (mise, ~/.config/conky) and Obsidian
+    # Debian testing's cups 2.4.20-3 breaks driverless network printing ("Bad device URI", Debian bug #1153943, #62),
+    # so forky machines keep trixie's 2.4.10 from a trixie source that nothing else installs from (priority 1).
+    # Its security updates (2.4.10-3+deb13uN) come only with a playbook run: unattended-upgrades takes forky-security.
+    # Once a fixed cups reaches testing: set cups_pin to false for one run (removes the pin, apt upgrades cups), then
+    # delete this block.
+    - name: Cups from trixie while testing's is broken (#62)
+      when: ansible_facts['distribution_release'] == 'forky'
+      vars:
+        cups_pin: true
+        cups_pkgs: [cups, cups-client, cups-common, cups-core-drivers, cups-daemon, cups-ipp-utils, cups-ppdc,
+                    cups-server-common, libcups2t64]
+      block:
+        - name: Trixie source, used by the cups pin only
+          ansible.builtin.copy:
+            dest: /etc/apt/sources.list.d/trixie-cups.sources
+            mode: "0644"
+            content: |
+              # Managed by ansible (dotfiles desktop role): trixie's cups while testing's is broken (#62).
+              Types: deb
+              URIs: http://deb.debian.org/debian
+              Suites: trixie
+              Components: main
+              Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+              Types: deb
+              URIs: http://security.debian.org/debian-security
+              Suites: trixie-security
+              Components: main
+              Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+          when: cups_pin
+        - name: Cups pinned to trixie's 2.4.10, nothing else from trixie
+          ansible.builtin.copy:
+            dest: /etc/apt/preferences.d/cups-trixie
+            mode: "0644"
+            content: |
+              # Managed by ansible (dotfiles desktop role): trixie's cups while testing's is broken (#62).
+              Package: *
+              Pin: release n=trixie
+              Pin-Priority: 1
+
+              Package: *
+              Pin: release n=trixie-security
+              Pin-Priority: 1
+
+              Package: {{ (cups_pkgs + ['libcupsimage2t64', 'cups-bsd']) | join(' ') }}
+              Pin: version 2.4.10-*
+              Pin-Priority: 1001
+          when: cups_pin
+        - name: No cups pin
+          ansible.builtin.file: { path: "{{ item }}", state: absent }
+          loop: [/etc/apt/sources.list.d/trixie-cups.sources, /etc/apt/preferences.d/cups-trixie]
+          when: not cups_pin
+        # latest on purpose: apt's candidate is the pin's version, down while pinned and back up once unpinned.
+        # libcupsimage2t64 and cups-bsd (not installed) are pinned too: installing them later keeps libcups at 2.4.10.
+        - name: Cups at the pinned (or, unpinned, the newest) version  # noqa: package-latest
+          ansible.builtin.apt:
+            name: "{{ cups_pkgs }}"
+            state: latest
+            allow_downgrade: true
+            update_cache: true
     # yt-dlp comes from mise (YouTube breaks old versions within weeks; Debian stable's is months old). mpv only
     # Recommends Debian's, so remove it and pin it out so a later mpv install does not bring it back.
     - name: No Debian yt-dlp (mise provides it)
