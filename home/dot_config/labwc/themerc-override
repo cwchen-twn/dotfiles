@@ -1,0 +1,8 @@
+# Managed by chezmoi. Added to labwc's theme (~/.config/labwc/rc.xml turns the shadows on). From upstream LXQt's
+# labwc config (lxqt-wayland-session), the snap overlay in Catppuccin Mocha blue.
+window.active.shadow.size: 70
+window.inactive.shadow.size: 60
+window.active.shadow.color: #00000080
+window.inactive.shadow.color: #00000080
+snapping.overlay.edge.bg.color: #89b4fa50
+snapping.overlay.region.bg.color: #89b4fa50

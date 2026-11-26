@@ -5,12 +5,17 @@
   Reload after editing: `labwc -r`. Monitors (scale, layout) are kanshi's: ~/.config/kanshi/config.
 -->
 <labwc_config>
+  <!-- Server-side title bars (as upstream LXQt's labwc config), so Qt and GTK windows look alike. -->
   <core>
+    <decoration>server</decoration>
     <gap>0</gap>
   </core>
 
+  <!-- Shadow and snap overlay colors: themerc-override. -->
   <theme>
     <cornerRadius>6</cornerRadius>
+    <dropShadows>yes</dropShadows>
+    <dropShadowsOnTiled>no</dropShadowsOnTiled>
     <font place=""><name>sans</name><size>10</size></font>
   </theme>
 
@@ -25,21 +30,31 @@
   <!--
     Keys: labwc's defaults (Alt+Tab, Super+arrows snap, Alt+F4, ...) plus the ones the X11 session gets from xfwm4
     and lxqt-globalkeysd (ansible lxqt role), which does not grab keys on Wayland. Same commands as there.
+    Panel actions (main menu, show desktop) go over D-Bus to the panel plugin's shortcut object, as upstream's
+    lxqt-qdbus does; gdbus needs no extra package.
   -->
   <keyboard>
     <default />
     <keybind key="C-A-t"><action name="Execute" command="alacritty" /></keybind>
-    <keybind key="A-F1"><action name="ShowMenu" menu="root-menu" atCursor="no" /></keybind>
+    <keybind key="A-F1">
+      <action name="Execute" command="gdbus call --session -d org.kde.StatusNotifierWatcher -o /global_key_shortcuts/panel/mainmenu/show_hide -m org.lxqt.global_key_shortcuts.client.activated" />
+    </keybind>
+    <keybind key="A-F2"><action name="Execute" command="lxqt-runner" /></keybind>
     <keybind key="C-A-l"><action name="Execute" command="loginctl lock-session" /></keybind>
+    <!-- Snap to a half, a quarter when combined (Super+Left then Super+Up). -->
+    <keybind key="W-Left"><action name="SnapToEdge" direction="left" combine="yes" /></keybind>
+    <keybind key="W-Right"><action name="SnapToEdge" direction="right" combine="yes" /></keybind>
+    <keybind key="W-Up"><action name="SnapToEdge" direction="up" combine="yes" /></keybind>
+    <keybind key="W-Down"><action name="SnapToEdge" direction="down" combine="yes" /></keybind>
 
     <!-- Workspaces (also the 4-finger swipes, ~/.config/libinput-gestures.conf). -->
     <keybind key="C-A-Left"><action name="GoToDesktop" to="left" wrap="no" /></keybind>
     <keybind key="C-A-Right"><action name="GoToDesktop" to="right" wrap="no" /></keybind>
     <keybind key="C-A-S-Left"><action name="SendToDesktop" to="left" wrap="no" /></keybind>
     <keybind key="C-A-S-Right"><action name="SendToDesktop" to="right" wrap="no" /></keybind>
-    <!-- Show the desktop: minimize every window. -->
+    <!-- Show the desktop (toggle), through the panel's show-desktop plugin. -->
     <keybind key="C-A-d">
-      <action name="ForEach"><query /><then><action name="Iconify" /></then></action>
+      <action name="Execute" command="gdbus call --session -d org.kde.StatusNotifierWatcher -o /global_key_shortcuts/panel/showdesktop/show_hide -m org.lxqt.global_key_shortcuts.client.activated" />
     </keybind>
 
     <!-- Screenshots to ~/Pictures/Screenshots and the clipboard: whole screen, or a region. -->

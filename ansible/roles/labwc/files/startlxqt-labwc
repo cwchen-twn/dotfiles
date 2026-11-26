@@ -1,9 +1,37 @@
 #!/bin/sh
-# Managed by ansible (dotfiles labwc role). LXQt on Wayland: labwc starts the usual LXQt session (startlxqt ->
-# lxqt-session: panel, desktop, notifications, power, autostart) and exits with it (-S). The compositor's own config
-# is ~/.config/labwc (rc.xml, autostart, environment); monitors are kanshi's (~/.config/kanshi/config).
+# Managed by ansible (dotfiles labwc role). LXQt on Wayland: labwc runs lxqt-session (panel, desktop, notifications,
+# power, ~/.config/autostart) and exits with it (-S). The compositor's own config is ~/.config/labwc (rc.xml,
+# autostart, environment); monitors are kanshi's (~/.config/kanshi/config).
+# Follows upstream's startlxqtwayland (lxqt-wayland-session, Debian forky and later; not in Debian 13): the LXQt
+# environment is exported here, before labwc, so apps that labwc itself starts (key bindings) get it too, which
+# startlxqt would only give to lxqt-session's children. Drop this script for that package once it is available.
+
+[ -n "$XDG_DATA_HOME" ] || export XDG_DATA_HOME="$HOME/.local/share"
+[ -n "$XDG_CONFIG_HOME" ] || export XDG_CONFIG_HOME="$HOME/.config"
+[ -n "$XDG_CACHE_HOME" ] || export XDG_CACHE_HOME="$HOME/.cache"
+case ":${XDG_DATA_DIRS:-}:" in
+    *:/usr/share:*) ;;
+    ::) export XDG_DATA_DIRS="$XDG_DATA_HOME:/usr/local/share:/usr/share" ;;
+    *) export XDG_DATA_DIRS="$XDG_DATA_DIRS:/usr/share" ;;
+esac
+case ":${XDG_CONFIG_DIRS:-}:" in
+    *:/etc/xdg:*) ;;
+    ::) export XDG_CONFIG_DIRS="/etc:/etc/xdg:/usr/share" ;;
+    *) export XDG_CONFIG_DIRS="$XDG_CONFIG_DIRS:/etc/xdg" ;;
+esac
+
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] && ! [ -S "${XDG_RUNTIME_DIR:-/nonexistent}/bus" ]; then
+    eval "$(dbus-launch --sh-syntax --exit-with-session)"
+fi
+
+export QT_QPA_PLATFORMTHEME=lxqt
+export QT_QPA_PLATFORM='wayland;xcb' # Xwayland only as a fallback
+export QT_AUTO_SCREEN_SCALE_FACTOR=0 # the compositor scales
+export QT_ACCESSIBILITY=1
+export XDG_MENU_PREFIX=lxqt-
 export XDG_SESSION_TYPE=wayland
 export XDG_SESSION_DESKTOP=lxqt-labwc
-# Qt picks Wayland itself; Xwayland only as a fallback.
-export QT_QPA_PLATFORM='wayland;xcb'
-exec labwc -S startlxqt
+# LXQt for the autostart entries (OnlyShowIn=LXQt), wlroots for xdg-desktop-portal-wlr (screen sharing).
+export XDG_CURRENT_DESKTOP=LXQt:labwc:wlroots
+
+exec labwc -C "$XDG_CONFIG_HOME/labwc" -S lxqt-session
