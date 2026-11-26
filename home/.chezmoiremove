@@ -25,3 +25,5 @@
 .config/autostart/xss-lock.desktop
 .config/autostart/lxqt-xscreensaver-autostart.desktop
 .config/autostart/kbd-backlight-idle.desktop
+# GTK 2's old bookmarks file: the file manager reads ~/.config/gtk-3.0/bookmarks (chezmoi) (2026-11, #83)
+.gtk-bookmarks

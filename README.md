@@ -99,6 +99,9 @@ is the chezmoi one-liner above, and log in again with "LXQt (labwc)".
   `/usr/lib/libreoffice/share/registry/zz-dark.xcd`); Alacritty as terminal (Ctrl+Alt+T); panel quick launch and
   menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, as selected); panel widgets
   (`lxqt_panel_plugins`: Debian default minus mount and the X11-only tray/keyboard widgets, plus the CPU monitor).
+- File manager bookmarks (pcmanfm-qt's side pane, GTK file dialogs): Documents, Downloads, Pictures and
+  `~/Documents/Gitea`, each only if the folder exists (`~/.config/gtk-3.0/bookmarks`, chezmoi). One added in the GUI
+  makes `chezmoi apply` ask: add it to the source too.
 - Retina boot and login: GRUB console font at 36 px and console in Terminus 16x32 (macbook role); the SDDM greeter
   runs on Wayland inside weston's kiosk shell, 2x on Retina (`/etc/sddm/weston.ini`, labwc role). Locked out by a
   greeter that doesn't start: Ctrl+Alt+F2, log in, `sudo rm /etc/sddm.conf.d/10-wayland.conf`, then

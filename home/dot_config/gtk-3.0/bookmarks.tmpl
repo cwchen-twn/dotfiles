@@ -1,0 +1,8 @@
+{{- /* File manager side-pane bookmarks (pcmanfm-qt, GTK file dialogs), in order; a folder that is missing gets no
+       line (Gitea is made by hand, not an XDG default). */ -}}
+{{- range list "Documents" "Downloads" "Pictures" "Documents/Gitea" -}}
+{{-   $dir := joinPath $.chezmoi.homeDir . -}}
+{{-   if stat $dir -}}
+file://{{ $dir }} {{ base . }}
+{{    end -}}
+{{- end -}}
