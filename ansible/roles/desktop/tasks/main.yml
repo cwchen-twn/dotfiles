@@ -42,10 +42,10 @@
         apt_map:
           brave: [brave-browser, vainfo]   # vainfo: which codecs the GPU decodes (media-check)
           vscode: [code]
-          alacritty: "{{ ['alacritty'] if ansible_facts['distribution_release'] not in ['jammy', 'bookworm'] else [] }}"
+          alacritty: [alacritty]
           libinput-gestures: [libinput-tools]
           # libreoffice-qt6: LXQt 2.x themes only Qt6 apps, so LO's Qt5 backend stays light (lxqt role picks qt6)
-          libreoffice: "{{ ['libreoffice'] + (['libreoffice-qt6'] if ansible_facts['distribution_release'] not in ['jammy', 'bookworm'] else []) }}"
+          libreoffice: [libreoffice, libreoffice-qt6]
           calibre: [calibre]
           fcitx5: [fcitx5, fcitx5-chewing, fcitx5-chinese-addons, fonts-noto-cjk]  # input methods: ~/.config/fcitx5/profile
           supersonic: [libmpv2, playerctl]  # the player itself comes from mise; playerctl drives the media keys
@@ -74,7 +74,7 @@
           - libnotify-bin  # notify-send: the volume popup of ~/.local/bin/vol (volume keys)
           - pasystray      # tray volume icon that follows the default output (~/.config/autostart/pasystray.desktop)
           - mpv            # video player; YouTube via yt-dlp from mise and VA-API (~/.config/mpv/mpv.conf)
-          - libfuse2t64    # runs the conky AppImage (mise): the desktop system monitor, ~/.config/conky
+          - libfuse2t64    # runs AppImages: conky (mise, ~/.config/conky) and Obsidian
     # yt-dlp comes from mise (YouTube breaks old versions within weeks; Debian stable's is months old). mpv only
     # Recommends Debian's, so remove it and pin it out so a later mpv install does not bring it back.
     - name: No Debian yt-dlp (mise provides it)
@@ -197,12 +197,6 @@
       loop: [ModemManager.service, cups-browsed.service, NetworkManager-wait-online.service]
       when: item in ansible_facts.services
 
-    - name: Alacritty via cargo on older releases (jammy/bookworm lack it)
-      become: false
-      ansible.builtin.command: "{{ home }}/.cargo/bin/cargo install alacritty"
-      args: { creates: "{{ home }}/.cargo/bin/alacritty" }
-      when: "'alacritty' in desktop and ansible_facts['distribution_release'] in ['jammy', 'bookworm']"
-
     # Not packaged in Debian/Ubuntu. Gestures: ~/.config/libinput-gestures.conf; started from
     # ~/.config/autostart/libinput-gestures.desktop (both chezmoi). Bump the tag to upgrade.
     - name: Libinput-gestures (from source)
@@ -240,11 +234,6 @@
         - name: Install balenaEtcher .deb
           ansible.builtin.apt:
             deb: "{{ etcher_rel.json.assets | selectattr('name', 'search', 'amd64\\.deb$') | map(attribute='browser_download_url') | first }}"
-
-    - name: FUSE 2 for AppImages
-      ansible.builtin.apt:
-        name: "{{ 'libfuse2' if ansible_facts['distribution_release'] in ['bookworm', 'jammy'] else 'libfuse2t64' }}"
-      when: "'obsidian' in desktop"
 
     - name: Obsidian AppImage
       when: "'obsidian' in desktop"
