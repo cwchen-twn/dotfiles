@@ -39,9 +39,13 @@ Every project is driven the same way. Follow it unless the repo's CLAUDE.md/AGEN
   - the repo's `## Git profile` overrides the defaults.
   - Commit, push the issue branch and open its draft PR once the gate and reviews pass ("Ready to push").
     Push in its own Bash call, with nothing chained to it.
-  - Every plan that will end in a PR ends with a `Merge:` line, decided while planning, not after approval:
-    `Merge: agent (<one-line reason it is low-risk>)` for small fixes, chores and doc-like config tweaks, or
-    `Merge: ask (<reason>)`. Approving the plan confirms the line. A hook blocks ExitPlanMode in a repo without it.
+  - Every plan that will end in a PR ends with a `Merge:` line, decided while planning, not after approval, with
+    the reason in parentheses. Approving the plan confirms the line. A hook blocks ExitPlanMode in a repo without it.
+    - `Merge: agent (<why it is low-risk>)` is the default when none of the `ask` cases applies: docs, comments,
+      a small fix or chore, or config for one app or tool. The gate and CI still have to pass.
+    - `Merge: ask (<which case>)` only when the change touches CI or deploys, infra, secrets or encryption setup,
+      auth, the agents' own rules, permissions or hooks, or deletes data or state that git can't restore, or when
+      the user should see it working before it lands. Name the case; "to be safe" is not a reason.
   - Merge by yourself, once CI passes, only docs-only PRs, Renovate patch/minor PRs and PRs whose approved plan said
     `Merge: agent`. Merge any other PR, force-push or tag only when asked.
   - Merges fast-forward. When `main` has moved, Gitea rebases on the server (`"Do":"rebase"`): never a local rebase

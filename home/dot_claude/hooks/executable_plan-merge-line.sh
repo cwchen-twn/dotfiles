@@ -21,12 +21,13 @@ if [[ -z $plan ]]; then
     plan=$(<"$file")
 fi
 
-if grep -Eq '^\**Merge:\**[[:space:]]+(agent|ask)([^[:alnum:]]|$)' <<<"$plan"; then
+# The line needs a non-empty reason in parentheses: `Merge: agent (one app config)`.
+if grep -Eq '^\**Merge:\**[[:space:]]+(agent|ask)[[:space:]]*\([^)[:space:]][^)]*\)' <<<"$plan"; then
     exit 0
 fi
 
 jq -n '{hookSpecificOutput: {
 	hookEventName: "PreToolUse",
 	permissionDecision: "deny",
-	permissionDecisionReason: "The plan has no Merge line. Add `Merge: agent (<one-line reason it is low-risk>)` or `Merge: ask (<reason>)` at the end of the plan file (git-flow, Agent-merged PRs), then call ExitPlanMode again."
+	permissionDecisionReason: "The plan needs a Merge line with a reason, at the end of the plan file. `Merge: agent (<why it is low-risk>)` is the default; use `Merge: ask (<which case>)` only for CI or deploys, infra, secrets or encryption setup, auth, the agents own rules, permissions or hooks, deletes git cannot restore, or when the user should see it working first (AGENTS.md). Then call ExitPlanMode again."
 }}'
