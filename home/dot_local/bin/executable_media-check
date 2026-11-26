@@ -2,17 +2,18 @@
 # media-check [--decode]: the audio/video decisions of this setup, checked against the running system.
 # --decode also runs brave-decode-test (plays a clip in a throwaway Brave: the only real proof of GPU decoding).
 # ✔ as decided, ✘ drifted (with a hint), – not applicable right now. Exit code = number of ✘.
-# Brave, PulseAudio and the OS change interfaces over time; this is the quick way to notice. Cost: cpu-stat.
+# Brave, PulseAudio/PipeWire and the OS change interfaces over time; this is the quick way to notice. Cost: cpu-stat.
 set -u
 
 # ---------------------------------------------------------------- the decisions (change here when they change)
 BT_POLICY_ARG="auto_switch=2"                                                       # headphones switch to the headset profile (mic) when any app records
-BT_AVOID_CODEC="ldac"                                                               # LDAC costs about half a core to encode on a 2015 dual-core: bt-codec moves off it
+BT_AVOID_CODEC="ldac"                                                               # LDAC costs about half a core to encode on a 2015 dual-core: bt-codec / WirePlumber avoid it
+BT_WP_CODECS="sbc_xq sbc"                                                           # under PipeWire: WirePlumber's A2DP codec list (no LDAC)
 SUPERSONIC_TRANSCODE=(RequestTranscode=true Codec=opus MaxBitRateKBPS=192)          # Opus instead of raw FLAC
 MEDIA_KEYS=(XF86AudioPlay=playerctl XF86AudioNext=playerctl XF86AudioPrev=playerctl # key=command it must run,
     XF86AudioRaiseVolume=vol XF86AudioLowerVolume=vol XF86AudioMute=vol)            # as its only enabled binding
 VAAPI_NEED="VideoProc"                                                              # Chromium's VA-API decoder on older Intel needs the driver's post-processing (non-free iHD)
-BRAVE_VULKAN="Vulkan,DefaultANGLEVulkan,VulkanFromANGLE"                            # Brave composites with Vulkan: GL conversion corrupted frames
+BRAVE_VULKAN="Vulkan,DefaultANGLEVulkan,VulkanFromANGLE"                            # X11 only: Brave composites with Vulkan (GL conversion corrupted frames); Wayland has EGL
 BRAVE_H264IFY="omkfmpieigblcllmkgbflkikinpkodlk"                                    # enhanced-h264ify
 BRAVE_DARK="WebContentsForceDark"                                                   # Blink darkens pages: Dark Reader's per-page script cost CPU
 BRAVE_NO_EXT="eimadpbcbfnmbkopoojfekhnkhdbieeh"                                     # Dark Reader, replaced by BRAVE_DARK
@@ -36,16 +37,31 @@ section() { printf '\n\e[1m%s\e[0m\n' "$1"; }
 
 # ---------------------------------------------------------------- audio
 section "Audio"
+pipewire=false
 if pactl info >/dev/null 2>&1; then
-    ok "sound server" "$(pactl info | sed -n 's/^Server Name: //p') $(pactl info | sed -n 's/^Server Version: //p')"
-    arg=$(pactl list modules 2>/dev/null | awk '/Name: module-bluetooth-policy/ {f=1} f && /Argument:/ {sub(/^[^:]*: */, ""); print; exit}')
-    if [ "$arg" = "$BT_POLICY_ARG" ]; then
-        ok "headset profile when recording" "$arg"
-    else bad "headset profile when recording" "module-bluetooth-policy: '${arg:-not loaded}'" "$HOME/.config/pulse/default.pa (chezmoi); pulseaudio -k to reload"; fi
+    server=$(pactl info | sed -n 's/^Server Name: //p')
+    [[ $server == *PipeWire* ]] && pipewire=true
+    ok "sound server" "$server $(pactl info | sed -n 's/^Server Version: //p')"
+    if $pipewire; then
+        # WirePlumber switches to the headset profile when an app records (its default); Bluetooth needs libspa's plugin.
+        if dpkg-query -W -f='${Status}' libspa-0.2-bluetooth 2>/dev/null | grep -q 'ok installed'; then
+            ok "Bluetooth audio (PipeWire)" "libspa-0.2-bluetooth; headset profile by WirePlumber"
+        else bad "Bluetooth audio (PipeWire)" "libspa-0.2-bluetooth missing: headphones can't play" "chezmoi apply (desktop role)"; fi
+        wpconf=$HOME/.config/wireplumber/wireplumber.conf.d/51-bluez-codecs.conf
+        have=$(sed -n 's/.*bluez5.codecs *= *\[ *\(.*[^ ]\) *\].*/\1/p' "$wpconf" 2>/dev/null)
+        if [ "$have" = "$BT_WP_CODECS" ]; then
+            ok "Bluetooth codecs (WirePlumber)" "$have (no $BT_AVOID_CODEC)"
+        else bad "Bluetooth codecs (WirePlumber)" "'${have:-default: all}'" "chezmoi apply; systemctl --user restart wireplumber"; fi
+    else
+        arg=$(pactl list modules 2>/dev/null | awk '/Name: module-bluetooth-policy/ {f=1} f && /Argument:/ {sub(/^[^:]*: */, ""); print; exit}')
+        if [ "$arg" = "$BT_POLICY_ARG" ]; then
+            ok "headset profile when recording" "$arg"
+        else bad "headset profile when recording" "module-bluetooth-policy: '${arg:-not loaded}'" "$HOME/.config/pulse/default.pa (chezmoi); pulseaudio -k to reload"; fi
+    fi
     ok "default output" "$(pactl get-default-sink)"
     ok "default input" "$(pactl get-default-source)"
 else
-    bad "sound server" "pactl cannot reach it" "systemctl --user status pulseaudio"
+    bad "sound server" "pactl cannot reach it" "systemctl --user status pipewire-pulse pulseaudio"
 fi
 if pgrep -u "$(id -u)" -x pasystray >/dev/null; then
     ok "volume tray (pasystray)" "running"
@@ -55,7 +71,9 @@ else bad "volume tray (pasystray)" "not installed" "chezmoi apply (apt pasystray
 if grep -qE '^plugins=.*\bvolume\b' "$HOME/.config/lxqt/panel.conf" 2>/dev/null; then
     bad "panel volume widget" "still in the panel (shows a fixed device)" "chezmoi apply (lxqt role removes it)"
 else ok "panel volume widget" "removed (pasystray instead)"; fi
-if systemctl --user is-active -q bt-codec.service; then
+if $pipewire; then
+    na "bt-codec service" "PulseAudio only (WirePlumber picks the codec)"
+elif systemctl --user is-active -q bt-codec.service; then
     ok "bt-codec service" "active"
 else bad "bt-codec service" "$(systemctl --user is-active bt-codec.service)" "systemctl --user enable --now bt-codec.service"; fi
 cards=$(pactl list short cards 2>/dev/null | awk '$2 ~ /^bluez_card\./ {print $2}')
@@ -63,9 +81,11 @@ if [ -z "$cards" ]; then na "Bluetooth audio device" "none connected"; fi
 for card in $cards; do
     name=$(bluetoothctl info "$(echo "${card#bluez_card.}" | tr _ :)" 2>/dev/null | sed -n 's/^\s*Name: //p')
     profile=$(pactl list cards | awk -v c="$card" '$0 ~ "Name: "c {f=1} f && /Active Profile:/ {print $3; exit}')
-    codec=$(pactl send-message "/card/$card/bluez" get-codec 2>/dev/null | tr -d '"')
+    if $pipewire; then
+        codec=$(pactl list sinks 2>/dev/null | awk -v c="${card#bluez_card.}" '$0 ~ "Name: bluez_output."c {f=1} f && /api.bluez5.codec/ {gsub(/"/, "", $3); print $3; exit}')
+    else codec=$(pactl send-message "/card/$card/bluez" get-codec 2>/dev/null | tr -d '"'); fi
     case $codec in
-        "$BT_AVOID_CODEC"*) bad "${name:-$card}" "$profile, codec $codec" "bt-codec should have switched it: journalctl --user -u bt-codec" ;;
+        "$BT_AVOID_CODEC"*) bad "${name:-$card}" "$profile, codec $codec" "PulseAudio: journalctl --user -u bt-codec; PipeWire: the WirePlumber codec list" ;;
         *) ok "${name:-$card}" "$profile, codec ${codec:-?}" ;;
     esac
 done
@@ -130,17 +150,20 @@ if command -v vainfo >/dev/null 2>&1; then
         ok "VA-API post-processing" "$VAAPI_NEED (Brave can decode on the GPU)"
     else bad "VA-API post-processing" "no $VAAPI_NEED: Brave falls back to CPU decoding" "Intel: apt install intel-media-va-driver-non-free (desktop role)"; fi
 fi
-# Brave's flags: force-dark everywhere, Vulkan on Intel graphics (desktop role)
-want=$BRAVE_DARK
-grep -qsx 0x8086 /sys/class/drm/card*/device/vendor && want="$BRAVE_VULKAN,$BRAVE_DARK"
+# Brave's flags (desktop role): force-dark everywhere, Vulkan on Intel graphics in X11 sessions only. The wrapper picks
+# them per session; the menu entry starts the wrapper.
+want_x11=$BRAVE_DARK
+grep -qsx 0x8086 /sys/class/drm/card*/device/vendor && want_x11="$BRAVE_VULKAN,$BRAVE_DARK"
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then want=$BRAVE_DARK; else want=$want_x11; fi
 launcher=$HOME/.local/share/applications/brave-browser.desktop
-if has_features "$(grep -m1 '^Exec=' "$launcher" 2>/dev/null)" "$want"; then
-    ok "Brave menu entry" "flags $want"
-else bad "Brave menu entry" "missing some of $want in $launcher" "chezmoi apply (desktop role generates it)"; fi
 wrapper=$HOME/.local/bin/brave-browser
-if has_features "$(cat "$wrapper" 2>/dev/null)" "$want"; then
-    ok "brave-browser wrapper" "flags $want (\$BROWSER, terminals)"
-else bad "brave-browser wrapper" "missing some of $want in $wrapper" "chezmoi apply (desktop role generates it)"; fi
+if grep -q "^Exec=$wrapper" "$launcher" 2>/dev/null; then
+    ok "Brave menu entry" "starts the wrapper"
+else bad "Brave menu entry" "doesn't start $wrapper" "chezmoi apply (desktop role generates it)"; fi
+w=$(cat "$wrapper" 2>/dev/null)
+if grep -q 'WAYLAND_DISPLAY' <<<"$w" && grep -q "features=$want_x11\b" <<<"$w" && grep -q "features=$BRAVE_DARK\b" <<<"$w"; then
+    ok "brave-browser wrapper" "X11 $want_x11; Wayland $BRAVE_DARK"
+else bad "brave-browser wrapper" "not the per-session flags in $wrapper" "chezmoi apply (desktop role generates it)"; fi
 if grep -q "$BRAVE_NO_EXT" "$pol" 2>/dev/null; then
     bad "Dark Reader (policy)" "still force-installed (per-page CPU)" "chezmoi apply (desktop role)"
 elif [ -d "$HOME/.config/BraveSoftware/Brave-Browser/Default/Extensions/$BRAVE_NO_EXT" ]; then
@@ -152,9 +175,11 @@ if [ -z "$main" ]; then
 else
     if has_features "$(tr '\0' ' ' </proc/"$main"/cmdline)" "$want"; then
         ok "running Brave" "started with $want"
-    else bad "running Brave" "started without some of $want (no Vulkan: corrupted video squares)" "quit Brave (menu > Exit) and start it again"; fi
+    else bad "running Brave" "started without some of $want" "quit Brave (menu > Exit) and start it again"; fi
     gpu=$(pgrep -u "$(id -u)" -f -- '--type=gpu-process' | head -1)
-    if [ -n "$gpu" ] && grep -q 'libvulkan_intel' /proc/"$gpu"/maps 2>/dev/null; then
+    if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+        [ -n "$gpu" ] && ok "Brave GPU process" "EGL on Wayland (no Vulkan needed)"
+    elif [ -n "$gpu" ] && grep -q 'libvulkan_intel' /proc/"$gpu"/maps 2>/dev/null; then
         ok "Brave GPU process" "Vulkan ($(grep -oE 'libvulkan_intel[a-z_]*' /proc/"$gpu"/maps | head -1))"
     elif [ -n "$gpu" ]; then bad "Brave GPU process" "not using Vulkan" "brave://gpu: check Vulkan / ANGLE backend"; fi
 fi

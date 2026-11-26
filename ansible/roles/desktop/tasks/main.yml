@@ -57,15 +57,17 @@
 
     # Bluetooth audio (pair with the blueman tray or bluetoothctl) and driverless printing/scanning anywhere: fish
     # `printers` lists the IPP/AirPrint printers on the network, `printer-add N` adds one (lpadmin group, no sudo).
-    - name: Audio server is PulseAudio?
-      ansible.builtin.stat: { path: /usr/bin/pulseaudio }
-      register: pulse_bin
+    # PipeWire when pipewire-pulse is installed (Debian 14 desktops; PulseAudio may stay installed but inactive),
+    # else PulseAudio (Debian 13 LXQt). Each needs its own Bluetooth audio module.
+    - name: Audio server is PipeWire?
+      ansible.builtin.stat: { path: /usr/bin/pipewire-pulse }
+      register: pipewire_pulse
     - name: Bluetooth, printing and scanning
       ansible.builtin.apt:
         name:
           - bluez
           - blueman
-          - "{{ 'pulseaudio-module-bluetooth' if pulse_bin.stat.exists else 'libspa-0.2-bluetooth' }}"
+          - "{{ 'libspa-0.2-bluetooth' if pipewire_pulse.stat.exists else 'pulseaudio-module-bluetooth' }}"
           - cups
           - avahi-daemon   # mDNS: finds printers/scanners, resolves *.local
           - avahi-utils
@@ -98,6 +100,19 @@
     # Conky comes from mise (upstream's AppImage): Debian 13's 1.22 draws badly on Wayland ("LXQt (labwc)").
     - name: Debian conky removed (mise provides it)
       ansible.builtin.apt: { name: [conky-std, conky-all, conky], state: absent }
+
+    # Both servers listen on the same PulseAudio socket; when the upgrade to Debian 14 brought PipeWire, PulseAudio
+    # stayed installed and enabled, and whichever socket started first served (pulseaudio once took it back).
+    # Enabled first, so masking PulseAudio never leaves a machine without a server (pipewire-pulse installed but off).
+    - name: PipeWire serves where installed (all users)
+      ansible.builtin.systemd_service: { name: "{{ item }}", scope: global, enabled: true }
+      loop: [pipewire.socket, pipewire-pulse.socket, wireplumber.service]
+      when: pipewire_pulse.stat.exists
+
+    - name: PulseAudio off where PipeWire serves (all users)
+      ansible.builtin.systemd_service: { name: "{{ item }}", scope: global, masked: true }
+      loop: [pulseaudio.service, pulseaudio.socket]
+      when: pipewire_pulse.stat.exists
 
     - name: Manage printers and scanners without sudo
       ansible.builtin.user: { name: "{{ user }}", groups: [lpadmin, scanner, bluetooth], append: true }

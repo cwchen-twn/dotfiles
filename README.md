@@ -378,6 +378,9 @@ the panel volume menu / `pavucontrol` (profile A2DP for music, HSP/HFP when you 
 - **Bluetooth codec:** PulseAudio picks LDAC for headphones that offer it, about half a core to encode on a 2015
   dual-core. The `bt-codec` user service switches them to SBC XQ 552 kbps whenever they connect or come back from a
   call (`journalctl --user -u bt-codec` shows each switch); `BT_CODEC=` in the unit keeps PulseAudio's choice.
+  Under PipeWire (Debian 14 desktops) WirePlumber picks the codec instead, from SBC XQ and SBC only
+  (`~/.config/wireplumber/wireplumber.conf.d/51-bluez-codecs.conf`); bt-codec then stays off, PulseAudio's units
+  are masked so it can't take the socket back, and Bluetooth audio comes from `libspa-0.2-bluetooth`.
 
 ## Kubernetes access
 

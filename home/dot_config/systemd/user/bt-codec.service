@@ -2,8 +2,12 @@
 # Idle (blocked on `pactl subscribe`) until a Bluetooth card appears or changes.
 [Unit]
 Description=Bluetooth headphones: lighter codec than LDAC (bt-codec)
+# PulseAudio only: under PipeWire, WirePlumber picks the codec and LDAC is left out of its list
+# (~/.config/wireplumber/wireplumber.conf.d/51-bluez-codecs.conf).
+ConditionPathExists=!/usr/bin/pipewire-pulse
+# Ordering only: a Wants= on pulseaudio.socket started PulseAudio even where PipeWire serves (the condition above
+# fails after dependencies are pulled in), and it took the socket from pipewire-pulse.
 After=pulseaudio.service
-Wants=pulseaudio.socket
 
 [Service]
 Type=exec
