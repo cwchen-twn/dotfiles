@@ -10,16 +10,16 @@
     runtimes: []
     desktop: []
     extras: []
-    user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
+    user: "{{ ansible_facts['env'].SUDO_USER | default(ansible_facts['user_id']) }}"
     home: "{{ lookup('env', 'HOME') }}"
-    is_debian: "{{ ansible_os_family == 'Debian' }}"
-    is_mac: "{{ ansible_os_family == 'Darwin' }}"
-    arch_deb: "{{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}"
+    is_debian: "{{ ansible_facts['os_family'] == 'Debian' }}"
+    is_mac: "{{ ansible_facts['os_family'] == 'Darwin' }}"
+    arch_deb: "{{ 'arm64' if ansible_facts['architecture'] in ['aarch64', 'arm64'] else 'amd64' }}"
     keyrings: /etc/apt/keyrings
     # api.github.com calls: authenticated (gh token, exported by the chezmoi script) when available.
     github_api_headers: "{{ {'Authorization': 'Bearer ' ~ lookup('env', 'GITHUB_TOKEN')} if lookup('env', 'GITHUB_TOKEN') else {} }}"
     # Retina MacBooks (MacBookPro10+, 12" MacBook): 2x UI, bigger GRUB/console/login fonts. Override with -e hidpi=false.
-    hidpi: "{{ ansible_product_name is search('^MacBookPro1[0-9],|^MacBook(8|9|10),') }}"
+    hidpi: "{{ ansible_facts['product_name'] is search('^MacBookPro1[0-9],|^MacBook(8|9|10),') }}"
   pre_tasks:
     - name: Homebrew tasks run unprivileged on macOS
       ansible.builtin.set_fact:
@@ -34,7 +34,7 @@
     - role: desktop
       when: desktop | length > 0
     - role: macbook
-      when: is_debian and ansible_product_name is search('MacBook')
+      when: is_debian and ansible_facts['product_name'] is search('MacBook')
     - role: boottheme
       when: is_debian and desktop | length > 0
     - role: lxqt

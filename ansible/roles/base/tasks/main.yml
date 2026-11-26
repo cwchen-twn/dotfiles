@@ -20,11 +20,17 @@
       retries: 3
       delay: 10
 
+    # Ubuntu's own tool, which also fetches the PPA's signing key (ansible's apt_repository goes in ansible-core 2.25).
+    # Minimal and cloud images lack it; the Shutter PPA (desktop role, later) uses it too.
+    - name: Add-apt-repository (Ubuntu only)
+      ansible.builtin.apt: { name: software-properties-common }
+      when: ansible_facts['distribution'] == 'Ubuntu'
+
     - name: Fish PPA (Ubuntu only; Debian uses the distro package)
-      ansible.builtin.apt_repository:
-        repo: ppa:fish-shell/release-4
-        codename: "{{ ansible_distribution_release }}"
-      when: ansible_distribution == 'Ubuntu'
+      ansible.builtin.command:
+        cmd: add-apt-repository --yes ppa:fish-shell/release-4
+        creates: /etc/apt/sources.list.d/fish-shell-ubuntu-release-4-*
+      when: ansible_facts['distribution'] == 'Ubuntu'
 
     - name: Tshark installs without asking about non-root capture (no)
       ansible.builtin.debconf:

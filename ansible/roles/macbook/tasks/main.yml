@@ -7,7 +7,7 @@
       - brightnessctl     # screen/keyboard brightness keys (lxqt role) and kbd-backlight-idle
       - tlp
       - dkms
-      - "{{ 'linux-headers-amd64' if ansible_distribution == 'Debian' else 'linux-headers-generic' }}"
+      - "{{ 'linux-headers-amd64' if ansible_facts['distribution'] == 'Debian' else 'linux-headers-generic' }}"
       - cpio
       - xz-utils
       - curl
@@ -18,7 +18,7 @@
 
 - name: Broadcom Wi-Fi firmware (Ubuntu ships it in linux-firmware)
   ansible.builtin.apt: { name: firmware-brcm80211 }
-  when: ansible_distribution == 'Debian'
+  when: ansible_facts['distribution'] == 'Debian'
 
 # Quieter than Debian's defaults (63/66/86 spins up on any compile). The CPU throttles at ~105 C, so this is safe.
 # Live tweaks: edit /etc/mbpfan.conf + `sudo systemctl restart mbpfan`; watch with `watch cat /sys/devices/platform/applesmc.768/fan1_input`.

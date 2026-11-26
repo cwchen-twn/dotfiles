@@ -3,13 +3,13 @@
 - name: Docker (Debian/Ubuntu)
   when: is_debian and 'docker' in devops
   vars:
-    docker_url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}"
+    docker_url: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}"
     # Docker publishes a release only once it is out, so Debian testing (#57) uses the newest stable one's packages.
-    docker_fallback_suite: "{{ 'trixie' if ansible_distribution == 'Debian' else 'noble' }}"
+    docker_fallback_suite: "{{ 'trixie' if ansible_facts['distribution'] == 'Debian' else 'noble' }}"
   block:
     - name: Docker publishes this release?
       ansible.builtin.uri:
-        url: "{{ docker_url }}/dists/{{ ansible_distribution_release }}/Release"
+        url: "{{ docker_url }}/dists/{{ ansible_facts['distribution_release'] }}/Release"
         method: HEAD
         status_code: [200, 404]
       register: docker_dist
@@ -22,7 +22,7 @@
         name: docker
         types: deb
         uris: "{{ docker_url }}"
-        suites: "{{ ansible_distribution_release if docker_dist.status == 200 else docker_fallback_suite }}"
+        suites: "{{ ansible_facts['distribution_release'] if docker_dist.status == 200 else docker_fallback_suite }}"
         components: stable
         architectures: "{{ arch_deb }}"
         signed_by: "{{ docker_url }}/gpg"
@@ -52,10 +52,10 @@
       ansible.builtin.deb822_repository:
         name: tailscale
         types: deb
-        uris: "https://pkgs.tailscale.com/stable/{{ ansible_distribution | lower }}"
-        suites: "{{ ansible_distribution_release }}"
+        uris: "https://pkgs.tailscale.com/stable/{{ ansible_facts['distribution'] | lower }}"
+        suites: "{{ ansible_facts['distribution_release'] }}"
         components: main
-        signed_by: "https://pkgs.tailscale.com/stable/{{ ansible_distribution | lower }}/{{ ansible_distribution_release }}.noarmor.gpg"
+        signed_by: "https://pkgs.tailscale.com/stable/{{ ansible_facts['distribution'] | lower }}/{{ ansible_facts['distribution_release'] }}.noarmor.gpg"
       # key servers time out now and then, and the module re-fetches the key on every run
       register: repo_key
       until: repo_key is succeeded
