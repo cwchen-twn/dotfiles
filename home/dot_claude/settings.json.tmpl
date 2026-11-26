@@ -8,6 +8,8 @@
     "allow": [
       "Bash(git push -u origin *)",
       "Bash(git push origin *)",
+      "Bash(rtk git push -u origin *)",
+      "Bash(rtk git push origin *)",
       "Bash(mise exec -- git push -u origin *)",
       "Bash(mise exec -- git push origin *)",
       "Bash(tea pulls create *)",
@@ -42,7 +44,7 @@
   "autoMode": {
     "environment": [
       "$defaults",
-      "Source control: the user's own forges (self-hosted Gitea via tea, GitLab via glab, GitHub via gh). Pushing an <issue>-<slug> feature branch and opening a draft PR/MR on it is routine once make audit passes, which the pre-push hook enforces. Merging, marking ready, force-pushing, pushing to main, tags and deploys are not routine."
+      "Source control: the user's own forges (self-hosted Gitea via tea, GitLab via glab, GitHub via gh). Pushing an <issue>-<slug> feature branch and opening a draft PR/MR on it is routine once make audit passes, which the pre-push hook enforces. Marking ready and merging through the Gitea merge API (Do fast-forward-only, or Do rebase when main moved) is routine once CI passed, for docs-only PRs, Renovate patch/minor PRs, and PRs whose body says 'Merge: agent (agreed in plan)'. Merging any other PR, merge commits, force-pushing, pushing to main, tags and deploys are not routine."
     ]
   },
   "hooks": {

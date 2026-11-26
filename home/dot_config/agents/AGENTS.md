@@ -37,8 +37,12 @@ Every project is driven the same way. Follow it unless the repo's CLAUDE.md/AGEN
 - **Git runs through the `git-flow` skill:**
   - issue → `<issue>-<slug>` branch → draft PR/MR → fast-forward merge;
   - the repo's `## Git profile` overrides the defaults.
-  - Commit, push the issue branch and open its draft PR once the gate and reviews pass ("Ready to push");
-    force-push, merge or tag only when asked.
+  - Commit, push the issue branch and open its draft PR once the gate and reviews pass ("Ready to push").
+    Push in its own Bash call, with nothing chained to it.
+  - Merge by yourself, once CI passes, only docs-only PRs, Renovate patch/minor PRs and tasks the approved plan marked
+    "Merge: agent". Merge any other PR, force-push or tag only when asked.
+  - Merges fast-forward. When `main` has moved, Gitea rebases on the server (`"Do":"rebase"`): never a local rebase
+    and force-push.
 - **Releases are a tag, and CI publishes them:** `make release version=X.Y.Z` tags `main`, and the tag's CI builds the
   image and the release page. Renovate opens the bump PR in the infra repo, and a human merges and deploys.
   Images that carry personal data go to a private org (`catopia`), and so does the repo that builds them: Gitea

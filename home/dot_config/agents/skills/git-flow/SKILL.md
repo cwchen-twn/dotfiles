@@ -19,10 +19,25 @@ description: Git workflow for every repository, on any forge (Gitea via tea, Git
    PR body.
 3. The branch is the issue's branch, never the default one, and the push names it: `git push -u origin <branch>`,
    not `HEAD` or `@` (those prompt). It is a plain push (no `--force*`), and nothing stray or secret is committed.
+4. The push is **its own Bash call**, with nothing chained before or after it. Commit, push and open the PR as
+   separate calls. The permission rules match the whole command string, so a trailing `; git switch main`, or a
+   `+`, `HEAD` or `-d` in a commit message or JSON body, makes a branch push prompt as a push to `main`.
 
 Then report the PR link. If any condition fails, stop and report instead of pushing.
 
-**Ask first:** force-push (even `--force-with-lease`), any push to `main`, marking a PR ready, merging, tags,
+**Agent-merged PRs.** Merge without asking when all of these hold:
+
+- The PR is in one of these classes, and the profile's `auto-merge:` doesn't leave its class out:
+  - `docs`: the diff touches only Markdown, `docs/` or comments. No code, config or CI.
+  - `deps-minor`: a Renovate PR (`renovate/*`) whose updates are all patch or minor. Never a major.
+  - `planned`: the plan the user approved said **Merge: agent**, and the PR body carries the line
+    `Merge: agent (agreed in plan)`. When a task looks minor (a small fix, a chore, a doc-like config tweak), say
+    so in the plan with a one-line reason; without that line the merge asks.
+- CI passed on the PR's head commit, and the "Ready to push" reviews left nothing open.
+
+Then mark it ready (Gitea: drop `WIP:`), merge it as in §3, clean up, and report the merged commit.
+
+**Ask first:** force-push (even `--force-with-lease`), any push to `main`, merging any other PR, tags,
 `make release … confirm=yes` and deploys. A pushed tag may **deploy**.
 
 ## 0. Detect the forge and the profile
@@ -50,6 +65,7 @@ missing keys take the default shown:
 issue-first: yes                 # yes | no (then branches are <type>/<slug>)
 branch: <issue>-<slug>           # or <type>/<slug>
 merge: fast-forward-only         # fast-forward-only | merge | squash
+auto-merge: docs,deps-minor,planned  # the agent-merged classes (top of this skill), or none
 commit-style: reasoned-list      # reasoned-list | finding-prose | <path to repo skill>
 tags: none                       # none | vX.Y.Z | <env>.<app>.<X.Y.Z>
 release: none                    # none | page | goreleaser: what CI makes of a vX.Y.Z tag (§4)
@@ -88,13 +104,14 @@ Every change goes through an issue and a PR or MR. That includes config, CI, doc
    ```
 
 3. **Draft PR/MR.** Push and open it as soon as the work is "ready to push" (top of this skill), and keep it a draft
-   until the user marks it ready.
+   until the user marks it ready, or until it is an agent-merged PR whose CI passed.
    - **Title:** the conventional subject of the main change, in commit-subject format (§2).
    - **Body:** use [templates/pr.md](templates/pr.md):
      - `Closes #<issue>`;
      - `## What`, with why each change is needed;
      - `## Testing done`, which names the make targets or commands actually run and what is not verified yet;
      - `## Before merge / deploy`, for manual steps;
+     - `Merge: agent (agreed in plan)`, only for a `planned` agent-merged PR;
      - the attribution line the session asks for.
    - When the work changes direction, update the body. It must describe what gets merged, not the first draft.
 
@@ -126,31 +143,27 @@ Rules for every style:
 
 ## 3. Merge
 
-- **`fast-forward-only` (default):** no merge commit, no squash.
-  - If `main` has moved, rebase first:
+- **`fast-forward-only` (default):** no merge commit, no squash. Merge through the forge, never by pushing `main`
+  (the forms are in `forges.md`; **`tea pulls merge`'s default style creates a merge commit**, so don't use it bare).
+  1. **Fast-forward.** On Gitea, the merge API with `"Do":"fast-forward-only"`.
+  2. **`main` moved** (Gitea answers 405 or 409): **don't rebase locally and don't force-push.** Merge with
+     `"Do":"rebase"`: Gitea rebases the branch onto `main` on the server and fast-forwards. History stays linear;
+     only the committer is rewritten.
+  3. **The server rebase conflicts:** stop and report. Never resolve it with a force-push.
 
-    ```bash
-    git fetch && git rebase origin/main
-    git push --force-with-lease
-    ```
-
-    Then let CI pass again.
-  - Merge through the forge with the fast-forward method. The tea, glab and gh forms are in `forges.md`.
-    **`tea pulls merge`'s default style creates a merge commit**, so don't use it bare.
-- After the merge, delete the branch. Then `git switch main && git pull --ff-only`, and archive any OpenSpec change:
-  `openspec archive <change>`.
+  GitLab and GitHub have no server-side fallback here: a local `git rebase origin/main` and
+  `git push --force-with-lease` of the branch run only when the user asks.
+- After the merge: `git switch main && git pull --ff-only`, then `git branch -D <branch>` (`-D`: a server rebase
+  rewrote its commits, so `-d` refuses). Archive any OpenSpec change: `openspec archive <change>`.
 
 **Stacked PRs** (work that splits into dependent changes):
 
 - Branch each one from the previous branch's tip, not from `main`. Every PR still targets `main`; its body says
   `Stacked on #<n>, merge after it`.
-- Merge in order. Each branch already sits on the previous one, so each fast-forwards with no rebase.
+- Merge in order. Each fast-forwards when the previous one did; if the previous one took the server rebase, the next
+  one takes it too.
 
-**When force-push isn't allowed** (a permission check refuses it, branch protection, or the user said no):
-
-- Never rewrite pushed history to fix a branch. Add a follow-up commit; it must still stand on its own.
-- If `main` moved and the fast-forward fails, ask the user to run the `--force-with-lease` push, or merge with
-  Gitea's `--style rebase` fallback (`forges.md`), which rebases on the server.
+**Never rewrite pushed history to fix a branch.** Add a follow-up commit; it must still stand on its own.
 
 **Renovate PRs/MRs** (`renovate/*` branches, opened by the bot):
 
@@ -176,4 +189,4 @@ What the agent does unasked, and what waits for the user:
 
 | Unasked | Only when asked |
 |---|---|
-| issue, branch, commits, push the issue branch and open its draft PR once ready to push, `make release` preview, watching CI, reporting | force-push, push to `main`, mark a PR ready, merge a PR, `make release … confirm=yes`, merge an infra bump PR, deploy |
+| issue, branch, commits, push the issue branch and open its draft PR once ready to push, merge an agent-merged PR (docs, Renovate patch/minor, `planned`) once CI passed, `make release` preview, watching CI, reporting | force-push, push to `main`, mark any other PR ready or merge it, `make release … confirm=yes`, merge an infra bump PR, deploy |

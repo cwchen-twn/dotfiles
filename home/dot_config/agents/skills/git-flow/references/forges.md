@@ -13,6 +13,7 @@ never breaks.
 | Update body | `tea pulls edit <n> --description-file pr.md` | `glab mr update <n> -d "$(cat pr.md)"` | `gh pr edit <n> -F pr.md` |
 | CI status | `tea actions runs ls` · `tea actions runs logs <id>` | `glab ci list` · `glab ci trace <job-id>` | `gh pr checks <n> --watch` · `gh run view <id> --log-failed` |
 | **FF merge** | `tea api -X POST "repos/{owner}/{repo}/pulls/<n>/merge" -d '{"Do":"fast-forward-only","delete_branch_after_merge":true}'` | `glab mr merge <n>` (project `merge_method: ff`) | `gh pr merge <n> --rebase --delete-branch` |
+| **Rebase+FF merge** (`main` moved) | `tea api -X POST "repos/{owner}/{repo}/pulls/<n>/merge" -d '{"Do":"rebase","delete_branch_after_merge":true}'` | ask the user (local rebase + `--force-with-lease`) | ask the user (local rebase + `--force-with-lease`) |
 | Clean up | `tea pulls clean <n>` | `--remove-source-branch` above | `--delete-branch` above |
 | Open in browser | `tea open pulls <n>` | `glab mr view <n> --web` | `gh pr view <n> --web` |
 
@@ -22,9 +23,10 @@ never breaks.
   editing the title to remove it.
 - **Gitea merge style.** `tea pulls merge` supports only `merge|rebase|squash|rebase-merge`, and **defaults to `merge`
   (a merge commit) whatever the repo's default is**. Use the API call above for fast-forward-only.
-  - `--style rebase` is the fallback. On a branch that is already rebased it yields the same linear history, but Gitea
-    rewrites the committer.
-  - If the API answers 405 or 409, `main` has moved. Rebase, push with `--force-with-lease`, wait for CI, and retry.
+  - If the API answers 405 or 409, `main` has moved. Don't rebase locally or force-push: merge with the **Rebase+FF**
+    row, which rebases on the server and fast-forwards (linear history; Gitea rewrites the committer). It needs the
+    repo's "Rebase then fast-forward" merge style enabled (Settings → Pull requests). A conflict there stops the merge:
+    report it.
 - **GitLab** fast-forwards only when the project's `merge_method` is `ff`. If `glab mr merge` refuses, rebase first, as
   above.
 - **GitHub** `--rebase` replays the commits onto `main`. With a branch already rebased, the result is the fast-forward equivalent.
