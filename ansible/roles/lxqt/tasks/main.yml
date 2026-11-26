@@ -64,8 +64,11 @@
           {{ out }}
         lxqt_keys: "{{ kbd_ini + screen_ini + media_ini + volume_ini }}"
       vars:
+        # preferred_backend: in the Wayland session (labwc role) the panel's auto-detection loads every backend to
+        # score it, and the X11 one crashes it (lxqt-panel 2.1.4); naming wlroots for labwc skips that. X11 keeps xcb.
         panel_ini: >-
-          {%- set out = [['lxqt/panel.conf', 'panel1', 'plugins', lxqt_panel_plugins | join(', ')]] -%}
+          {%- set out = [['lxqt/panel.conf', 'panel1', 'plugins', lxqt_panel_plugins | join(', ')],
+                         ['lxqt/panel.conf', 'General', 'preferred_backend', 'labwc:wlroots']] -%}
           {%- for name, keys in lxqt_panel_plugin_sections.items() -%}
             {%- for k, v in keys.items() -%}{%- set _ = out.append(['lxqt/panel.conf', name, k, v]) -%}{%- endfor -%}
           {%- endfor -%}

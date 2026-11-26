@@ -4,7 +4,7 @@
 # autostart, environment); monitors are kanshi's (~/.config/kanshi/config).
 # Follows upstream's startlxqtwayland (lxqt-wayland-session, Debian forky and later; not in Debian 13): the LXQt
 # environment is exported here, before labwc, so apps that labwc itself starts (key bindings) get it too, which
-# startlxqt would only give to lxqt-session's children. Drop this script for that package once it is available.
+# startlxqt would only give to lxqt-session's children. Drop this script for that package on Debian 14 (#54).
 
 [ -n "$XDG_DATA_HOME" ] || export XDG_DATA_HOME="$HOME/.local/share"
 [ -n "$XDG_CONFIG_HOME" ] || export XDG_CONFIG_HOME="$HOME/.config"

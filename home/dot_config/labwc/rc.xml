@@ -41,11 +41,6 @@
     </keybind>
     <keybind key="A-F2"><action name="Execute" command="lxqt-runner" /></keybind>
     <keybind key="C-A-l"><action name="Execute" command="loginctl lock-session" /></keybind>
-    <!-- Snap to a half, a quarter when combined (Super+Left then Super+Up). -->
-    <keybind key="W-Left"><action name="SnapToEdge" direction="left" combine="yes" /></keybind>
-    <keybind key="W-Right"><action name="SnapToEdge" direction="right" combine="yes" /></keybind>
-    <keybind key="W-Up"><action name="SnapToEdge" direction="up" combine="yes" /></keybind>
-    <keybind key="W-Down"><action name="SnapToEdge" direction="down" combine="yes" /></keybind>
 
     <!-- Workspaces (also the 4-finger swipes, ~/.config/libinput-gestures.conf). -->
     <keybind key="C-A-Left"><action name="GoToDesktop" to="left" wrap="no" /></keybind>

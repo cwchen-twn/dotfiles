@@ -301,8 +301,9 @@ function conky_reboot_notice()
 		end
 		local what = msg:match("kernel (%S+) installed")
 		what = what and ("kernel " .. what:gsub("[+-].*", "")) or (msg:match(": (%S+)") or ""):sub(1, 16)
+		-- Two lines: "Reboot needed" and what waits; on one line the kernel version ran into the title.
 		reboot.text = msg ~= ""
-				and ("${font1}${color f38ba8}Reboot${font}${alignr}" .. what .. " waiting${color}\n${voffset 8}")
+				and ("${font1}${color f38ba8}Reboot needed${font}\n" .. what .. " waiting${color}\n${voffset 8}")
 			or ""
 	end
 	return reboot.text

@@ -286,7 +286,7 @@ return function(alignment, names)
 		format_human_readable = true,
 		if_up_strictness = "address",
 
-		use_xft = true,
+		use_xft = not wayland, -- Xft is X11 only; on Wayland Conky draws text with Pango
 		font = "JetBrains Mono:size=12", -- 16 px at 96 dpi
 		font1 = "JetBrains Mono:bold:size=12",
 		default_color = "cdd6f4", -- text: values
