@@ -1,6 +1,6 @@
 #_preseed_V1
-# Unattended Debian 13 + LXQt install. Rendered by build-iso.sh: the placeholders (Wi-Fi, password hash) only
-# ever exist in the generated ISO, never in this public repo.
+# Unattended Debian testing (forky) + LXQt on Wayland, from the stable netinst. Rendered by build-iso.sh: the
+# placeholders (Wi-Fi, password hash) only ever exist in the generated ISO, never in this public repo.
 # WARNING: wipes the first non-USB disk without asking.
 
 ### Locale, keyboard
@@ -24,6 +24,10 @@ d-i mirror/country string manual
 d-i mirror/http/hostname string deb.debian.org
 d-i mirror/http/directory string /debian
 d-i mirror/http/proxy string
+# The target is forky (by codename, so the machine becomes Debian 14 stable at release, #57); the installer's own
+# components stay on the netinst's release, whose kernel they match.
+d-i mirror/suite string forky
+d-i mirror/udeb/suite string @@UDEB_SUITE@@
 
 ### Account: no root password, the user gets sudo
 d-i passwd/root-login boolean false
@@ -64,7 +68,9 @@ d-i apt-setup/non-free-firmware boolean true
 d-i apt-setup/services-select multiselect security, updates
 d-i apt-setup/cdrom/set-first boolean false
 tasksel tasksel/first multiselect standard, ssh-server
-d-i pkgsel/include string task-lxqt-desktop network-manager sudo git curl ca-certificates firmware-brcm80211
+# Wayland only (#66): forky's desktop task brings no X server, so the session and the greeter's compositor come here
+# (late.sh points SDDM at weston); the first chezmoi apply adds the dotfiles' labwc setup.
+d-i pkgsel/include string task-lxqt-desktop lxqt-wayland-session labwc weston network-manager sudo git curl ca-certificates firmware-brcm80211
 d-i pkgsel/upgrade select full-upgrade
 popularity-contest popularity-contest/participate boolean false
 

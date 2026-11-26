@@ -58,7 +58,10 @@ limit: `gh auth login`, then `chezmoi apply` (re-runs only what changed or faile
 
 ## Fresh Debian install from USB (laptops)
 
-`install/debian/` builds an unattended Debian netinst ISO: Debian stable + LXQt, no disk encryption, GPT/EFI/ext4.
+`install/debian/` builds an unattended Debian netinst ISO: Debian testing (forky) + LXQt on Wayland, no disk
+encryption, GPT/EFI/ext4. The ISO is the current stable netinst, whose kernel and firmware know the MacBook; its
+preseed installs forky (`mirror/suite`, the installer's own components from the netinst's release), the same system
+this repo runs (#57, #66).
 
 ```sh
 install/debian/build-iso.sh --write /dev/sdX   # asks hostname, user, timezone, Wi-Fi, password; writes the stick
@@ -66,12 +69,14 @@ install/debian/build-iso.sh --write /dev/sdX   # asks hostname, user, timezone, 
 
 Boot the target from the stick (Mac: hold Option, pick "EFI Boot"). The default boot entry
 **wipes the first non-USB disk** and installs without questions (~15 min, needs the Wi-Fi from the build).
-After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above.
+The login screen already runs on Wayland (weston kiosk); log into "LXQt (Wayland)", then run `~/bootstrap.sh`, which
+is the chezmoi one-liner above, and log in again with "LXQt (labwc)".
 
 - `preseed.cfg.tmpl`: the installer answers. Secrets are filled in at build time and only live in the ISO
   (`~/.cache/debian-iso/`, mode 600).
 - `pick-disk.sh`: picks the internal disk and zeroes its old partition tables (used drives, APFS, LVM).
-- `late.sh`: drops `~/bootstrap.sh` and writes a NetworkManager profile for the install's Wi-Fi (WPA2-PSK, PMF optional:
+- `late.sh`: points SDDM's greeter at weston (2x on Retina MacBooks; forky's desktop task brings no X server), drops
+  `~/bootstrap.sh` and writes a NetworkManager profile for the install's Wi-Fi (WPA2-PSK, PMF optional:
   NetworkManager's automatic choice of WPA3-SAE fails on WPA2/WPA3 mixed APs with the MacBook's Broadcom chip).
 - On MacBooks the `macbook` Ansible role runs automatically (DMI product name): Broadcom Wi-Fi firmware, `mbpfan`,
   `tlp`, F1-F12 as function keys, the FaceTime HD camera (`facetimehd` driver via DKMS + firmware extracted from Apple's

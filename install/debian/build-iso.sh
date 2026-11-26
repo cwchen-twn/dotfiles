@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Build an unattended Debian netinst ISO (LXQt, preseeded) and optionally write it to a USB stick.
+# Build an unattended Debian netinst ISO (Debian testing + LXQt on Wayland, preseeded) and optionally write it to a USB
+# stick. The ISO is the current stable netinst (its kernel and firmware know the MacBook); the system it installs is
+# forky.
 #
 #   install/debian/build-iso.sh                 # build only -> ~/.cache/debian-iso/debian-preseed.iso
 #   install/debian/build-iso.sh --write /dev/sdX
@@ -98,6 +100,16 @@ fi
     echo "checksum mismatch: $cache/$iso" >&2
     exit 1
 }
+# The installer loads its components (udebs) from the netinst's own release; the target is forky (preseed).
+# shellcheck disable=SC2034 # read through ${!src} by the @@KEY@@ substitution loop
+case $iso in
+    debian-13.*) UDEB_SUITE=trixie ;;
+    debian-14.*) UDEB_SUITE=forky ;;
+    *)
+        echo "unknown Debian release in $iso: add it to the udeb suite map" >&2
+        exit 1
+        ;;
+esac
 
 # --- render the preseed and a grub.cfg whose default entry runs it
 work=$(mktemp -d)
@@ -114,7 +126,7 @@ if [ -z "$WIFI_SSID" ]; then
     WIFI_PASS=
     priority=high
 fi
-for v in HOSTNAME_NEW:HOSTNAME USERNAME_NEW:USERNAME FULLNAME TIMEZONE KEYMAP SWAP_MB WIFI_SSID WIFI_PASS PASSHASH; do
+for v in HOSTNAME_NEW:HOSTNAME USERNAME_NEW:USERNAME FULLNAME TIMEZONE KEYMAP SWAP_MB WIFI_SSID WIFI_PASS PASSHASH UDEB_SUITE; do
     src=${v%%:*} key=${v#*:}
     cfg=${cfg//@@$key@@/${!src}}
 done

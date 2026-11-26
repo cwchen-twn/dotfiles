@@ -17,13 +17,34 @@ rm -f "$0"
 cat <<'MSG'
 
 Done. Next:
-  1. Log out and back in: fish as login shell, docker/input groups, LXQt HiDPI and favorites.
+  1. Log out and back in, choosing "LXQt (labwc)": fish as login shell, docker/input groups, monitors, keys.
   2. register-ssh-key   (fish: logs in to gh/glab/tea and uploads this machine's SSH key)
   3. If anything above failed (e.g. GitHub rate limit): gh auth login, then chezmoi apply.
 MSG
 EOF
 chmod 755 "$home/bootstrap.sh"
 in-target chown "$user:$user" "/home/$user/bootstrap.sh"
+
+# Login screen on Wayland from the first boot (#66): forky's desktop task brings no X server, and SDDM's default
+# greeter needs one. The labwc role writes the same two files on the first chezmoi apply.
+mkdir -p /target/etc/sddm.conf.d /target/etc/sddm
+cat >/target/etc/sddm.conf.d/10-wayland.conf <<'SDDM'
+# Managed by ansible (dotfiles labwc role); first written by the installer.
+[General]
+DisplayServer=wayland
+
+[Wayland]
+CompositorCommand=weston --shell=kiosk --config=/etc/sddm/weston.ini
+SDDM
+{
+    echo '# Managed by ansible (dotfiles labwc role): the compositor of the SDDM greeter.'
+    echo '[core]'
+    echo 'idle-time=0'
+    # Retina MacBooks (as setup.yml's hidpi): the greeter at 2x.
+    if grep -qE '^MacBookPro1[0-9],|^MacBook(8|9|10),' /sys/class/dmi/id/product_name 2>/dev/null; then
+        printf '[output]\nname=eDP-1\nscale=2\n'
+    fi
+} >/target/etc/sddm/weston.ini
 
 # Wi-Fi used during the install (preseeded or picked on the target) -> explicit NetworkManager profile.
 # netcfg's handover doesn't connect on WPA2/WPA3 mixed-mode APs with brcmfmac (MacBook BCM43602);
