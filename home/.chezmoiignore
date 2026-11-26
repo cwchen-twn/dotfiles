@@ -86,6 +86,10 @@
 .local/bin/lock-screen
 .config/autostart/xss-lock.desktop
 .config/autostart/lxqt-xscreensaver-autostart.desktop
+.config/labwc
+.config/kanshi
+.local/bin/screenshot
+.local/bin/sendkey
 {{ end }}
 
 {{ if not (has "kubernetes" .devops) }}

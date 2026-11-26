@@ -133,7 +133,7 @@
         dest: /etc/default/earlyoom
         mode: "0644"
         content: |
-          EARLYOOM_ARGS="-r 0 --avoid (^|/)(Xorg|sddm|sddm-helper|lxqt-session|xfwm4|systemd|sshd)$"
+          EARLYOOM_ARGS="-r 0 --avoid (^|/)(Xorg|Xwayland|labwc|sddm|sddm-helper|lxqt-session|xfwm4|systemd|sshd)$"
       register: earlyoom_conf
 
     - name: Earlyoom running

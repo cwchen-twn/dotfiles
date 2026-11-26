@@ -23,7 +23,23 @@ local edge, margin = 24, 14 -- screen edge to window, window edge to text
 local gap = edge + margin + 2
 local W = 264 -- content width; replaced below so the window plus `edge` is a quarter of the primary monitor
 local dpi = 96
-do
+-- Wayland session ("LXQt (labwc)"): a layer-shell surface instead of an X window. Sizes are in the compositor's
+-- scaled (logical) pixels, so no dpi factor: the width is the first monitor's mode width over its scale (wlr-randr).
+local wayland = os.getenv("WAYLAND_DISPLAY") ~= nil
+if wayland then
+	local p = io.popen("wlr-randr 2>/dev/null")
+	if p then
+		local out = p:read("*a")
+		p:close()
+		local first = out:match("^(.-)\n%S") or out -- the first output's block
+		local mw = tonumber(first:match("(%d+)x%d+ px[^\n]*current") or "")
+		local scale = tonumber(first:match("Scale: ([%d.]+)") or "") or 1
+		if mw then
+			W = math.floor(mw / scale / 4) - edge - 2 * margin - 4
+		end
+	end
+end
+if not wayland then
 	local p = io.popen("xrandr --listactivemonitors 2>/dev/null; xrdb -get Xft.dpi 2>/dev/null")
 	if p then
 		local out = p:read("*a")
@@ -247,6 +263,8 @@ return function(alignment, names)
 		own_window_argb_value = 179, -- 70% dark backing: mutes the wallpaper's stars behind the text
 		own_window_colour = "11111b", -- crust
 		double_buffer = true,
+		out_to_x = not wayland,
+		out_to_wayland = wayland,
 
 		alignment = alignment,
 		gap_x = gap,

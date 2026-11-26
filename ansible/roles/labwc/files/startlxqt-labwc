@@ -1,0 +1,9 @@
+#!/bin/sh
+# Managed by ansible (dotfiles labwc role). LXQt on Wayland: labwc starts the usual LXQt session (startlxqt ->
+# lxqt-session: panel, desktop, notifications, power, autostart) and exits with it (-S). The compositor's own config
+# is ~/.config/labwc (rc.xml, autostart, environment); monitors are kanshi's (~/.config/kanshi/config).
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=lxqt-labwc
+# Qt picks Wayland itself; Xwayland only as a fallback.
+export QT_QPA_PLATFORM='wayland;xcb'
+exec labwc -S startlxqt

@@ -1,0 +1,16 @@
+# Managed by chezmoi. Monitor profiles for the Wayland session ("LXQt (labwc)"), applied by kanshi (started from
+# ~/.config/labwc/autostart) at login and on every plug/unplug: the first profile whose outputs all match wins.
+# Each monitor gets its own scale, so a low-PPI external screen is sharp at 1x next to the 2x Retina panel.
+# Names: `wlr-randr`. Positions are in scaled (logical) pixels: the 2560x1600 panel at 2x is 1280 wide.
+
+# Laptop panel with any one external monitor to its right. The external one at 1x suits ~80-110 PPI screens
+# (24-27" 1080p/1440p); give a 4K one its own profile above this one (match it by "make model serial").
+profile docked {
+    output eDP-1 enable scale 2 position 0,0
+    output * enable scale 1 position 1280,0
+}
+
+# Laptop alone.
+profile laptop {
+    output eDP-1 enable scale 2 position 0,0
+}

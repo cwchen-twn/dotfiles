@@ -119,6 +119,15 @@ After the first login run `~/bootstrap.sh`, which is the chezmoi one-liner above
     preset's own wallpaper. Preview the login without logging out:
     `sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/sddm-astronaut-theme`. More: gnome-look.org (GRUB
     Themes), store.kde.org (SDDM Login Themes, Qt6 only), r/unixporn.
+- Wayland session (labwc role), "LXQt (labwc)" on the login screen next to the X11 "LXQt": the same LXQt panel,
+  desktop and apps on the [labwc](https://labwc.github.io) compositor (`/usr/local/bin/startlxqt-labwc`; Debian 13
+  has no lxqt-wayland-session). Each monitor gets its own scale, so a 1080p external screen is sharp at 1x next to
+  the 2x panel: kanshi profiles in `~/.config/kanshi/config`, reapplied on plug/unplug. labwc's config is
+  `~/.config/labwc/` (`rc.xml`: workspaces, touchpad, the keys LXQt's shortcut daemon binds on X11; `autostart`:
+  kanshi, and swayidle for the keyboard backlight, the lock (swaylock, same `lock-screen`) and screens off;
+  `environment`). Print / Shift+Print: screenshot (`~/.local/bin/screenshot`). Gestures press keys through
+  `~/.local/bin/sendkey` (xdotool or wtype), so the same `libinput-gestures.conf` serves both sessions. GTK's 2x
+  for X11 (`GDK_SCALE`) moved to `~/.xsessionrc`, which only X11 sessions read.
 - fcitx5 (desktop app): US keyboard + Chewing (`~/.config/fcitx5/profile`, chezmoi; stop fcitx5 before editing it by
   hand, it saves its profile on exit). Ctrl+Space toggles, Shift_L switches temporarily. CJK font: `fonts-noto-cjk`.
 - Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,

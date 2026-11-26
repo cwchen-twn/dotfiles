@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# screenshot [region]: save the whole screen (or a region picked with the mouse) to ~/Pictures/Screenshots and copy
+# it to the clipboard. Wayland session only (grim, slurp, wl-copy); bound to Print / Shift+Print in
+# ~/.config/labwc/rc.xml. The X11 session uses Shutter.
+set -eu
+dir=${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots
+mkdir -p "$dir"
+file=$dir/$(date +%Y-%m-%d_%H-%M-%S).png
+if [ "${1:-}" = region ]; then
+    geom=$(slurp) || exit 0 # Esc cancels
+    grim -g "$geom" "$file"
+else
+    grim "$file"
+fi
+wl-copy --type image/png <"$file"
+notify-send -i "$file" "Screenshot" "${file/#$HOME/\~}" 2>/dev/null || true

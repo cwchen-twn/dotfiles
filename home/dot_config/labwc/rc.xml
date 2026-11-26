@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<!--
+  Managed by chezmoi. labwc, the compositor of the "LXQt (labwc)" Wayland session (ansible labwc role); the X11
+  "LXQt" session keeps xfwm4. Reference: /usr/share/doc/labwc/rc.xml.all.gz, labwc-config(5), labwc-actions(5).
+  Reload after editing: `labwc -r`. Monitors (scale, layout) are kanshi's: ~/.config/kanshi/config.
+-->
+<labwc_config>
+  <core>
+    <gap>0</gap>
+  </core>
+
+  <theme>
+    <cornerRadius>6</cornerRadius>
+    <font place=""><name>sans</name><size>10</size></font>
+  </theme>
+
+  <!-- One row of 4, like the X11 session (keep in sync with lxqt_workspaces, ansible lxqt role). -->
+  <desktops number="4" popupTime="500" />
+
+  <focus>
+    <followMouse>no</followMouse>
+    <raiseOnFocus>no</raiseOnFocus>
+  </focus>
+
+  <!--
+    Keys: labwc's defaults (Alt+Tab, Super+arrows snap, Alt+F4, ...) plus the ones the X11 session gets from xfwm4
+    and lxqt-globalkeysd (ansible lxqt role), which does not grab keys on Wayland. Same commands as there.
+  -->
+  <keyboard>
+    <default />
+    <keybind key="C-A-t"><action name="Execute" command="alacritty" /></keybind>
+    <keybind key="A-F1"><action name="ShowMenu" menu="root-menu" atCursor="no" /></keybind>
+    <keybind key="C-A-l"><action name="Execute" command="loginctl lock-session" /></keybind>
+
+    <!-- Workspaces (also the 4-finger swipes, ~/.config/libinput-gestures.conf). -->
+    <keybind key="C-A-Left"><action name="GoToDesktop" to="left" wrap="no" /></keybind>
+    <keybind key="C-A-Right"><action name="GoToDesktop" to="right" wrap="no" /></keybind>
+    <keybind key="C-A-S-Left"><action name="SendToDesktop" to="left" wrap="no" /></keybind>
+    <keybind key="C-A-S-Right"><action name="SendToDesktop" to="right" wrap="no" /></keybind>
+    <!-- Show the desktop: minimize every window. -->
+    <keybind key="C-A-d">
+      <action name="ForEach"><query /><then><action name="Iconify" /></then></action>
+    </keybind>
+
+    <!-- Screenshots to ~/Pictures/Screenshots and the clipboard: whole screen, or a region. -->
+    <keybind key="Print"><action name="Execute" command="~/.local/bin/screenshot" /></keybind>
+    <keybind key="S-Print"><action name="Execute" command="~/.local/bin/screenshot region" /></keybind>
+
+    <!-- Screen brightness: 5% steps, never below 1% (fully dark looks like a dead screen). -->
+    <keybind key="XF86_MonBrightnessUp">
+      <action name="Execute" command="brightnessctl -q -c backlight --min-value=1% set 5%+" />
+    </keybind>
+    <keybind key="XF86_MonBrightnessDown">
+      <action name="Execute" command="brightnessctl -q -c backlight --min-value=1% set 5%-" />
+    </keybind>
+    <!-- MacBook keyboard backlight. -->
+    <keybind key="XF86_KbdBrightnessUp">
+      <action name="Execute" command="brightnessctl -q -d smc::kbd_backlight set +10%" />
+    </keybind>
+    <keybind key="XF86_KbdBrightnessDown">
+      <action name="Execute" command="brightnessctl -q -d smc::kbd_backlight set 10%-" />
+    </keybind>
+    <!-- Media keys for whichever player is active (MPRIS). -->
+    <keybind key="XF86_AudioPlay"><action name="Execute" command="playerctl play-pause" /></keybind>
+    <keybind key="XF86_AudioNext"><action name="Execute" command="playerctl next" /></keybind>
+    <keybind key="XF86_AudioPrev"><action name="Execute" command="playerctl previous" /></keybind>
+    <!-- Volume of the current default output (~/.local/bin/vol), so Bluetooth headphones too. -->
+    <keybind key="XF86_AudioRaiseVolume"><action name="Execute" command="~/.local/bin/vol up" /></keybind>
+    <keybind key="XF86_AudioLowerVolume"><action name="Execute" command="~/.local/bin/vol down" /></keybind>
+    <keybind key="XF86_AudioMute"><action name="Execute" command="~/.local/bin/vol mute" /></keybind>
+  </keyboard>
+
+  <!-- Touchpads as the X11 session has them (/etc/X11/xorg.conf.d/50-macbook-touchpad.conf). -->
+  <libinput>
+    <device category="touchpad">
+      <naturalScroll>yes</naturalScroll>
+      <tap>yes</tap>
+      <tapAndDrag>yes</tapAndDrag>
+      <clickMethod>clickfinger</clickMethod>
+      <disableWhileTyping>yes</disableWhileTyping>
+    </device>
+  </libinput>
+</labwc_config>

@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
-# lock-screen: lock the X session with i3lock on the login screen's background (the SDDM astronaut theme's image), so
-# unlocking looks like logging in. Run by xss-lock (~/.config/autostart/xss-lock.desktop) on idle, before sleep and
-# when anything asks logind to lock (LXQt's "Lock screen", `loginctl lock-session`). Type the password and press
-# Enter: i3lock shows no box, only a ring that reacts to keys (red: wrong password).
+# lock-screen: lock the session on the login screen's background (the SDDM astronaut theme's image), so unlocking
+# looks like logging in. Type the password and press Enter: there is no box, only a ring that reacts to keys (red:
+# wrong password). Runs on idle, before sleep and when anything asks logind to lock (LXQt's "Lock screen",
+# `loginctl lock-session`):
+# - Wayland ("LXQt (labwc)"): swaylock, run by swayidle (~/.config/labwc/autostart);
+# - X11: i3lock, run by xss-lock (~/.config/autostart/xss-lock.desktop).
 set -u
 src=/usr/share/sddm/themes/sddm-astronaut-theme/Backgrounds/dotfiles-login.jpg
+
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    pgrep -xu "$EUID" swaylock >/dev/null && exit 0
+    args=(--daemonize --ignore-empty-password --show-failed-attempts --color=11111b)
+    [ -r "$src" ] && args+=(--image="$src" --scaling=fill)
+    # --daemonize returns once the screen is locked: swayidle -w then lets sleep go on.
+    exec swaylock "${args[@]}"
+fi
+
 size=$(xrandr 2>/dev/null | sed -n 's/.* current \([0-9]*\) x \([0-9]*\),.*/\1x\2/p')
 img=${XDG_CACHE_HOME:-$HOME/.cache}/lock-screen/${size:-unknown}.png
 # i3lock wants a PNG of the screen's size: make one per resolution, again when the background changes.

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# sendkey KEYS: press a key combination in either session, xdotool style (ctrl+alt+Left, alt+F1, ctrl+plus).
+# Used by the touchpad gestures (~/.config/libinput-gestures.conf). Wayland: wtype (virtual keyboard protocol);
+# X11: xdotool.
+set -eu
+[ $# -eq 1 ] || {
+    echo "usage: sendkey KEY[+KEY...]" >&2
+    exit 2
+}
+if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    exec xdotool key "$1"
+fi
+IFS=+ read -ra parts <<<"$1"
+key=${parts[-1]}
+unset 'parts[-1]'
+args=()
+for m in "${parts[@]}"; do
+    case $m in
+        super) m=logo ;;
+        control) m=ctrl ;;
+    esac
+    args+=(-M "$m")
+done
+args+=(-k "$key")
+for m in "${parts[@]}"; do
+    case $m in
+        super) m=logo ;;
+        control) m=ctrl ;;
+    esac
+    args+=(-m "$m")
+done
+exec wtype "${args[@]}"

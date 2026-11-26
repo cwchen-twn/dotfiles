@@ -1,0 +1,12 @@
+# Managed by chezmoi. Environment of the "LXQt (labwc)" session (labwc reads it at start; KEY=value only).
+# The compositor scales each monitor (kanshi), so nothing here doubles sizes: no GDK_SCALE, no Xft.dpi.
+
+# Cursor size before scaling (labwc multiplies it per monitor).
+XCURSOR_SIZE=24
+
+# Electron apps (VS Code, Obsidian) native on Wayland: under Xwayland they render at 1x and blur on the 2x panel.
+ELECTRON_OZONE_PLATFORM_HINT=auto
+
+# Input method (fcitx5): GTK and Qt talk to it through the compositor (text-input-v3); Xwayland apps through XIM.
+XMODIFIERS=@im=fcitx
+QT_IM_MODULE=fcitx

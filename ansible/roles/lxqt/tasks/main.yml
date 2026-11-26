@@ -70,14 +70,13 @@
             {%- for k, v in keys.items() -%}{%- set _ = out.append(['lxqt/panel.conf', name, k, v]) -%}{%- endfor -%}
           {%- endfor -%}
           {{ out }}
-        # Xft.dpi itself goes to ~/.Xresources (below); these keep LXQt's own settings consistent with it.
+        # Xft.dpi itself goes to ~/.Xresources and the GTK scale to ~/.xsessionrc (below, X11 only); these keep
+        # LXQt's own settings consistent with it.
         hidpi_ini: |-
           {{ (
               [
                   ['lxqt/session.conf', 'Font', 'dpi', lxqt_dpi],
                   ['lxqt/session.conf', 'Mouse', 'cursor_size', lxqt_cursor_size],
-                  ['lxqt/session.conf', 'Environment', 'GDK_SCALE', 2],
-                  ['lxqt/session.conf', 'Environment', 'GDK_DPI_SCALE', 0.5],
                   ['lxqt/panel.conf', 'panel1', 'panelSize', 32],
                   ['lxqt/panel.conf', 'panel1', 'iconSize', 22],
               ]
@@ -227,6 +226,28 @@
         mode: "0644"
       loop: "{{ {'Xft.dpi': lxqt_dpi, 'Xcursor.size': lxqt_cursor_size} | dict2items }}"
       when: lxqt_hidpi | bool
+
+    # GTK's 2x on X11 (GDK_SCALE doubles the UI, GDK_DPI_SCALE halves the fonts Xft.dpi already doubled). Only X11
+    # sessions source ~/.xsessionrc (/etc/X11/Xsession.d); in LXQt's session.conf it also reached the Wayland
+    # session ("LXQt (labwc)", labwc role), where the compositor scales and GTK text came out half size.
+    - name: GTK HiDPI for X11 sessions only (~/.xsessionrc)
+      ansible.builtin.lineinfile:
+        path: "{{ home }}/.xsessionrc"
+        regexp: '^export {{ item.key }}='
+        line: "export {{ item.key }}={{ item.value }}"
+        create: true
+        mode: "0644"
+      loop: "{{ {'GDK_SCALE': 2, 'GDK_DPI_SCALE': 0.5} | dict2items }}"
+      when: lxqt_hidpi | bool
+
+    - name: GTK HiDPI no longer in LXQt's session environment (both sessions read it)
+      community.general.ini_file:
+        path: "{{ cfg }}/lxqt/session.conf"
+        section: Environment
+        option: "{{ item }}"
+        state: absent
+        mode: "0644"
+      loop: [GDK_SCALE, GDK_DPI_SCALE]
 
     - name: LXQt and GTK settings (HiDPI, dark mode, default apps, panel)
       community.general.ini_file:

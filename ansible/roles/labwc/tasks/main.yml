@@ -1,0 +1,42 @@
+# LXQt on Wayland: labwc (the compositor upstream LXQt defaults to) running the usual LXQt session, picked as
+# "LXQt (labwc)" on the login screen next to the X11 "LXQt". Wayland scales each monitor on its own (kanshi, chezmoi
+# ~/.config/kanshi/config), which X11's single DPI can't. Debian 13 has labwc but no lxqt-wayland-session, so the
+# session entry and its start script are here; the user side (~/.config/labwc, kanshi, swayidle) is chezmoi.
+- name: Wayland session packages
+  ansible.builtin.apt:
+    name:
+      - labwc
+      - qt6-wayland            # Qt 6 (LXQt, pcmanfm-qt) on Wayland instead of Xwayland
+      - layer-shell-qt         # lxqt-panel and the pcmanfm-qt desktop as Wayland layers
+      - xwayland               # X11-only apps
+      - kanshi                 # per-monitor scale and layout, applied on plug/unplug
+      - wlr-randr              # monitor list (conky's width) and manual changes
+      - swayidle               # idle: lock, keyboard backlight; before-sleep and logind lock
+      - swaylock               # screen lock on the login background
+      - wlopm                  # screens off/on
+      - grim                   # screenshots
+      - slurp                  # screenshot region picker
+      - wl-clipboard           # wl-copy / wl-paste
+      - wtype                  # key presses for touchpad gestures
+      - xdg-desktop-portal-wlr # screen sharing and screenshots for browsers
+      - xdg-desktop-portal-gtk # file chooser portal
+
+- name: Session start script
+  ansible.builtin.copy:
+    src: startlxqt-labwc
+    dest: /usr/local/bin/startlxqt-labwc
+    mode: "0755"
+
+- name: Login screen entry
+  ansible.builtin.copy:
+    dest: /usr/share/wayland-sessions/lxqt-labwc.desktop
+    mode: "0644"
+    content: |
+      # Managed by ansible (dotfiles labwc role).
+      [Desktop Entry]
+      Type=Application
+      Name=LXQt (labwc)
+      Comment=LXQt on Wayland with the labwc compositor
+      Exec=/usr/local/bin/startlxqt-labwc
+      TryExec=labwc
+      DesktopNames=LXQt

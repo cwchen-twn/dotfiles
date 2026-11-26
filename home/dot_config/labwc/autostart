@@ -1,0 +1,17 @@
+# Managed by chezmoi. Run by labwc at the start of the "LXQt (labwc)" session, before LXQt's own autostart
+# (lxqt-session: panel, desktop, notifications, ~/.config/autostart). Only what the Wayland session needs instead of
+# the X11 tools: monitors, idle and lock.
+
+# Monitors: per-output scale and layout, reapplied on plug/unplug (~/.config/kanshi/config).
+kanshi >/dev/null 2>&1 &
+
+# Idle and lock (the X11 session: xss-lock + xset + kbd-backlight-idle):
+# - keyboard backlight off after 60 s idle, back on input (MacBooks; harmless elsewhere);
+# - lock after 10 min, screens off 5 min later;
+# - lock before sleep (-w waits for swaylock to be up) and when logind asks (LXQt's Lock screen, Ctrl+Alt+L).
+swayidle -w \
+    timeout 60 '~/.local/bin/kbd-backlight-idle off' resume '~/.local/bin/kbd-backlight-idle on' \
+    timeout 600 '~/.local/bin/lock-screen' \
+    timeout 900 'wlopm --off "*"' resume 'wlopm --on "*"' \
+    before-sleep '~/.local/bin/lock-screen' \
+    lock '~/.local/bin/lock-screen' >/dev/null 2>&1 &
