@@ -150,8 +150,8 @@ function __ci_list
     tea api admin/actions/runners 2>/dev/null | jq -c '[.runners[]? | {name, status, busy, labels}]' >$tmp/runners 2>/dev/null
     or echo '[]' >$tmp/runners
 
-    jq -nr --slurpfile rs $tmp/runs --slurpfile js $tmp/jobs --slurpfile rn $tmp/runners \
-        --argjson limit $limit --argjson since $since --argjson failed $failed '
+    # Shared by both passes: the rows, split into $active and $done (the completed runs shown).
+    set -l rows '
       def ts: if . == null then null else
           (sub("[.][0-9]+"; "")
            | if test("Z$") then fromdateiso8601
@@ -179,30 +179,47 @@ function __ci_list
             event: ($r.event // "?" | sub("pull_request"; "pr") | sub("workflow_dispatch"; "dispatch")),
             status: (if $r.q == "completed" then ($r.conclusion // "completed") else $r.q end),
             created: $j.created, started: ($r.started_at|ts // $j.started), done: ($r.completed_at|ts),
-            runner: ($j.runner // "")}]
+            runner: ($j.runner // "" | gsub("-gitea-runner(?=,|$)"; "") | if . == "" then "-" else . end)}]
       | (map(select(.q != "completed")) | sort_by(.created // 0)) as $active
       | (map(select(.q == "completed"
                     and ($since == 0 or ((.done // 0) >= $now - $since))
                     and ($failed == 0 or (.status == "failure" or .status == "cancelled"))))
          | unique_by(.id) | sort_by(-(.done // 0)) | .[:$limit]) as $done
-      | (if ($runners | length) > 0 then
+      | '
+    set -l jqargs --slurpfile rs $tmp/runs --slurpfile js $tmp/jobs --slurpfile rn $tmp/runners \
+        --argjson limit $limit --argjson since $since --argjson failed $failed
+
+    # Completed runs have no jobs in the scope-level call (it lists the oldest first): fetch the shown runs' jobs,
+    # for their runner, in parallel.
+    for pick in (jq -nr $jqargs "$rows"'$done[] | "\(.repo) \(.id)"')
+        set -l p (string split ' ' -- $pick)
+        tea api "repos/$p[1]/actions/runs/$p[2]/jobs" 2>/dev/null \
+            | jq -c '[.jobs[]? | {run_id, created_at, started_at, runner_name}]' >$tmp/jobs-$p[2] &
+    end
+    wait
+    for f in $tmp/jobs-*
+        cat $f >>$tmp/jobs
+    end
+
+    jq -nr $jqargs "$rows"'
+        (if ($runners | length) > 0 then
            $runners[] | "#runner\t\(.name)  \(.status)\(if .busy then ", busy" else "" end)  \([.labels[]?.name] | join(","))"
          else
            "#runner\t" + ([$active[] | select(.q == "running") | .runner] | group_by(.) | map("\(.[0] // "?"): \(length) running") | join("  ") | if . == "" then "no job running" else . end)
            + "  (runner status needs a tea token with read:admin)"
          end),
         "#summary\t" + ([$active[] | .q] | group_by(.) | map("\(length) \(.[0])") | join(" · ") | if . == "" then "nothing running or queued" else . end),
-        "STATUS\tAGE\tWAIT\tDUR\tREPO\tWORKFLOW\tEVENT\tREF\tRUN",
+        "STATUS\tAGE\tWAIT\tDUR\tREPO\tWORKFLOW\tEVENT\tREF\tRUNNER\tRUN",
         ($active[] | [.status,
             ((.created // .started) | if . then ($now - .) | hms else "-" end),
             (if .q == "running" then (if .created and .started then .started - .created else null end) else (if .created then $now - .created else null end) end | hms),
             (if .q == "running" and .started then ($now - .started) | hms else "-" end),
-            .repo, .wf, .event, .ref, (.id|tostring)] | join("\t")),
+            .repo, .wf, .event, .ref, .runner, (.id|tostring)] | join("\t")),
         ($done[] | [.status,
             (if .done then ($now - .done) | hms else "-" end),
             "-",
             (if .done and .started then .done - .started else null end | hms),
-            .repo, .wf, .event, .ref, (.id|tostring)] | join("\t"))
+            .repo, .wf, .event, .ref, .runner, (.id|tostring)] | join("\t"))
     ' | __ci_format $color
     rm -rf $tmp
 end
