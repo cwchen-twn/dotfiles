@@ -253,6 +253,11 @@ pins merge themselves on green CI.
   machine is ready (AC power, free space, no broken or held packages). Then it backs up and switches the Debian
   sources, runs `upgrade --without-new-pkgs` and `full-upgrade`, and finishes with `chezmoi apply`. The Ansible
   playbook reruns whenever the OS codename changes, so Docker, Tailscale, PostgreSQL and the other repos follow.
+- **Debian testing before the release** (#57): `debian-release-upgrade --testing` moves to the next codename while it
+  is still testing, so the machine becomes the new stable at release. It adds apt-listbugs and apt-listchanges and
+  keeps the running kernel as the boot fallback (out-of-tree drivers such as facetimehd). On testing,
+  unattended-upgrades installs only security fixes; the rest is `sudo apt update && sudo apt full-upgrade`, reading
+  what it removes. Docker has no repo for an unreleased Debian, so its newest stable one (trixie) is used.
 - The hcloud server is different: it reboots itself at 04:00 when a patch needs it (see that repo's `host/CLAUDE.md`).
 
 ## What this repo manages, and how to list it

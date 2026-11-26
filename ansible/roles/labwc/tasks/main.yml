@@ -1,10 +1,20 @@
 # LXQt on Wayland: labwc (the compositor upstream LXQt defaults to) running the usual LXQt session, picked as
 # "LXQt (labwc)" on the login screen next to the X11 "LXQt". Wayland scales each monitor on its own (kanshi, chezmoi
-# ~/.config/kanshi/config), which X11's single DPI can't. Debian 13 has labwc but no lxqt-wayland-session, so the
-# session entry and its start script are here; the user side (~/.config/labwc, kanshi, swayidle) is chezmoi.
+# ~/.config/kanshi/config), which X11's single DPI can't. The user side (~/.config/labwc, kanshi, swayidle) is
+# chezmoi. Debian 13 has no lxqt-wayland-session, so there the session start script is ours (files/startlxqt-labwc);
+# where Debian packages it (forky and later, #57) it starts the session, and our entry only adds the fcitx5 fix.
+- name: Debian packages LXQt's Wayland session?
+  ansible.builtin.command: apt-cache show lxqt-wayland-session
+  register: labwc_official
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
 - name: Wayland session packages
   ansible.builtin.apt:
-    name:
+    name: "{{ labwc_packages + (['lxqt-wayland-session'] if labwc_official.rc == 0 else []) }}"
+  vars:
+    labwc_packages:
       - labwc
       - qt6-wayland            # Qt 6 (LXQt, pcmanfm-qt) on Wayland instead of Xwayland
       - layer-shell-qt         # lxqt-panel and the pcmanfm-qt desktop as Wayland layers
@@ -21,11 +31,37 @@
       - xdg-desktop-portal-wlr # screen sharing and screenshots for browsers
       - xdg-desktop-portal-gtk # file chooser portal
 
-- name: Session start script
+- name: Session start script (ours on Debian 13)
   ansible.builtin.copy:
     src: startlxqt-labwc
     dest: /usr/local/bin/startlxqt-labwc
     mode: "0755"
+  when: labwc_official.rc != 0
+
+# Debian's startlxqtwayland exports the LXQt environment and runs `labwc -C ~/.config/labwc -S lxqt-session`, as
+# ours did. Debian's /etc/profile.d/im-config_wayland.sh sets GTK_IM_MODULE=fcitx, which fcitx5 warns about on
+# Wayland (GTK uses labwc's text-input there), and labwc's environment file can't unset a variable: hence this.
+- name: Session start script (Debian's session, with the fcitx5 fix)
+  ansible.builtin.copy:
+    dest: /usr/local/bin/startlxqt-labwc
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      # Managed by ansible (dotfiles labwc role): Debian's lxqt-wayland-session, with GTK_IM_MODULE unset (fcitx5).
+      unset GTK_IM_MODULE
+      exec startlxqtwayland
+  when: labwc_official.rc == 0
+
+- name: LXQt's Wayland session uses labwc
+  community.general.ini_file:
+    path: "{{ home }}/.config/lxqt/session.conf"
+    section: General
+    option: compositor
+    value: labwc
+    no_extra_spaces: true
+    mode: "0644"
+  become: false
+  when: labwc_official.rc == 0
 
 - name: Login screen entry
   ansible.builtin.copy:

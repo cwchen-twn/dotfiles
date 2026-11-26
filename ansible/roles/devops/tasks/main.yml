@@ -2,16 +2,30 @@
 # kubectl/helm/kubectx/terraform come from mise. Here: things needing system integration.
 - name: Docker (Debian/Ubuntu)
   when: is_debian and 'docker' in devops
+  vars:
+    docker_url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}"
+    # Docker publishes a release only once it is out, so Debian testing (#57) uses the newest stable one's packages.
+    docker_fallback_suite: "{{ 'trixie' if ansible_distribution == 'Debian' else 'noble' }}"
   block:
+    - name: Docker publishes this release?
+      ansible.builtin.uri:
+        url: "{{ docker_url }}/dists/{{ ansible_distribution_release }}/Release"
+        method: HEAD
+        status_code: [200, 404]
+      register: docker_dist
+      until: docker_dist is succeeded
+      retries: 3
+      delay: 5
+      check_mode: false # read-only probe
     - name: Docker repo
       ansible.builtin.deb822_repository:
         name: docker
         types: deb
-        uris: "https://download.docker.com/linux/{{ ansible_distribution | lower }}"
-        suites: "{{ ansible_distribution_release }}"
+        uris: "{{ docker_url }}"
+        suites: "{{ ansible_distribution_release if docker_dist.status == 200 else docker_fallback_suite }}"
         components: stable
         architectures: "{{ arch_deb }}"
-        signed_by: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+        signed_by: "{{ docker_url }}/gpg"
       # key servers time out now and then, and the module re-fetches the key on every run
       register: repo_key
       until: repo_key is succeeded

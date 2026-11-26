@@ -1,4 +1,7 @@
 <?xml version="1.0"?>
+{{- /* labwc's version decides two bindings: 0.20 added ToggleShowDesktop, 0.9.2 SnapToEdge combine. */}}
+{{- $labwc := "0.0.0" }}
+{{- if lookPath "labwc" }}{{ $labwc = output "labwc" "--version" | regexFind "[0-9]+\\.[0-9]+(\\.[0-9]+)?" | default "0.0.0" }}{{ end }}
 <!--
   Managed by chezmoi. labwc, the compositor of the "LXQt (labwc)" Wayland session (ansible labwc role); the X11
   "LXQt" session keeps xfwm4. Reference: /usr/share/doc/labwc/rc.xml.all.gz, labwc-config(5), labwc-actions(5).
@@ -57,10 +60,23 @@
     <keybind key="C-A-Right"><action name="GoToDesktop" to="right" wrap="no" /></keybind>
     <keybind key="C-A-S-Left"><action name="SendToDesktop" to="left" wrap="no" /></keybind>
     <keybind key="C-A-S-Right"><action name="SendToDesktop" to="right" wrap="no" /></keybind>
-    <!-- Show the desktop (toggle), through the panel's show-desktop plugin. -->
+    <!-- Show the desktop (also the 4-finger swipe up). labwc {{ $labwc }}: {{ if semverCompare ">=0.20.0" $labwc }}its
+         own toggle.{{ else }}no toggle before 0.20, and lxqt-panel 2.1's
+         show-desktop does nothing under labwc, so this minimizes every window.{{ end }} -->
     <keybind key="C-A-d">
-      <action name="Execute" command="gdbus call --session -d org.kde.StatusNotifierWatcher -o /global_key_shortcuts/panel/showdesktop/show_hide -m org.lxqt.global_key_shortcuts.client.activated" />
+{{- if semverCompare ">=0.20.0" $labwc }}
+      <action name="ToggleShowDesktop" />
+{{- else }}
+      <action name="ForEach"><query /><then><action name="Iconify" /></then></action>
+{{- end }}
     </keybind>
+{{- if semverCompare ">=0.9.2" $labwc }}
+    <!-- Snap to a half, a quarter when combined (Super+Left then Super+Up). -->
+    <keybind key="W-Left"><action name="SnapToEdge" direction="left" combine="yes" /></keybind>
+    <keybind key="W-Right"><action name="SnapToEdge" direction="right" combine="yes" /></keybind>
+    <keybind key="W-Up"><action name="SnapToEdge" direction="up" combine="yes" /></keybind>
+    <keybind key="W-Down"><action name="SnapToEdge" direction="down" combine="yes" /></keybind>
+{{- end }}
 
     <!-- Screenshots to ~/Pictures/Screenshots and the clipboard: whole screen, or a region. -->
     <keybind key="Print"><action name="Execute" command="~/.local/bin/screenshot" /></keybind>

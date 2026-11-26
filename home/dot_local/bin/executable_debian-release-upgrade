@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
-# debian-release-upgrade [--dry-run] [CODENAME]: move this machine to the next Debian release (trixie -> forky), by
-# hand and with checks, never unattended. The Debian sources are pinned to the codename (not "stable"), so a new
-# release changes nothing until this runs. Wait for the x.1 point release and read the release notes first:
+# debian-release-upgrade [--dry-run] [--testing] [CODENAME]: move this machine to the next Debian release (trixie ->
+# forky), by hand and with checks, never unattended. The Debian sources are pinned to the codename (not "stable"),
+# so a new release changes nothing until this runs. Wait for the x.1 point release and read the release notes first:
 # https://www.debian.org/releases/<codename>/releasenotes
+#
+# --testing: move to the next codename while it is still Debian testing (#57). The sources keep the codename, not
+# "testing", so the machine becomes the new stable at release instead of following testing forever. It also
+# installs apt-listbugs (warns about release-critical bugs before apt installs a package) and apt-listchanges, and
+# keeps the running kernel installed as the boot-menu fallback for an out-of-tree driver that does not build yet
+# (facetimehd). Testing then updates by hand: sudo apt update && sudo apt full-upgrade, reading what it removes;
+# unattended-upgrades only takes security fixes there (ansible base role).
 #
 # Steps: refuse unless the target is released and the machine is ready (AC power, free space, no broken or held
 # packages); back up the apt sources; switch the Debian entries (sources.list, debian.sources) to the new codename;
@@ -16,10 +23,15 @@ set -euo pipefail
 next_of() { case $1 in bookworm) echo trixie ;; trixie) echo forky ;; forky) echo duke ;; *) return 1 ;; esac }
 
 dry=false
-[ "${1:-}" = --dry-run ] && {
-    dry=true
+testing=false
+while [ $# -gt 0 ]; do
+    case $1 in
+        --dry-run) dry=true ;;
+        --testing) testing=true ;;
+        *) break ;;
+    esac
     shift
-}
+done
 . /etc/os-release
 [ "${ID:-}" = debian ] || {
     echo "Debian only (this is ${ID:-unknown})" >&2
@@ -39,7 +51,11 @@ check() { if eval "$2"; then echo "  ok    $1"; else
 fi; }
 # Released = deb.debian.org has dists/<target>/Release and its Suite is "stable" (testing has one long before).
 suite=$(curl -fsSL "https://deb.debian.org/debian/dists/$target/Release" 2>/dev/null | sed -n 's/^Suite: //p')
-check "$target is released (suite: ${suite:-not found})" '[ "$suite" = stable ]'
+if $testing; then
+    check "$target is testing or released (suite: ${suite:-not found})" '[ "$suite" = testing ] || [ "$suite" = stable ]'
+else
+    check "$target is released (suite: ${suite:-not found}; --testing for testing)" '[ "$suite" = stable ]'
+fi
 on_ac() {
     local s found=false
     for s in /sys/class/power_supply/*; do
@@ -89,6 +105,17 @@ echo "sources backed up to $backup"
 for f in "${files[@]}"; do sudo sed -i "s/\b$current\b/$target/g" "$f"; done
 
 sudo apt update
+if $testing; then
+    sudo apt install apt-listbugs apt-listchanges
+    # apt keeps only the running and the newest kernel: after a reboot into the new one, autoremove would drop this.
+    # Warn, don't stop: the sources are already switched, so the upgrade must go on.
+    kernel=linux-image-$(uname -r)
+    if dpkg-query -W "$kernel" >/dev/null 2>&1 && sudo apt-mark manual "$kernel" >/dev/null; then
+        echo "kept $kernel as the boot fallback (Advanced options in GRUB)"
+    else
+        echo "warning: $kernel is not a package; no fallback kernel is kept" >&2
+    fi
+fi
 sudo apt upgrade --without-new-pkgs
 sudo apt full-upgrade
 sudo apt autoremove

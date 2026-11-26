@@ -145,8 +145,9 @@
 # Security updates (kernel included) install themselves daily; the reboot is left to the user. The hcloud server does
 # the opposite (reboots itself at 04:00) because nothing ever reboots a server; a laptop or desktop reboots often, and
 # rebooting one under its user loses work. reboot-needed (~/.local/bin; fish at shell start, Conky on the desktop) says
-# when a new kernel or library waits for one. Origins stay Debian's default: security only. Point releases, Brave,
-# Docker and the other third-party repos still come with a manual apt upgrade. Release upgrades: debian-release-upgrade.
+# when a new kernel or library waits for one. Origins stay Debian's default (security, and point releases on stable;
+# security only on testing, below). Brave, Docker and the other third-party repos still come with a manual apt upgrade.
+# Release upgrades: debian-release-upgrade.
 - name: Automatic security updates
   when: is_debian
   block:
@@ -161,7 +162,14 @@
           APT::Periodic::Update-Package-Lists "1";
           APT::Periodic::Unattended-Upgrade "1";
 
-    - name: Never reboot by itself; only on AC power; drop superseded kernels
+    # Debian testing (debian_version "forky/sid"; debian-release-upgrade --testing, #57): Debian's default origins
+    # include the release's main archive, which on stable changes only at point releases but on testing is every
+    # testing update. There only the -security origin installs by itself; the rest waits for a manual full-upgrade.
+    - name: Debian testing?
+      ansible.builtin.slurp: { src: /etc/debian_version }
+      register: debian_version
+
+    - name: Never reboot by itself; only on AC power; drop superseded kernels; security only on testing
       ansible.builtin.copy:
         dest: /etc/apt/apt.conf.d/51unattended-upgrades-local
         mode: "0644"
@@ -172,6 +180,12 @@
           Unattended-Upgrade::Skip-Updates-On-Metered-Connections "true";
           Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
           Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+          {% if '/' in (debian_version.content | b64decode) %}
+          #clear Unattended-Upgrade::Origins-Pattern;
+          Unattended-Upgrade::Origins-Pattern {
+                  "origin=Debian,codename=${distro_codename}-security,label=Debian-Security";
+          };
+          {% endif %}
 
 - name: MacOS base
   when: is_mac
