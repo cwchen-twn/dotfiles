@@ -131,7 +131,9 @@
         lock_ini:
           - ['lxqt/lxqt.conf', 'Screensaver', 'lock_command', 'loginctl lock-session']
           - ['lxqt/session.conf', 'General', 'lock_screen_before_power_actions', 'false']
-        terminal_ini: "{{ [['lxqt/session.conf', 'Environment', 'TERM', 'alacritty']] if 'alacritty' in desktop else [] }}"
+        # LXQt's default terminal *command* (Session Settings → Terminal emulator, the file manager's "Open in
+        # Terminal"), not a terminfo name: kitty still sets TERM=xterm-kitty for its own shells.
+        terminal_ini: "{{ [['lxqt/session.conf', 'Environment', 'TERM', 'kitty']] if 'kitty' in desktop else [] }}"
 
     # Not gtk-3.0: chezmoi owns it (bookmarks) and creates it before the playbook runs; a mode set here made every
     # following `chezmoi apply` ask about the folder (0755 here, 0775 from chezmoi under umask 0002).

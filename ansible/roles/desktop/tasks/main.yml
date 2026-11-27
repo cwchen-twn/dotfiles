@@ -42,7 +42,7 @@
         apt_map:
           brave: [brave-browser, vainfo]   # vainfo: which codecs the GPU decodes (media-check)
           vscode: [code]
-          alacritty: [alacritty]
+          kitty: [kitty]
           libinput-gestures: [libinput-tools]
           # libreoffice-qt6: LXQt 2.x themes only Qt6 apps, so LO's Qt5 backend stays light (lxqt role picks qt6)
           libreoffice: [libreoffice, libreoffice-qt6]
@@ -345,7 +345,7 @@
     cask_map:
       brave: brave-browser
       vscode: visual-studio-code
-      alacritty: alacritty
+      kitty: kitty
       libreoffice: libreoffice
       balena-etcher: balenaetcher
       calibre: calibre

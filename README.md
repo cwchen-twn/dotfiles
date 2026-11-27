@@ -19,7 +19,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
 |---|---|
 | devops | kubernetes (kubectl, helm, kubectx), terraform, docker, tailscale |
 | runtimes | node (+pnpm), go, java (+maven, gradle), rust, bun, python (uv) |
-| desktop | brave, vscode, alacritty, libinput-gestures, libreoffice, balena-etcher, calibre, obsidian, dbeaver, fcitx5 |
+| desktop | brave, vscode, kitty, libinput-gestures, libreoffice, balena-etcher, calibre, obsidian, dbeaver, fcitx5 |
 | extras | postgres, openvpn (2.x), openfortivpn, nordvpn, nvidia-cuda, claude-code, mint |
 
 Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age,
@@ -96,8 +96,8 @@ is the chezmoi one-liner above, and log in again with "LXQt (labwc)".
   Brave as default browser; LibreOffice as default for office documents (Calibre claims .docx/.odt too), on its Qt6
   backend (`SAL_USE_VCLPLUGIN=qt6`: LXQt 2.x themes only Qt6, so the Qt5 backend stayed light) with Colibre Dark
   icons and a light page in the dark UI (Appearance "Light": documents' own black text and borders stay readable;
-  `/usr/lib/libreoffice/share/registry/zz-dark.xcd`); Alacritty as terminal (Ctrl+Alt+T); panel quick launch and
-  menu favorites (file manager, Brave, Alacritty, VS Code, Obsidian, DBeaver, as selected); panel widgets
+  `/usr/lib/libreoffice/share/registry/zz-dark.xcd`); kitty as terminal (Ctrl+Alt+T); panel quick launch and
+  menu favorites (file manager, Brave, kitty, VS Code, Obsidian, DBeaver, as selected); panel widgets
   (`lxqt_panel_plugins`: Debian default minus mount and the X11-only tray/keyboard widgets, plus the CPU monitor).
 - File manager bookmarks (pcmanfm-qt's side pane, GTK file dialogs): Documents, Downloads, Pictures and
   `~/Documents/Gitea`, each only if the folder exists (`~/.config/gtk-3.0/bookmarks`, chezmoi). One added in the GUI
@@ -145,7 +145,8 @@ is the chezmoi one-liner above, and log in again with "LXQt (labwc)".
   (`~/.local/bin/screenshot`: grim, slurp, satty): Super+Shift+3 whole screen, +4 a region, +5 a region annotated in
   satty (also the panel's Screenshot button); Print / Shift+Print / Ctrl+Print on an external keyboard. Gestures
   press keys through `~/.local/bin/sendkey` (wtype). Title bars in Catppuccin (`themerc-override`).
-  alacritty takes no drag-and-drop on Wayland: `clip-img FILE` copies an image to the clipboard for Ctrl+V.
+  `clip-img FILE` puts an image on the clipboard as an image: Ctrl+V in Claude Code attaches it (screenshots are
+  copied the same way). kitty takes dropped files and folders too (pastes the path).
 - fcitx5 (desktop app): US keyboard + Chewing (`~/.config/fcitx5/profile`, chezmoi; stop fcitx5 before editing it by
   hand, it saves its profile on exit). Ctrl+Space toggles, Shift_L switches temporarily. CJK font: `fonts-noto-cjk`.
 - Brave: fixed defaults are managed policies (`/etc/brave/policies/managed/dotfiles.json`: no Rewards/Wallet/VPN/News/Leo,

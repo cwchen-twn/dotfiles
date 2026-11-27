@@ -1,7 +1,7 @@
 {{- /* Per-machine choices. Asked once on `chezmoi init`; re-ask with `chezmoi init --prompt`. */ -}}
 {{- $devopsAll   := list "kubernetes" "terraform" "docker" "tailscale" -}}
 {{- $runtimesAll := list "node" "go" "java" "rust" "bun" "python" -}}
-{{- $desktopAll  := list "brave" "vscode" "alacritty" "libinput-gestures" "libreoffice" "balena-etcher" "calibre" "obsidian" "dbeaver" "fcitx5" "supersonic" -}}
+{{- $desktopAll  := list "brave" "vscode" "kitty" "libinput-gestures" "libreoffice" "balena-etcher" "calibre" "obsidian" "dbeaver" "fcitx5" "supersonic" -}}
 {{- $extrasAll   := list "postgres" "openvpn" "openfortivpn" "nordvpn" "nvidia-cuda" "claude-code" "mint" -}}
 
 {{- $name   := promptStringOnce . "name" "Git user name" "cwchen-twn" -}}
@@ -11,6 +11,10 @@
 {{- $devops   := promptMultichoiceOnce . "devops" "DevOps tools" $devopsAll $devopsAll -}}
 {{- $runtimes := promptMultichoiceOnce . "runtimes" "Language runtimes" $runtimesAll $runtimesAll -}}
 {{- $desktop  := promptMultichoiceOnce . "desktop" "Desktop apps (deselect all on servers)" $desktopAll $desktopAll -}}
+{{- /* alacritty became kitty (#102): a saved choice carries over on the next `chezmoi init`, without re-asking. */ -}}
+{{- if has "alacritty" $desktop -}}
+{{-   $desktop = mustAppend (without $desktop "alacritty") "kitty" | uniq -}}
+{{- end -}}
 {{- $extras   := promptMultichoiceOnce . "extras" "Extras" $extrasAll (list "claude-code") -}}
 
 sourceDir = {{ joinPath .chezmoi.homeDir "Documents/Gitea/cwchen-twn/dotfiles" | quote }}

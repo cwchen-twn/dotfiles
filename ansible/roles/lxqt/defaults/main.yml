@@ -18,7 +18,7 @@ lxqt_dark_palette: Kvantum   # /usr/share/lxqt/palettes/<name>
 lxqt_favorites:
   - { app: "", files: [/usr/share/applications/pcmanfm-qt.desktop] }
   - { app: brave, files: ["{{ home }}/.local/share/applications/brave-browser.desktop", /usr/share/applications/brave-browser.desktop] }
-  - { app: alacritty, files: [/usr/share/applications/Alacritty.desktop] }
+  - { app: kitty, files: [/usr/share/applications/kitty.desktop] }
   - { app: vscode, files: [/usr/share/applications/com.microsoft.VSCode.desktop, /usr/share/applications/code.desktop] }
   - { app: obsidian, files: ["{{ home }}/.local/share/applications/obsidian.desktop"] }
   - { app: dbeaver, files: [/usr/share/applications/dbeaver-ce.desktop] }

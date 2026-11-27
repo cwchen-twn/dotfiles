@@ -4,11 +4,11 @@
      (labwc-menu-generator, ansible labwc role), so it follows installs. The window menu is labwc's default. -->
 <openbox_menu>
   <menu id="root-menu">
-    <item label="Terminal" icon="Alacritty"><action name="Execute" command="alacritty" /></item>
+    <item label="Terminal" icon="kitty"><action name="Execute" command="kitty" /></item>
     <item label="File Manager" icon="system-file-manager"><action name="Execute" command="pcmanfm-qt" /></item>
     <separator />
     <menu id="apps" label="Applications" icon="applications-other"
-          execute="labwc-menu-generator --pipemenu --icons --no-duplicates --terminal-prefix 'alacritty -e'" />
+          execute="labwc-menu-generator --pipemenu --icons --no-duplicates --terminal-prefix 'kitty'" />
     <separator />
     <item label="LXQt Settings" icon="preferences-desktop"><action name="Execute" command="lxqt-config" /></item>
     <item label="Lock Screen" icon="system-lock-screen"><action name="Execute" command="loginctl lock-session" /></item>

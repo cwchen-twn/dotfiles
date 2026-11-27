@@ -35,8 +35,8 @@
 .config/supersonic
 .local/share/applications/supersonic.desktop
 {{ end }}
-{{ if not (has "alacritty" .desktop) }}
-.config/alacritty
+{{ if not (has "kitty" .desktop) }}
+.config/kitty
 {{ end }}
 {{ if not (has "dbeaver" .desktop) }}
 .local/share/DBeaverData
