@@ -151,6 +151,10 @@
     # Conky comes from mise (upstream's AppImage): Debian 13's 1.22 draws badly on Wayland ("LXQt (labwc)").
     - name: Debian conky removed (mise provides it)
       ansible.builtin.apt: { name: [conky-std, conky-all, conky], state: absent }
+    # kitty replaced Alacritty, which takes no file drops on Wayland (#102).
+    - name: Alacritty removed (kitty replaces it)
+      when: "'kitty' in desktop"
+      ansible.builtin.apt: { name: alacritty, state: absent }
 
     # Both servers listen on the same PulseAudio socket; when the upgrade to Debian 14 brought PipeWire, PulseAudio
     # stayed installed and enabled, and whichever socket started first served (pulseaudio once took it back).
@@ -351,3 +355,8 @@
       calibre: calibre
       obsidian: obsidian
       dbeaver: dbeaver-community
+
+# kitty replaced Alacritty (#102).
+- name: Alacritty removed (macOS; kitty replaces it)
+  when: is_mac and 'kitty' in desktop
+  community.general.homebrew_cask: { name: alacritty, state: absent }

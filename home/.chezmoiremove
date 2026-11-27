@@ -31,3 +31,5 @@
 .local/bin/genmedia
 .config/agents/skills/media-assets
 .claude/skills/media-assets
+# alacritty: replaced by kitty, which takes file drops on Wayland (2026-11, #102)
+.config/alacritty
