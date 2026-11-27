@@ -133,9 +133,11 @@
           - ['lxqt/session.conf', 'General', 'lock_screen_before_power_actions', 'false']
         terminal_ini: "{{ [['lxqt/session.conf', 'Environment', 'TERM', 'alacritty']] if 'alacritty' in desktop else [] }}"
 
+    # Not gtk-3.0: chezmoi owns it (bookmarks) and creates it before the playbook runs; a mode set here made every
+    # following `chezmoi apply` ask about the folder (0755 here, 0775 from chezmoi under umask 0002).
     - name: Config dirs
       ansible.builtin.file: { path: "{{ cfg }}/{{ item }}", state: directory, mode: "0755" }
-      loop: [lxqt, gtk-3.0, gtk-4.0]
+      loop: [lxqt, gtk-4.0]
 
     # X11 leftovers (#66): the 2x X resources and GTK scale that X sessions read.
     - name: No X11 HiDPI resources
