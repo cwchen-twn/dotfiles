@@ -51,9 +51,9 @@ Every repo provides the targets that apply to it, under exactly these names:
 
 Any other target uses a `group/action` name: `db/reset`, `migrations/new`, `upgrade/go`, `frontend/build`.
 
-Apps with generated media add `assets/build` (generate the manifest's missing entries through `genmedia`) and
+Apps with generated media add `assets/build` (generate the manifest's missing entries through `mint`) and
 `assets/icons` (derive icon sizes from the master). Both write committed files and are never part of `audit` or CI;
-the `media-assets` skill has the recipe.
+the `mint` skill has the recipe.
 
 ## Style
 

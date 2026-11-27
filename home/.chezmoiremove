@@ -27,3 +27,7 @@
 .config/autostart/kbd-backlight-idle.desktop
 # GTK 2's old bookmarks file: the file manager reads ~/.config/gtk-3.0/bookmarks (chezmoi) (2026-11, #83)
 .gtk-bookmarks
+# genmedia was renamed mint (2026-11, #100): its old wrapper, skill and skill link
+.local/bin/genmedia
+.config/agents/skills/media-assets
+.claude/skills/media-assets

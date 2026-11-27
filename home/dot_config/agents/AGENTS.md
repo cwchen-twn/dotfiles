@@ -63,9 +63,9 @@ Every project is driven the same way. Follow it unless the repo's CLAUDE.md/AGEN
 - **New apps or UI features start with the `product-docs` skill:** PRD → Mermaid flows and sitemap → HTML mockups
   reviewed live in the local browser before any code. Then an OpenSpec change (`/openspec-propose`) where the repo
   uses OpenSpec.
-- **App media (images, icons, video) goes through the `media-assets` skill:** prompts in `assets/manifest.yaml`,
-  generated with `genmedia` (machines with the `genmedia` extra), outputs committed. Never call a provider directly:
-  the backend behind `genmedia` changes when a subscription does.
+- **App media (images, icons, video) goes through the `mint` skill:** prompts in `assets/manifest.yaml`,
+  generated with `mint` (machines with the `mint` extra), outputs committed. Never call a provider directly:
+  the backend behind `mint` changes when a subscription does.
 - **The main session plans, implements and decides; subagents return conclusions, not logs.** Delegate:
   - `test-runner` after a change and before committing (runs `make audit`, reports failures only);
   - `e2e-tester` for web UI flows and mockup comparison (Playwright);

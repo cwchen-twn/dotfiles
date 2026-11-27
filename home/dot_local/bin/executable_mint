@@ -1,38 +1,38 @@
 #!/usr/bin/env bash
-# genmedia: the one seam between apps and whatever generates their media (media-assets skill). Apps call this, never a
+# mint: the one seam between apps and whatever generates their media (mint skill). Apps call this, never a
 # provider, and commit what it writes, so dropping a provider only stops new generation.
 #
-#   genmedia image   --prompt TEXT --out FILE.png [--ref IMG]... [--aspect 1:1] [--force]
-#   genmedia video   --prompt TEXT --out FILE.mp4 [--ref IMG]... [--aspect 16:9] [--duration 4] [--model M] [--force]
-#   genmedia icons   MASTER.png OUTDIR        every app icon size from one master, locally (ImageMagick)
-#   genmedia credits                          Flow balance, and this month's spend from the ledger
-#   genmedia login                            one-time Flow sign-in (flow backend)
-#   genmedia project ID                       the Flow project every generation goes into (saved locally)
-#   genmedia browse                           open Flow in gflow's own profile (dialogs, projects); close it after
+#   mint image   --prompt TEXT --out FILE.png [--ref IMG]... [--aspect 1:1] [--force]
+#   mint video   --prompt TEXT --out FILE.mp4 [--ref IMG]... [--aspect 16:9] [--duration 4] [--model M] [--force]
+#   mint icons   MASTER.png OUTDIR        every app icon size from one master, locally (ImageMagick)
+#   mint credits                          Flow balance, and this month's spend from the ledger
+#   mint login                            one-time Flow sign-in (flow backend)
+#   mint project ID                       the Flow project every generation goes into (saved locally)
+#   mint browse                           open Flow in gflow's own profile (dialogs, projects); close it after
 #
-# Backends (GENMEDIA_BACKEND):
-#   flow    default. Google Flow on the AI Plus credits, through gflow-cli (unofficial; mise, `genmedia` extra) in
-#           Brave standing in for Chrome (genmedia ansible role). Images spend no credits (a daily quota); video does,
-#           capped per call by GENMEDIA_MAX_CREDITS (default 20).
+# Backends (MINT_BACKEND):
+#   flow    default. Google Flow on the AI Plus credits, through gflow-cli (unofficial; mise, `mint` extra) in
+#           Brave standing in for Chrome (mint ansible role). Images spend no credits (a daily quota); video does,
+#           capped per call by MINT_MAX_CREDITS (default 20).
 #   manual  prints the prompt, opens Flow in the browser and waits for the file you download (~/Downloads), then
 #           moves it to --out. Works with any web tool, and after the subscription is gone.
-# Every generation is logged to ~/.local/state/genmedia/ledger.tsv (date, backend, kind, credits, out, prompt).
+# Every generation is logged to ~/.local/state/mint/ledger.tsv (date, backend, kind, credits, out, prompt).
 set -euo pipefail
 PATH=$HOME/.local/share/mise/shims:$PATH
 export GFLOW_CLI_TELEMETRY=0 GFLOW_CLI_UPDATE_CHECK=0 # no usage reports; Renovate moves the pin, not `gflow update`
 # Generation finds Chrome only at Playwright's path; sign-in looks on PATH and /usr/bin instead, so point it there too.
 [ -n "${CHROME_BINARY:-}" ] || [ ! -e /opt/google/chrome/chrome ] || export CHROME_BINARY=/opt/google/chrome/chrome
 
-backend=${GENMEDIA_BACKEND:-flow}
-max_credits=${GENMEDIA_MAX_CREDITS:-20}
-state=${XDG_STATE_HOME:-$HOME/.local/state}/genmedia
+backend=${MINT_BACKEND:-flow}
+max_credits=${MINT_MAX_CREDITS:-20}
+state=${XDG_STATE_HOME:-$HOME/.local/state}/mint
 ledger=$state/ledger.tsv
 flow_url=https://flow.google.com
-project_file=${XDG_CONFIG_HOME:-$HOME/.config}/genmedia/flow-project # per account, so not in the dotfiles
-flow_project=${GENMEDIA_FLOW_PROJECT:-$(cat "$project_file" 2>/dev/null || true)}
+project_file=${XDG_CONFIG_HOME:-$HOME/.config}/mint/flow-project # per account, so not in the dotfiles
+flow_project=${MINT_FLOW_PROJECT:-$(cat "$project_file" 2>/dev/null || true)}
 
 die() {
-    echo "genmedia: $*" >&2
+    echo "mint: $*" >&2
     exit 1
 }
 usage() {
@@ -41,9 +41,9 @@ usage() {
 }
 
 need_gflow() {
-    command -v gflow >/dev/null 2>&1 || die "gflow not found: select the genmedia extra and run chezmoi apply (mise installs it)"
+    command -v gflow >/dev/null 2>&1 || die "gflow not found: select the mint extra and run chezmoi apply (mise installs it)"
     [ "$(uname -s)" != Linux ] || [ -e /opt/google/chrome/chrome ] \
-        || die "/opt/google/chrome/chrome missing: chezmoi apply (genmedia ansible role links Brave there)"
+        || die "/opt/google/chrome/chrome missing: chezmoi apply (mint ansible role links Brave there)"
 }
 
 # The Flow balance as a number, or empty when it can't be read.
@@ -120,8 +120,8 @@ generate() { # image|video, then options
             log "$kind" "${spent:-?}" "$out" "$prompt"
             ;;
         manual)
-            local dl=${XDG_DOWNLOAD_DIR:-$HOME/Downloads} timeout=${GENMEDIA_MANUAL_TIMEOUT:-1800} file="" size=-1 now
-            printf 'genmedia (manual): generate this %s and download it; it lands in %s\n\n  %s\n\n' "$kind" "$out" "$prompt" >&2
+            local dl=${XDG_DOWNLOAD_DIR:-$HOME/Downloads} timeout=${MINT_MANUAL_TIMEOUT:-1800} file="" size=-1 now
+            printf 'mint (manual): generate this %s and download it; it lands in %s\n\n  %s\n\n' "$kind" "$out" "$prompt" >&2
             [ ${#refs[@]} -eq 0 ] || printf '  references: %s\n' "${refs[*]}" >&2
             [ -z "$aspect" ] || printf '  aspect: %s\n' "$aspect" >&2
             (xdg-open "$flow_url" || open "$flow_url") >/dev/null 2>&1 || true
@@ -148,14 +148,14 @@ generate() { # image|video, then options
             settle "$out"
             log "$kind" 0 "$out" "$prompt"
             ;;
-        *) die "unknown GENMEDIA_BACKEND: $backend (flow, manual)" ;;
+        *) die "unknown MINT_BACKEND: $backend (flow, manual)" ;;
     esac
     echo "$out"
 }
 
 icons() { # master outdir: square-crop the master, then every size apps and stores ask for
     local master=${1:-} dir=${2:-}
-    [ -f "$master" ] && [ -n "$dir" ] || die "usage: genmedia icons MASTER.png OUTDIR"
+    [ -f "$master" ] && [ -n "$dir" ] || die "usage: mint icons MASTER.png OUTDIR"
     command -v magick >/dev/null 2>&1 || die "ImageMagick (magick) not found"
     mkdir -p "$dir"
     local tmp sq
@@ -193,7 +193,7 @@ case ${1:-} in
     icons) icons "${@:2}" ;;
     credits) credits ;;
     project)
-        [ -n "${2:-}" ] || die "usage: genmedia project ID (from flow.google.com/project/ID)"
+        [ -n "${2:-}" ] || die "usage: mint project ID (from flow.google.com/project/ID)"
         mkdir -p "$(dirname "$project_file")"
         id=$(printf '%s' "$2" | sed -E 's#^.*/project/##; s#[/?\#].*$##')
         [ -n "$id" ] || die "no project id in: $2"
@@ -205,7 +205,7 @@ case ${1:-} in
         # The profile's cookies are stored the way gflow launches it (--password-store=basic). Opening it without
         # that flag re-encrypts them with the desktop keyring, and gflow is signed out until the next login.
         dir=$(find "${XDG_DATA_HOME:-$HOME/.local/share}/gflow-cli" -maxdepth 1 -type d -name 'profile_*' -print -quit 2>/dev/null || true)
-        [ -n "$dir" ] || die "no gflow profile yet: genmedia login"
+        [ -n "$dir" ] || die "no gflow profile yet: mint login"
         "${CHROME_BINARY:-/opt/google/chrome/chrome}" --user-data-dir="$dir" --password-store=basic "$flow_url${flow_project:+/project/$flow_project}"
         ;;
     login)

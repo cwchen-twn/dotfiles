@@ -1,0 +1,56 @@
+---
+# mint's Flow backend (gflow-cli) launches Playwright with channel="chrome", which accepts only
+# /opt/google/chrome/chrome. Brave stands in there through a symlink, so the browser that saved the Flow login
+# cookies is the same one that reads them back. This role runs on every Debian machine so turning the `mint`
+# extra off removes the symlink again. It only ever removes its own symlink to Brave, never a real Chrome install.
+- name: Converters mint needs (formats the backend serves, video trims, icon sizes)
+  ansible.builtin.apt: { name: [imagemagick, ffmpeg], state: present }
+  when: "'mint' in extras"
+
+- name: Brave stands in for Chrome at Playwright's path
+  vars:
+    mint_chrome: /opt/google/chrome/chrome
+    mint_brave: /opt/brave.com/brave/brave-browser
+    # the path is free, or already our link: anything else (a real Chrome, another link) is never replaced
+    mint_chrome_mine: >-
+      {{ not mint_chrome_stat.stat.exists and not (mint_chrome_stat.stat.islnk | default(false))
+      or (mint_chrome_stat.stat.lnk_target | default('')) == mint_brave }}
+  block:
+    - name: Look at the Chrome path
+      ansible.builtin.stat: { path: "{{ mint_chrome }}" }
+      register: mint_chrome_stat
+
+    - name: Look for Brave
+      ansible.builtin.stat: { path: "{{ mint_brave }}" }
+      register: mint_brave_stat
+
+    - name: Link Brave into the Chrome path
+      when:
+        - "'mint' in extras"
+        - mint_brave_stat.stat.exists
+        - mint_chrome_mine
+      block:
+        - name: Chrome directory
+          ansible.builtin.file: { path: /opt/google/chrome, state: directory, mode: "0755" }
+        - name: Chrome symlink to Brave
+          ansible.builtin.file: { src: "{{ mint_brave }}", dest: "{{ mint_chrome }}", state: link, force: true }
+
+    - name: Say why there is no link
+      ansible.builtin.debug:
+        msg: >-
+          mint: {{ 'Brave is not installed (select brave in desktop, or install Google Chrome)'
+          if not mint_brave_stat.stat.exists else mint_chrome ~ ' is already something else; left as it is' }}
+      when:
+        - "'mint' in extras"
+        - not mint_brave_stat.stat.exists or not mint_chrome_mine
+
+    - name: Remove the Brave link when mint is off
+      when:
+        - "'mint' not in extras"
+        - mint_chrome_stat.stat.islnk | default(false)
+        - mint_chrome_stat.stat.lnk_target == mint_brave
+      block:
+        - name: Chrome symlink
+          ansible.builtin.file: { path: "{{ mint_chrome }}", state: absent }
+        - name: Chrome directories, if now empty  # noqa: no-changed-when  rmdir only removes empty dirs
+          ansible.builtin.command: rmdir --ignore-fail-on-non-empty /opt/google/chrome /opt/google

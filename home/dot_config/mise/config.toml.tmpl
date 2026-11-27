@@ -63,9 +63,9 @@ pnpm = "latest"
 "npm:chrome-devtools-mcp" = "latest"      # perf-auditor subagent
 {{- end }}
 {{- end }}
-{{- if has "genmedia" .extras }}
-# genmedia's Flow backend (~/.local/bin/genmedia, media-assets skill): unofficial, drives Google Flow in Brave-as-Chrome
-# (genmedia ansible role) on the AI Plus credits. Pinned: it automates a private UI, so upgrades are reviewed.
+{{- if has "mint" .extras }}
+# mint's Flow backend (~/.local/bin/mint, mint skill): unofficial, drives Google Flow in Brave-as-Chrome
+# (mint ansible role) on the AI Plus credits. Pinned: it automates a private UI, so upgrades are reviewed.
 # renovate: datasource=pypi depName=gflow-cli versioning=pep440
 "pipx:gflow-cli" = "0.107.0"
 {{- end }}

@@ -1,0 +1,12 @@
+{{ if not (has "mint" .extras) -}}
+#!/usr/bin/env bash
+# The mint extra is off: delete what it deployed. chezmoi ignores these paths then (.chezmoiignore) and never deletes
+# what it ignores; the ansible mint role removes its Chrome symlink. Runs on every apply: a few no-op checks.
+set -eu
+for p in .local/bin/mint .claude/skills/mint .config/agents/skills/mint; do
+    if [ -e "$HOME/$p" ] || [ -L "$HOME/$p" ]; then
+        rm -rf "${HOME:?}/$p"
+        echo "mint off: removed ~/$p"
+    fi
+done
+{{ end -}}

@@ -52,11 +52,11 @@
 {{ if not (has "claude-code" .extras) }}
 .claude
 {{ end }}
-{{ if not (has "genmedia" .extras) }}
-# removed again by run_after_60-genmedia-off (chezmoi never deletes what it ignores)
-.local/bin/genmedia
-.config/agents/skills/media-assets
-.claude/skills/media-assets
+{{ if not (has "mint" .extras) }}
+# removed again by run_after_60-mint-off (chezmoi never deletes what it ignores)
+.local/bin/mint
+.config/agents/skills/mint
+.claude/skills/mint
 {{ end }}
 
 # Claude Code runtime state: never managed
