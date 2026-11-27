@@ -20,7 +20,7 @@
   when: ansible_facts['distribution'] == 'Debian'
 
 # Quieter than Debian's defaults (63/66/86 spins up on any compile). The CPU throttles at ~105 C, so this is safe.
-# Live tweaks: edit /etc/mbpfan.conf + `sudo systemctl restart mbpfan`; watch with `watch cat /sys/devices/platform/applesmc.768/fan1_input`.
+# Live tweaks: edit /etc/mbpfan.conf + `sudo systemctl restart mbpfan`; watch with `watch sensors applesmc-isa-0300`.
 - name: Fan curve (mbpfan)
   ansible.builtin.lineinfile:
     path: /etc/mbpfan.conf
@@ -47,6 +47,121 @@
 - name: Fan control and power management
   ansible.builtin.systemd_service: { name: "{{ item }}", enabled: true, state: started }
   loop: [mbpfan, tlp]
+
+# Battery charge cap: a Li-ion cell held at 100% (and warm) on AC wears out faster, so charging stops at
+# battery_charge_limit. The SMC does it (key BCLM, kept across reboots and other OSes until an SMC reset), but the
+# in-tree applesmc can't write it, and TLP's battery care covers only Apple Silicon. applesmc-next's patched sbs
+# doesn't build since kernel 7.0, so files/applesmc-bclm is a DKMS package of the kernel's own applesmc.c (from Debian's
+# linux-source for that kernel) plus /sys/devices/platform/applesmc.768/charge_limit. If a kernel's source is missing or
+# the patch stops applying, that kernel keeps the in-tree applesmc (fans and backlight work, no cap file).
+# battery-charge-limit.service sets the cap at every boot, which also ends a `battery full`.
+# Check: `battery` (fish) shows the cap; on AC above it the status reads "Not charging".
+- name: Battery charge limit (applesmc-bclm)
+  when: ansible_facts['distribution'] == 'Debian'  # prepare.sh reads Debian's linux-source-X.Y
+  vars:
+    battery_charge_limit: 80
+    bclm_version: "{{ lookup('file', 'applesmc-bclm/dkms.conf') | regex_search('PACKAGE_VERSION=\"([^\"]+)', '\\1') | first }}"
+    bclm_install: "/usr/src/applesmc-bclm-{{ bclm_version }}/install.sh"
+  block:
+    - name: Kernel source (applesmc.c comes from it) # linux-source follows the newest kernel series, like linux-image
+      ansible.builtin.apt: { name: linux-source }
+
+    - name: Applesmc-bclm in the DKMS tree
+      ansible.builtin.copy:
+        src: applesmc-bclm/
+        dest: "/usr/src/applesmc-bclm-{{ bclm_version }}/"
+        mode: preserve
+      register: bclm_src
+
+    # DKMS installs to updates/, which wins over the in-tree applesmc. install.sh skips (and reports) a kernel it can't
+    # build for, which keeps the in-tree driver: no cap, but fans and backlight as before.
+    - name: Build and install it for every kernel with headers
+      ansible.builtin.shell: |
+        {% if bclm_src.changed %}dkms remove -m applesmc-bclm -v {{ bclm_version }} --all >/dev/null 2>&1 || true{% endif %}
+        {{ bclm_install }}
+      args: { executable: /bin/bash }
+      register: bclm_dkms
+      changed_when: "'CHANGED' in bclm_dkms.stdout"
+
+    - name: Report kernels left with the in-tree applesmc
+      ansible.builtin.debug: { msg: "{{ bclm_dkms.stderr_lines }}" }
+      when: bclm_dkms.stderr | length > 0
+
+    # A kernel upgrade can trigger DKMS before linux-source of the same version is unpacked: retry after every apt run.
+    - name: Retry the build after apt runs
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/90-applesmc-bclm
+        mode: "0644"
+        content: |
+          // Managed by the dotfiles (ansible macbook role): build applesmc-bclm for kernels that don't have it yet.
+          DPkg::Post-Invoke { "{{ bclm_install }} >/dev/null 2>&1 || true"; };
+
+    # mbpfan holds applesmc: stop it around the reload so the fans are handed back after.
+    - name: Load the new applesmc now (else at the next boot)  # noqa: no-handler  inline on purpose (mbpfan around it)
+      when: bclm_dkms.changed
+      block:
+        - name: Stop mbpfan
+          ansible.builtin.systemd_service: { name: mbpfan, state: stopped }
+
+        - name: Reload applesmc
+          ansible.builtin.shell: modprobe -r applesmc && modprobe applesmc
+          changed_when: true
+      always:
+        - name: Start mbpfan again
+          ansible.builtin.systemd_service: { name: mbpfan, state: started }
+
+    - name: Cap script and its boot unit
+      ansible.builtin.copy:
+        dest: "{{ item.dest }}"
+        mode: "{{ item.mode }}"
+        content: "{{ item.content }}"
+      loop:
+        - dest: /usr/local/sbin/battery-charge-limit
+          mode: "0755"
+          content: |
+            #!/bin/sh
+            # Managed by the dotfiles (ansible macbook role). battery-charge-limit [PERCENT]: stop charging at PERCENT
+            # (50-100, default {{ battery_charge_limit }}). Waits up to 10 s for applesmc's file at boot. Without it (this
+            # kernel runs the in-tree applesmc) the boot unit only logs that; an explicit PERCENT is an error.
+            set -eu
+            pct=${1:-{{ battery_charge_limit }}}
+            f=/sys/devices/platform/applesmc.768/charge_limit
+            i=0
+            until [ -w "$f" ]; do
+                i=$((i + 1))
+                if [ "$i" -gt 10 ]; then
+                    echo "battery-charge-limit: no $f (this kernel has no applesmc-bclm build)" >&2
+                    [ $# -eq 0 ] && exit 0
+                    exit 1
+                fi
+                sleep 1
+            done
+            echo "$pct" > "$f"
+            logger -t battery-charge-limit "charging stops at $(cat "$f")%"
+        - dest: /etc/systemd/system/battery-charge-limit.service
+          mode: "0644"
+          content: |
+            # Managed by the dotfiles (ansible macbook role)
+            [Unit]
+            Description=Stop charging the battery at {{ battery_charge_limit }}% (SMC key BCLM)
+            ConditionPathExists=/sys/devices/platform/applesmc.768
+
+            [Service]
+            Type=oneshot
+            RemainAfterExit=yes
+            ExecStart=/usr/local/sbin/battery-charge-limit
+
+            [Install]
+            WantedBy=multi-user.target
+      loop_control: { label: "{{ item.dest }}" }
+      register: battery_limit_unit
+
+    - name: Enable it and set the cap now
+      ansible.builtin.systemd_service:
+        name: battery-charge-limit.service
+        enabled: true
+        state: "{{ 'restarted' if battery_limit_unit.changed or bclm_dkms.changed else 'started' }}"
+        daemon_reload: "{{ battery_limit_unit.changed }}"
 
 # BD PROCHOT: the SMC can assert the CPU's external "processor hot" line, which pins every core at 500 MHz with no
 # thermal throttle event logged. Seen on a MacBookPro12,1 on battery under load (Brave) at 68-76 C. Clearing bit 0 of

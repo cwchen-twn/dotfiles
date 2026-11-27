@@ -25,7 +25,8 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
 Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age,
 gitleaks, rtk, codebase-memory-mcp and the Bitwarden CLI. System info / monitoring: fastfetch, btop, duf, gdu (mise);
 inxi (`sysinfo`), lm-sensors, smartmontools, iotop-c, nethogs, nvtop, s-tui, acpi, speedtest-cli (apt); `mem-stat [N]`
-(memory summary, swap, top N apps), `batinfo`, `battery` (TLP health) and `sudo intel_gpu_top` on MacBooks. The
+(memory summary, swap, top N apps), `battery` (status, health, charge cap; `battery full` charges to 100% once, `battery
+limit` caps it again, `battery info`/`tlp` for upower and TLP) and `sudo intel_gpu_top` on MacBooks. The
 JetBrainsMono Nerd Font is installed when any desktop app is selected, and on Linux it is the default `monospace`
 (`~/.config/fontconfig/conf.d/50-monospace.conf`), so every terminal and code font gets Nerd Font icons.
 
@@ -84,9 +85,11 @@ is the chezmoi one-liner above, and log in again with "LXQt (labwc)".
   swap file; the Wi-Fi driver `brcmfmac` is unloaded around every suspend/hibernate by
   `/usr/lib/systemd/system-sleep/50-dotfiles-macbook`: otherwise resume hangs and Wi-Fi doesn't come back after
   suspend), lid closed = suspend, then hibernate after 2 h on battery (plain suspend on AC; logind handles the lid, not
-  LXQt), hibernate at 5% battery, three-finger drag restarted after every wake-up, a quieter `mbpfan` curve, a
-  macOS-like touchpad (tap to click, natural scrolling, two-finger right-click: labwc's `rc.xml`), and the keyboard
-  backlight (Fn+F5/F6 via `brightnessctl`, off after 60 s idle: swayidle runs `~/.local/bin/kbd-backlight-idle`).
+  LXQt), hibernate at 5% battery, charging stops at 80% (SMC key BCLM, via a patched `applesmc` built by DKMS:
+  `battery-charge-limit.service` sets it at boot), three-finger drag restarted after every wake-up, a quieter
+  `mbpfan` curve, a macOS-like touchpad (tap to click, natural scrolling, two-finger right-click: labwc's `rc.xml`),
+  and the keyboard backlight (Fn+F5/F6 via `brightnessctl`, off after 60 s idle: swayidle runs
+  `~/.local/bin/kbd-backlight-idle`).
 - FaceTime camera in browsers/Meet: facetimehd reports its sizes as a range, which Chromium's camera code skips (also
   through PipeWire), so Brave/Chrome see no camera. Before a call run `camera-on` and pick "FaceTime HD (relay)": a
   v4l2loopback camera (`/dev/video10`, fixed 1280x720) fed by ffmpeg. `camera-off` afterwards (the LED goes off).

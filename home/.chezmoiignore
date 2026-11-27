@@ -8,6 +8,7 @@
 .config/fish/functions/printer-rm.fish
 .config/fish/functions/mem-stat.fish
 .config/fish/functions/bt-pair.fish
+.config/fish/functions/battery.fish
 .local/bin/media-check
 .local/bin/cpu-stat
 .local/bin/vol

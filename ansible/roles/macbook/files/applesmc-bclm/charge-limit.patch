@@ -1,0 +1,99 @@
+--- a/drivers/hwmon/applesmc.c
++++ b/drivers/hwmon/applesmc.c
+@@ -76,6 +76,10 @@
+ 
+ #define TEMP_SENSOR_TYPE	"sp78"
+ 
++/* Battery charge limit in percent (ui8): charging stops there. Persists in the SMC until an SMC reset. */
++#define CHARGE_LIMIT_KEY	"BCLM"
++#define CHARGE_LIMIT_MIN	50
++
+ /* List of keys used to read/write fan speeds */
+ static const char *const fan_speed_fmt[] = {
+ 	"F%dAc",		/* actual speed */
+@@ -1149,6 +1153,68 @@
+ 	destroy_workqueue(applesmc_led_wq);
+ }
+ 
++static bool applesmc_has_charge_limit;
++
++static ssize_t charge_limit_show(struct device *dev,
++				 struct device_attribute *attr, char *sysfsbuf)
++{
++	u8 val;
++	int ret;
++
++	ret = applesmc_read_key(CHARGE_LIMIT_KEY, &val, 1);
++	if (ret)
++		return ret;
++	return sysfs_emit(sysfsbuf, "%u\n", val);
++}
++
++static ssize_t charge_limit_store(struct device *dev,
++				  struct device_attribute *attr,
++				  const char *sysfsbuf, size_t count)
++{
++	u8 val;
++	int ret;
++
++	if (kstrtou8(sysfsbuf, 10, &val) || val < CHARGE_LIMIT_MIN || val > 100)
++		return -EINVAL;
++	ret = applesmc_write_key(CHARGE_LIMIT_KEY, &val, 1);
++	if (ret)
++		return ret;
++	return count;
++}
++
++static DEVICE_ATTR_RW(charge_limit);
++
++/* Optional: without a writable 1-byte BCLM key the driver loads as before, without the file. */
++static void applesmc_create_charge_limit(void)
++{
++	const struct applesmc_entry *entry;
++
++	entry = applesmc_get_entry_by_key(CHARGE_LIMIT_KEY);
++	if (IS_ERR(entry)) {
++		pr_info("no %s key (%ld), charge limit not available\n",
++			CHARGE_LIMIT_KEY, PTR_ERR(entry));
++		return;
++	}
++	if (entry->len != 1 || !(entry->flags & 0x40) ||
++	    strncmp(entry->type, "ui8", 3)) {
++		pr_info("%s key not usable (len %u type %.4s flags 0x%02x), charge limit not available\n",
++			CHARGE_LIMIT_KEY, entry->len, entry->type, entry->flags);
++		return;
++	}
++	if (device_create_file(&pdev->dev, &dev_attr_charge_limit)) {
++		pr_warn("could not create charge_limit attribute\n");
++		return;
++	}
++	applesmc_has_charge_limit = true;
++}
++
++static void applesmc_release_charge_limit(void)
++{
++	if (applesmc_has_charge_limit)
++		device_remove_file(&pdev->dev, &dev_attr_charge_limit);
++	applesmc_has_charge_limit = false;
++}
++
+ static int applesmc_dmi_match(const struct dmi_system_id *id)
+ {
+ 	return 1;
+@@ -1563,6 +1629,8 @@
+ 		goto out_light_ledclass;
+ 	}
+ 
++	applesmc_create_charge_limit();
++
+ 	return 0;
+ 
+ out_light_ledclass:
+@@ -1589,6 +1657,7 @@
+ 
+ static void __exit applesmc_exit(void)
+ {
++	applesmc_release_charge_limit();
+ 	hwmon_device_unregister(hwmon_dev);
+ 	applesmc_release_key_backlight();
+ 	applesmc_release_light_sensor();

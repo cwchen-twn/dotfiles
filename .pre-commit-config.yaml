@@ -12,7 +12,7 @@ repos:
         args: [--branch, main]
       - id: check-merge-conflict
       - id: trailing-whitespace
-        exclude: \.age$
+        exclude: \.(age|patch)$   # patches keep the single-space blank context lines
       - id: end-of-file-fixer
         exclude: \.age$
       - id: check-yaml
