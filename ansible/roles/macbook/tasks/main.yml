@@ -77,7 +77,8 @@
     # build for, which keeps the in-tree driver: no cap, but fans and backlight as before.
     - name: Build and install it for every kernel with headers
       ansible.builtin.shell: |
-        {% if bclm_src.changed %}dkms remove -m applesmc-bclm -v {{ bclm_version }} --all >/dev/null 2>&1 || true{% endif %}
+        # A shell if, not a Jinja if-block: Ansible's trim_blocks eats the newline after the block's end tag.
+        if {{ bclm_src.changed | lower }}; then dkms remove -m applesmc-bclm -v {{ bclm_version }} --all >/dev/null 2>&1 || true; fi
         {{ bclm_install }}
       args: { executable: /bin/bash }
       register: bclm_dkms
@@ -313,7 +314,7 @@
   ansible.builtin.shell: |
     set -e
     m=facetimehd v={{ facetimehd_ver }}
-    {% if facetimehd_src.changed %}dkms remove -m $m -v $v --all >/dev/null 2>&1 || true{% endif %}
+    if {{ facetimehd_src.changed | lower }}; then dkms remove -m $m -v $v --all >/dev/null 2>&1 || true; fi
     dkms status -m $m -v $v | grep -q . || dkms add -m $m -v $v
     for k in /lib/modules/*; do
       k=${k##*/}
