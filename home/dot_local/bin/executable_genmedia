@@ -1,0 +1,203 @@
+#!/usr/bin/env bash
+# genmedia: the one seam between apps and whatever generates their media (media-assets skill). Apps call this, never a
+# provider, and commit what it writes, so dropping a provider only stops new generation.
+#
+#   genmedia image   --prompt TEXT --out FILE.png [--ref IMG]... [--aspect 1:1] [--force]
+#   genmedia video   --prompt TEXT --out FILE.mp4 [--ref IMG]... [--aspect 16:9] [--duration 4] [--model M] [--force]
+#   genmedia icons   MASTER.png OUTDIR        every app icon size from one master, locally (ImageMagick)
+#   genmedia credits                          Flow balance, and this month's spend from the ledger
+#   genmedia login                            one-time Flow sign-in (flow backend)
+#   genmedia project ID                       the Flow project every generation goes into (saved locally)
+#   genmedia browse                           open Flow in gflow's own profile (dialogs, projects); close it after
+#
+# Backends (GENMEDIA_BACKEND):
+#   flow    default. Google Flow on the AI Plus credits, through gflow-cli (unofficial; mise, `genmedia` extra) in
+#           Brave standing in for Chrome (genmedia ansible role). Images spend no credits (a daily quota); video does,
+#           capped per call by GENMEDIA_MAX_CREDITS (default 20).
+#   manual  prints the prompt, opens Flow in the browser and waits for the file you download (~/Downloads), then
+#           moves it to --out. Works with any web tool, and after the subscription is gone.
+# Every generation is logged to ~/.local/state/genmedia/ledger.tsv (date, backend, kind, credits, out, prompt).
+set -euo pipefail
+PATH=$HOME/.local/share/mise/shims:$PATH
+export GFLOW_CLI_TELEMETRY=0 GFLOW_CLI_UPDATE_CHECK=0 # no usage reports; Renovate moves the pin, not `gflow update`
+# Generation finds Chrome only at Playwright's path; sign-in looks on PATH and /usr/bin instead, so point it there too.
+[ -n "${CHROME_BINARY:-}" ] || [ ! -e /opt/google/chrome/chrome ] || export CHROME_BINARY=/opt/google/chrome/chrome
+
+backend=${GENMEDIA_BACKEND:-flow}
+max_credits=${GENMEDIA_MAX_CREDITS:-20}
+state=${XDG_STATE_HOME:-$HOME/.local/state}/genmedia
+ledger=$state/ledger.tsv
+flow_url=https://flow.google.com
+project_file=${XDG_CONFIG_HOME:-$HOME/.config}/genmedia/flow-project # per account, so not in the dotfiles
+flow_project=${GENMEDIA_FLOW_PROJECT:-$(cat "$project_file" 2>/dev/null || true)}
+
+die() {
+    echo "genmedia: $*" >&2
+    exit 1
+}
+usage() {
+    sed -n '5,11p' "$0" | sed 's/^# \{0,1\}//'
+    exit "${1:-0}"
+}
+
+need_gflow() {
+    command -v gflow >/dev/null 2>&1 || die "gflow not found: select the genmedia extra and run chezmoi apply (mise installs it)"
+    [ "$(uname -s)" != Linux ] || [ -e /opt/google/chrome/chrome ] \
+        || die "/opt/google/chrome/chrome missing: chezmoi apply (genmedia ansible role links Brave there)"
+}
+
+# The Flow balance as a number, or empty when it can't be read.
+balance() {
+    gflow credits user -o json 2>/dev/null \
+        | jq -r '[.. | objects | (.credits? // .balance? // .remaining? // empty) | numbers][0] // empty' 2>/dev/null || true
+}
+
+log() { # kind credits out prompt
+    mkdir -p "$state"
+    [ -s "$ledger" ] || printf 'date\tbackend\tkind\tcredits\tout\tprompt\n' >"$ledger"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -Iseconds)" "$backend" "$1" "$2" "$3" "$(printf '%s' "$4" | tr '\t\n' '  ' | cut -c1-200)" >>"$ledger"
+}
+
+# gflow keeps the extension Flow serves (JPEG images, say): convert to the one --out asks for.
+settle() {
+    local out=$1 got
+    [ -e "$out" ] && return
+    got=$(find "$(dirname "$out")" -maxdepth 1 -type f -name "$(basename "${out%.*}").*" -newer "$state/.started" -print -quit)
+    [ -n "$got" ] || die "the backend wrote no file for $out"
+    case $out in
+        *.mp4 | *.webm | *.mov) ffmpeg -loglevel error -y -i "$got" "$out" ;;
+        *) magick "$got" "$out" ;;
+    esac
+    rm -f "$got"
+}
+
+generate() { # image|video, then options
+    local kind=$1 prompt="" out="" aspect="" duration="" model="" force=0 refs=()
+    shift
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --prompt) prompt=$2 && shift 2 ;;
+            --out) out=$2 && shift 2 ;;
+            --ref) refs+=("$2") && shift 2 ;;
+            --aspect) aspect=$2 && shift 2 ;;
+            --duration) duration=$2 && shift 2 ;;
+            --model) model=$2 && shift 2 ;; # backend's model name (flow: gflow models)
+            --force) force=1 && shift ;;
+            -h | --help) usage ;;
+            *) die "unknown option: $1" ;;
+        esac
+    done
+    [ -n "$prompt" ] && [ -n "$out" ] || die "$kind needs --prompt and --out"
+    [ "$force" = 1 ] || [ ! -e "$out" ] || die "$out exists (committed assets stay put; --force to regenerate)"
+    mkdir -p "$(dirname "$out")" "$state"
+    touch "$state/.started"
+
+    case $backend in
+        flow)
+            need_gflow
+            local before after args=() spent=""
+            before=$(balance)
+            [ -z "$aspect" ] || args+=(--aspect "$aspect")
+            [ -z "$model" ] || args+=(--model "$model")
+            [ -z "$flow_project" ] || args+=(--project "$flow_project")
+            for r in "${refs[@]}"; do args+=(--ref "$r"); done
+            if [ "$kind" = image ]; then
+                gflow image gen "$prompt" "${args[@]}" --out-file "$out"
+            else
+                # Flow offers no length control on every account: generate at its default length, trim below.
+                gflow video gen "$prompt" "${args[@]}" --max-credits "$max_credits" --out-file "$out"
+            fi
+            settle "$out"
+            if [ "$kind" = video ] && [ -n "$duration" ]; then
+                ffmpeg -loglevel error -y -i "$out" -t "$duration" -c copy "$out.trim.${out##*.}" && mv "$out.trim.${out##*.}" "$out"
+            fi
+            after=$(balance)
+            [ -z "$before" ] || [ -z "$after" ] || spent=$((before - after))
+            log "$kind" "${spent:-?}" "$out" "$prompt"
+            ;;
+        manual)
+            local dl=${XDG_DOWNLOAD_DIR:-$HOME/Downloads} timeout=${GENMEDIA_MANUAL_TIMEOUT:-1800} start file=""
+            start=$(mktemp)
+            printf 'genmedia (manual): generate this %s and download it; it lands in %s\n\n  %s\n\n' "$kind" "$out" "$prompt" >&2
+            [ ${#refs[@]} -eq 0 ] || printf '  references: %s\n' "${refs[*]}" >&2
+            [ -z "$aspect" ] || printf '  aspect: %s\n' "$aspect" >&2
+            (xdg-open "$flow_url" || open "$flow_url") >/dev/null 2>&1 || true
+            echo "waiting up to ${timeout}s for a new file in $dl ..." >&2
+            local ext='png|jpe?g|webp'
+            [ "$kind" = image ] || ext='mp4|webm|mov'
+            while [ "$timeout" -gt 0 ]; do
+                file=$(find "$dl" -maxdepth 1 -type f -newer "$start" -regextype egrep -iregex ".*\.($ext)" -print -quit)
+                [ -z "$file" ] || break
+                sleep 2
+                timeout=$((timeout - 2))
+            done
+            rm -f "$start"
+            [ -n "$file" ] || die "no file arrived in $dl"
+            sleep 1 # let the browser finish writing
+            mv "$file" "$out"
+            log "$kind" 0 "$out" "$prompt"
+            ;;
+        *) die "unknown GENMEDIA_BACKEND: $backend (flow, manual)" ;;
+    esac
+    echo "$out"
+}
+
+icons() { # master outdir: square-crop the master, then every size apps and stores ask for
+    local master=${1:-} dir=${2:-}
+    [ -f "$master" ] && [ -n "$dir" ] || die "usage: genmedia icons MASTER.png OUTDIR"
+    command -v magick >/dev/null 2>&1 || die "ImageMagick (magick) not found"
+    mkdir -p "$dir"
+    local sq
+    sq=$(mktemp --suffix=.png)
+    magick "$master" -gravity center -background none -extent '%[fx:min(w,h)]x%[fx:min(w,h)]' "$sq"
+    for s in 16 32 48 64 128 180 192 256 512 1024; do
+        magick "$sq" -resize "${s}x${s}" -strip "$dir/icon-$s.png"
+    done
+    cp "$dir/icon-180.png" "$dir/apple-touch-icon.png"
+    magick "$sq" -strip -define icon:auto-resize=16,32,48 "$dir/favicon.ico"
+    # PWA maskable: the platform crops to a circle, so the art sits inside the middle 80%
+    magick "$sq" -resize 410x410 -background none -gravity center -extent 512x512 -strip "$dir/icon-maskable-512.png"
+    rm -f "$sq"
+    ls "$dir"
+}
+
+credits() {
+    if [ "$backend" = flow ] && command -v gflow >/dev/null 2>&1; then
+        gflow credits user || true
+    fi
+    [ -s "$ledger" ] || {
+        echo "ledger: empty ($ledger)"
+        return
+    }
+    local month
+    month=$(date +%Y-%m)
+    awk -F'\t' -v m="$month" 'NR > 1 && index($1, m) == 1 { n++; if ($4 ~ /^[0-9]+$/) c += $4 }
+        END { printf "ledger %s: %d generations, %d credits (images free, video spends credits)\n", m, n, c }' "$ledger"
+    tail -n 5 "$ledger" | cut -f1-5
+}
+
+case ${1:-} in
+    image | video) generate "$@" ;;
+    icons) icons "${@:2}" ;;
+    credits) credits ;;
+    project)
+        [ -n "${2:-}" ] || die "usage: genmedia project ID (from flow.google.com/project/ID)"
+        mkdir -p "$(dirname "$project_file")"
+        echo "${2##*/}" >"$project_file"
+        echo "Flow project: $(cat "$project_file")"
+        ;;
+    browse)
+        need_gflow
+        # The profile's cookies are stored the way gflow launches it (--password-store=basic). Opening it without
+        # that flag re-encrypts them with the desktop keyring, and gflow is signed out until the next login.
+        dir=$(find "${XDG_DATA_HOME:-$HOME/.local/share}/gflow-cli" -maxdepth 1 -type d -name 'profile_*' -print -quit)
+        [ -n "$dir" ] || die "no gflow profile yet: genmedia login"
+        "${CHROME_BINARY:-/opt/google/chrome/chrome}" --user-data-dir="$dir" --password-store=basic "$flow_url${flow_project:+/project/$flow_project}"
+        ;;
+    login)
+        need_gflow
+        gflow auth login --browser chrome
+        ;;
+    -h | --help | help) usage ;;
+    *) usage 1 ;;
+esac

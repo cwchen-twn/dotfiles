@@ -49,3 +49,5 @@
       when: extras | intersect(['openvpn', 'openfortivpn', 'nordvpn']) | length > 0
     - role: claude
       when: "'claude-code' in extras"
+    - role: genmedia  # always on Debian: it also removes its Chrome symlink when the extra is off
+      when: is_debian

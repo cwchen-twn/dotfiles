@@ -20,7 +20,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply \
 | devops | kubernetes (kubectl, helm, kubectx), terraform, docker, tailscale |
 | runtimes | node (+pnpm), go, java (+maven, gradle), rust, bun, python (uv) |
 | desktop | brave, vscode, alacritty, libinput-gestures, libreoffice, balena-etcher, calibre, obsidian, dbeaver, fcitx5 |
-| extras | postgres, openvpn (2.x), openfortivpn, nordvpn, nvidia-cuda, claude-code |
+| extras | postgres, openvpn (2.x), openfortivpn, nordvpn, nvidia-cuda, claude-code, genmedia |
 
 Core tools are always installed: git, gh, glab, tea, fish, tmux, neovim, lazygit, ripgrep, fd, fzf, jq, sops, age,
 gitleaks, rtk, codebase-memory-mcp and the Bitwarden CLI. System info / monitoring: fastfetch, btop, duf, gdu (mise);

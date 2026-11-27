@@ -14,4 +14,4 @@ sshKey = "id_ed25519_ci"
 devops = ["kubernetes", "terraform", "docker", "tailscale"]
 runtimes = ["node", "go", "java", "rust", "bun", "python"]
 desktop = ["brave", "vscode", "alacritty", "libinput-gestures", "libreoffice", "balena-etcher", "calibre", "obsidian", "dbeaver", "fcitx5", "supersonic"]
-extras = ["postgres", "openvpn", "openfortivpn", "nordvpn", "nvidia-cuda", "claude-code"]
+extras = ["postgres", "openvpn", "openfortivpn", "nordvpn", "nvidia-cuda", "claude-code", "genmedia"]
