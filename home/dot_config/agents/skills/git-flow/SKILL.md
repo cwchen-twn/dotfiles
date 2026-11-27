@@ -38,9 +38,23 @@ Then report the PR link. If any condition fails, stop and report instead of push
     is the user's confirmation, and a missing line means ask. A PreToolUse hook on ExitPlanMode
     (`~/.claude/hooks/plan-merge-line.sh`) denies a plan without the line or without a reason. Merge in a Bash
     call of its own, separate from marking the PR ready.
+    **Say the decision in chat as well:** the message that presents the plan (and a revised plan after a rejection)
+    names it, e.g. "Merge: agent, I merge after CI" or "Merge: ask, you merge". The user approves the chat as much
+    as the plan file. The PR report repeats it.
 - CI passed on the PR's head commit, and the "Ready to push" reviews left nothing open.
 
-Then mark it ready (Gitea: drop `WIP:`), merge it as in §3, clean up, and report the merged commit.
+**Watch CI.** Right after opening an agent-merged PR, start a background wait on its head commit's CI
+(`run_in_background`, the "Wait for CI" row in forges.md). It is a bounded loop that prints the final state and
+never chains the merge, and the harness notifies the session when it exits. Then:
+
+- **success:** in separate Bash calls, check the PR body has its marker (`planned`), mark it ready (Gitea: drop
+  `WIP:`), merge it as in §3, clean up, and report the merged commit.
+- **failure or timeout:** report the failing job and stop. Don't retry the merge.
+- **Not watching** (the session ends, or the user said to wait): say so in the report ("not watching CI; say
+  `merge #N` when it's green"). Never write "I'll merge once CI passes" without a wait running.
+
+Gitea reads a `WIP:` draft as `mergeable: false`: mark it ready, re-check `mergeable`, and if it is still false check
+whether `main` moved (§3).
 
 **Ask first:** force-push (even `--force-with-lease`), any push to `main`, merging any other PR, tags,
 `make release … confirm=yes` and deploys. A pushed tag may **deploy**.

@@ -12,6 +12,7 @@ never breaks.
 | Mark ready | `tea pulls edit <n> -t "<title without WIP:>"` | `glab mr update <n> --ready` | `gh pr ready <n>` |
 | Update body | `tea pulls edit <n> --description-file pr.md` | `glab mr update <n> -d "$(cat pr.md)"` | `gh pr edit <n> -F pr.md` |
 | CI status | `tea actions runs ls` · `tea actions runs logs <id>` | `glab ci list` · `glab ci trace <job-id>` | `gh pr checks <n> --watch` · `gh run view <id> --log-failed` |
+| **Wait for CI** (background) | the loop in Notes, "Waiting for CI" | `glab ci status --live` | `gh pr checks <n> --watch --fail-fast` |
 | **FF merge** | `tea api -X POST "repos/{owner}/{repo}/pulls/<n>/merge" -d '{"Do":"fast-forward-only","delete_branch_after_merge":true}'` | `glab mr merge <n>` (project `merge_method: ff`) | `gh pr merge <n> --rebase --delete-branch` |
 | **Rebase+FF merge** (`main` moved) | `tea api -X POST "repos/{owner}/{repo}/pulls/<n>/merge" -d '{"Do":"rebase","delete_branch_after_merge":true}'` | ask the user (local rebase + `--force-with-lease`) | ask the user (local rebase + `--force-with-lease`) |
 | Clean up | `tea pulls clean <n>` | `--remove-source-branch` above | `--delete-branch` above |
@@ -20,7 +21,21 @@ never breaks.
 ## Notes
 
 - **Gitea drafts** are PRs whose title starts with `WIP:`. `--draft` adds the prefix, and marking the PR ready means
-  editing the title to remove it.
+  editing the title to remove it. The API reads a draft as `mergeable: false`: mark it ready before the merge call.
+- **Waiting for CI** runs in a Bash call of its own with `run_in_background`, so the harness notifies the session when
+  it exits. It prints the final state and never merges: the merge is a separate call afterwards. On Gitea, poll the
+  head commit's combined status (empty or `pending` until the runs report; ~30 min cap):
+
+  ```bash
+  sha=$(tea api "repos/{owner}/{repo}/pulls/<n>" | jq -r .head.sha) # the PR's head, not the local checkout
+  for _ in $(seq 90); do
+      s=$(tea api "repos/{owner}/{repo}/commits/$sha/status" | jq -r '.state // empty')
+      case $s in success | failure | error) echo "$s" && exit 0 ;; esac
+      sleep 20
+  done
+  echo timeout
+  ```
+
 - **Gitea merge style.** `tea pulls merge` supports only `merge|rebase|squash|rebase-merge`, and **defaults to `merge`
   (a merge commit) whatever the repo's default is**. Use the API call above for fast-forward-only.
   - If the API answers 405 or 409, `main` has moved. Don't rebase locally or force-push: merge with the **Rebase+FF**
