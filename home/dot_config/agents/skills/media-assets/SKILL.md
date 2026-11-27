@@ -103,8 +103,8 @@ Copy [templates/assets.mk](templates/assets.mk) into the app's Makefile (or `inc
 - `assets/icons`: `genmedia icons assets/src/icon.png $(ICON_OUT)` (default `public/icons`).
 
 `yq` comes from the project's `mise.toml` (`yq = "latest"`). `genmedia icons` makes `icon-{16…1024}.png`,
-`apple-touch-icon.png`, `favicon.ico` and `icon-maskable-512.png` (art inside the middle 80%). Point the web manifest
-and the `<link rel="icon">` tags at them.
+`apple-touch-icon.png`, `favicon.ico` and `icon-maskable-512.png` (the master at 56%, inside the circular safe
+zone). Point the web manifest and the `<link rel="icon">` tags at them.
 
 ## Workflow
 

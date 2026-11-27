@@ -49,21 +49,22 @@ need_gflow() {
 # The Flow balance as a number, or empty when it can't be read.
 balance() {
     gflow credits user -o json 2>/dev/null \
-        | jq -r '[.. | objects | (.credits? // .balance? // .remaining? // empty) | numbers][0] // empty' 2>/dev/null || true
+        | jq -r '.credits // empty | numbers | floor' 2>/dev/null || true
 }
 
 log() { # kind credits out prompt
     mkdir -p "$state"
     [ -s "$ledger" ] || printf 'date\tbackend\tkind\tcredits\tout\tprompt\n' >"$ledger"
-    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -Iseconds)" "$backend" "$1" "$2" "$3" "$(printf '%s' "$4" | tr '\t\n' '  ' | cut -c1-200)" >>"$ledger"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date +%Y-%m-%dT%H:%M:%S%z)" "$backend" "$1" "$2" "$3" "$(printf '%s' "$4" | tr '\t\n' '  ' | cut -c1-200)" >>"$ledger"
 }
 
 # gflow keeps the extension Flow serves (JPEG images, say): convert to the one --out asks for.
 settle() {
     local out=$1 got
-    [ -e "$out" ] && return
+    [ "$out" -nt "$state/.started" ] && return # written by this run (an old file under --force doesn't count)
     got=$(find "$(dirname "$out")" -maxdepth 1 -type f -name "$(basename "${out%.*}").*" -newer "$state/.started" -print -quit)
     [ -n "$got" ] || die "the backend wrote no file for $out"
+    [ "$got" != "$out" ] || return 0
     case $out in
         *.mp4 | *.webm | *.mov) ffmpeg -loglevel error -y -i "$got" "$out" ;;
         *) magick "$got" "$out" ;;
@@ -89,8 +90,11 @@ generate() { # image|video, then options
     done
     [ -n "$prompt" ] && [ -n "$out" ] || die "$kind needs --prompt and --out"
     [ "$force" = 1 ] || [ ! -e "$out" ] || die "$out exists (committed assets stay put; --force to regenerate)"
+    command -v magick >/dev/null 2>&1 || die "ImageMagick (magick) not found: it converts what the backend serves"
+    [ "$kind" = image ] || command -v ffmpeg >/dev/null 2>&1 || die "ffmpeg not found: it converts and trims video"
     mkdir -p "$(dirname "$out")" "$state"
     touch "$state/.started"
+    sleep 1 # mtimes have 1 s resolution on some filesystems: anything written from now on is newer than .started
 
     case $backend in
         flow)
@@ -100,41 +104,48 @@ generate() { # image|video, then options
             [ -z "$aspect" ] || args+=(--aspect "$aspect")
             [ -z "$model" ] || args+=(--model "$model")
             [ -z "$flow_project" ] || args+=(--project "$flow_project")
-            for r in "${refs[@]}"; do args+=(--ref "$r"); done
+            for r in ${refs[@]+"${refs[@]}"}; do args+=(--ref "$r"); done
             if [ "$kind" = image ]; then
-                gflow image gen "$prompt" "${args[@]}" --out-file "$out"
+                gflow image gen "$prompt" ${args[@]+"${args[@]}"} --out-file "$out"
             else
                 # Flow offers no length control on every account: generate at its default length, trim below.
-                gflow video gen "$prompt" "${args[@]}" --max-credits "$max_credits" --out-file "$out"
+                gflow video gen "$prompt" ${args[@]+"${args[@]}"} --max-credits "$max_credits" --out-file "$out"
             fi
             settle "$out"
             if [ "$kind" = video ] && [ -n "$duration" ]; then
                 ffmpeg -loglevel error -y -i "$out" -t "$duration" -c copy "$out.trim.${out##*.}" && mv "$out.trim.${out##*.}" "$out"
             fi
             after=$(balance)
-            [ -z "$before" ] || [ -z "$after" ] || spent=$((before - after))
+            case "$before/$after" in *[!0-9/]* | /* | */) ;; *) spent=$((before - after)) ;; esac
             log "$kind" "${spent:-?}" "$out" "$prompt"
             ;;
         manual)
-            local dl=${XDG_DOWNLOAD_DIR:-$HOME/Downloads} timeout=${GENMEDIA_MANUAL_TIMEOUT:-1800} start file=""
-            start=$(mktemp)
+            local dl=${XDG_DOWNLOAD_DIR:-$HOME/Downloads} timeout=${GENMEDIA_MANUAL_TIMEOUT:-1800} file="" size=-1 now
             printf 'genmedia (manual): generate this %s and download it; it lands in %s\n\n  %s\n\n' "$kind" "$out" "$prompt" >&2
             [ ${#refs[@]} -eq 0 ] || printf '  references: %s\n' "${refs[*]}" >&2
             [ -z "$aspect" ] || printf '  aspect: %s\n' "$aspect" >&2
             (xdg-open "$flow_url" || open "$flow_url") >/dev/null 2>&1 || true
             echo "waiting up to ${timeout}s for a new file in $dl ..." >&2
-            local ext='png|jpe?g|webp'
-            [ "$kind" = image ] || ext='mp4|webm|mov'
+            local pat=(-iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp')
+            [ "$kind" = image ] || pat=(-iname '*.mp4' -o -iname '*.webm' -o -iname '*.mov')
+            # the first new file of the right kind, once its size is non-zero and has stopped changing (a browser can
+            # create the final name before the data arrives)
             while [ "$timeout" -gt 0 ]; do
-                file=$(find "$dl" -maxdepth 1 -type f -newer "$start" -regextype egrep -iregex ".*\.($ext)" -print -quit)
-                [ -z "$file" ] || break
+                [ -n "$file" ] || file=$(find "$dl" -maxdepth 1 -type f -newer "$state/.started" \( "${pat[@]}" \) -print | head -n 1)
+                if [ -n "$file" ]; then
+                    now=$(wc -c <"$file" | tr -d ' ')
+                    [ "$now" -gt 0 ] && [ "$now" = "$size" ] && ! ls "$file".* >/dev/null 2>&1 && break
+                    size=$now
+                fi
                 sleep 2
                 timeout=$((timeout - 2))
             done
-            rm -f "$start"
-            [ -n "$file" ] || die "no file arrived in $dl"
-            sleep 1 # let the browser finish writing
-            mv "$file" "$out"
+            [ -n "$file" ] && [ "$timeout" -gt 0 ] || die "no complete file arrived in $dl"
+            local got="${out%.*}.${file##*.}"
+            [ "$got" = "$out" ] || [ ! -e "$got" ] || die "$got is in the way"
+            mv "$file" "$got"
+            touch "$got"
+            settle "$out"
             log "$kind" 0 "$out" "$prompt"
             ;;
         *) die "unknown GENMEDIA_BACKEND: $backend (flow, manual)" ;;
@@ -147,17 +158,18 @@ icons() { # master outdir: square-crop the master, then every size apps and stor
     [ -f "$master" ] && [ -n "$dir" ] || die "usage: genmedia icons MASTER.png OUTDIR"
     command -v magick >/dev/null 2>&1 || die "ImageMagick (magick) not found"
     mkdir -p "$dir"
-    local sq
-    sq=$(mktemp --suffix=.png)
+    local tmp sq
+    tmp=$(mktemp -d)
+    sq=$tmp/square.png
     magick "$master" -gravity center -background none -extent '%[fx:min(w,h)]x%[fx:min(w,h)]' "$sq"
     for s in 16 32 48 64 128 180 192 256 512 1024; do
         magick "$sq" -resize "${s}x${s}" -strip "$dir/icon-$s.png"
     done
     cp "$dir/icon-180.png" "$dir/apple-touch-icon.png"
     magick "$sq" -strip -define icon:auto-resize=16,32,48 "$dir/favicon.ico"
-    # PWA maskable: the platform crops to a circle, so the art sits inside the middle 80%
-    magick "$sq" -resize 410x410 -background none -gravity center -extent 512x512 -strip "$dir/icon-maskable-512.png"
-    rm -f "$sq"
+    # PWA maskable: the platform may crop to a circle 80% wide; a square fits inside it at 80%/sqrt(2) = 56%
+    magick "$sq" -resize 290x290 -background none -gravity center -extent 512x512 -strip "$dir/icon-maskable-512.png"
+    rm -rf "$tmp"
     ls "$dir"
 }
 
@@ -183,14 +195,16 @@ case ${1:-} in
     project)
         [ -n "${2:-}" ] || die "usage: genmedia project ID (from flow.google.com/project/ID)"
         mkdir -p "$(dirname "$project_file")"
-        echo "${2##*/}" >"$project_file"
+        id=$(printf '%s' "$2" | sed -E 's#^.*/project/##; s#[/?\#].*$##')
+        [ -n "$id" ] || die "no project id in: $2"
+        echo "$id" >"$project_file"
         echo "Flow project: $(cat "$project_file")"
         ;;
     browse)
         need_gflow
         # The profile's cookies are stored the way gflow launches it (--password-store=basic). Opening it without
         # that flag re-encrypts them with the desktop keyring, and gflow is signed out until the next login.
-        dir=$(find "${XDG_DATA_HOME:-$HOME/.local/share}/gflow-cli" -maxdepth 1 -type d -name 'profile_*' -print -quit)
+        dir=$(find "${XDG_DATA_HOME:-$HOME/.local/share}/gflow-cli" -maxdepth 1 -type d -name 'profile_*' -print -quit 2>/dev/null || true)
         [ -n "$dir" ] || die "no gflow profile yet: genmedia login"
         "${CHROME_BINARY:-/opt/google/chrome/chrome}" --user-data-dir="$dir" --password-store=basic "$flow_url${flow_project:+/project/$flow_project}"
         ;;
