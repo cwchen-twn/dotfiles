@@ -23,6 +23,7 @@
       - swaybg                 # wallpaper, each monitor on its own (~/.config/labwc/autostart)
       - labwc-menu-generator   # the apps in the desktop's right-click menu (~/.config/labwc/menu.xml)
       - wlr-randr              # monitor list (conky's width) and manual changes
+      - wlrctl                 # moves the cursor to the laptop panel so Conky opens there (conky-desktop)
       - swayidle               # idle: lock, keyboard backlight; before-sleep and logind lock
       - swaylock               # screen lock on the login background
       - wlopm                  # screens off/on

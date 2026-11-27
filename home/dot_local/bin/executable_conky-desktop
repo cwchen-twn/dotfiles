@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # conky-desktop [DELAY]: (re)start the system monitor on the desktop, two Conky windows (~/.config/conky): CPU and
-# memory in the right quarter of the screen, disk, network, GPU and battery in the left quarter. DELAY seconds before
-# drawing (autostart passes 5, so kanshi has set up the monitors first). Hide: pkill conky.
+# memory in the right quarter of the screen, disk, network, GPU and battery in the left quarter. Waits DELAY seconds
+# first, so the monitors have settled. Hide: pkill conky.
+# kanshi runs it on every monitor change (~/.config/kanshi/config): labwc closes Conky's windows with the monitor
+# they were on, and Conky never comes back by itself. The LXQt autostart runs it at login when kanshi didn't.
 set -eu
 delay=${1:-0}
+sleep "$delay"
+# Back-to-back monitor changes, or a run by hand during one: one run at a time.
+exec 9>"${XDG_RUNTIME_DIR:-$HOME/.cache}/conky-desktop.lock"
+flock 9
 pkill -x conky || true
 # A Conky whose main loop hung ignores SIGTERM in practice (its handler only sets a flag the loop checks), and its
 # window lingers as a 16x16 square mid-screen. Give the others a second to exit, then kill what is left.
@@ -12,6 +18,18 @@ for _ in 1 2 3 4 5; do
     sleep 0.2
 done
 pkill -9 -x conky || true
+# Conky can't choose a monitor on Wayland: labwc puts its windows on the one nearest the cursor. With an external
+# monitor on, move the cursor to the layout's top-left corner first, so both windows land on the laptop panel, but
+# only when the panel is on and sits in that corner (kanshi puts it at 0,0). The cursor stays there: Wayland doesn't
+# let it be read and put back.
+outputs=$(wlr-randr 2>/dev/null || true)
+panel=$(awk '/^[^ ]/ { p = ($1 ~ /^(eDP|LVDS)/) } p' <<<"$outputs")
+if command -v wlrctl >/dev/null 2>&1 \
+    && [ "$(grep -c '^  Enabled: yes' <<<"$outputs")" -gt 1 ] \
+    && grep -q '^  Enabled: yes' <<<"$panel" && grep -q '^  Position: 0,0$' <<<"$panel"; then
+    wlrctl pointer move -100000 -100000 || true
+fi
+# 9>&-: the Conky daemons must not inherit the lock, or they would hold it and block every later run.
 for side in left right; do
-    conky --daemonize --pause="$delay" --config="$HOME/.config/conky/$side.conf" >/dev/null 2>&1
+    conky --daemonize --config="$HOME/.config/conky/$side.conf" >/dev/null 2>&1 9>&-
 done

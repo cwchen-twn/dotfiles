@@ -1,9 +1,9 @@
 [Desktop Entry]
-# Managed by chezmoi: the system monitor on the desktop (~/.config/conky, two windows). The pause lets kanshi set up
-# the monitors first, so Conky measures the final screen width.
+# Managed by chezmoi: the system monitor on the desktop (~/.config/conky, two windows). kanshi starts it too, on
+# every monitor change, so this entry starts it only when no kanshi profile did (no Conky running after 5 s).
 Type=Application
 Name=Conky
 Comment=System monitor on the desktop
-Exec=sh -c 'exec "$HOME/.local/bin/conky-desktop" 5'
+Exec=sh -c 'sleep 5; pgrep -x conky >/dev/null || exec "$HOME/.local/bin/conky-desktop"'
 Icon=utilities-system-monitor
 OnlyShowIn=LXQt;

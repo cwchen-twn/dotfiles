@@ -126,6 +126,8 @@ is the chezmoi one-liner above, and log in again with "LXQt (labwc)".
     quarter of the screen. Right: CPU (per core, temperature, top apps) and memory (swap, top apps; processes summed
     per app as in `cpu-stat`/`mem-stat`). Left: disk and network I/O, GPU busy % (from i915 RC6 residency, no root)
     and battery draw in watts. About 2.5% of one core for both. Hide with `pkill conky`, restart with `conky-desktop`.
+    The windows stay on the laptop panel: kanshi restarts Conky on every plug/unplug, and `conky-desktop` first moves
+    the cursor to the panel (wlrctl), since labwc opens Conky on the monitor nearest the cursor.
     Conky is upstream's AppImage through mise (Debian 13's 1.22 drew badly on Wayland).
   - Screen lock: swaylock on the login screen's astronaut background (`~/.local/bin/lock-screen`), run by swayidle
     after 10 min idle, before suspend/hibernate and on LXQt's Lock screen or Ctrl+Alt+L (`loginctl lock-session`).

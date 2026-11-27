@@ -20,16 +20,33 @@ end
 -- Conky's gap_x/gap_y reach the text, not the window edge: the inner margin and 2 px of border are taken off them.
 local edge, margin = 24, 14 -- screen edge to window, window edge to text
 local gap = edge + margin + 2
-local W = 264 -- content width; replaced below so the window plus `edge` is a quarter of the primary monitor
--- The first monitor's mode width over its scale (wlr-randr).
+local W = 264 -- content width; replaced below so the window plus `edge` is a quarter of the monitor Conky is on
+-- That monitor's mode width over its scale (wlr-randr): the laptop panel (eDP/LVDS) when it is on, since
+-- conky-desktop puts the windows there, else the first one listed. wlr-randr may list an external monitor first.
 do
 	local p = io.popen("wlr-randr 2>/dev/null")
 	if p then
 		local out = p:read("*a")
 		p:close()
-		local first = out:match("^(.-)\n%S") or out -- the first output's block
-		local mw = tonumber(first:match("(%d+)x%d+ px[^\n]*current") or "")
-		local scale = tonumber(first:match("Scale: ([%d.]+)") or "") or 1
+		-- Split into one block per output: a line that starts with a name opens the next one.
+		local blocks = {}
+		for line in out:gmatch("[^\n]+") do
+			if line:match("^%S") then
+				blocks[#blocks + 1] = ""
+			end
+			if #blocks > 0 then
+				blocks[#blocks] = blocks[#blocks] .. line .. "\n"
+			end
+		end
+		local block = blocks[1] or ""
+		for _, b in ipairs(blocks) do
+			if (b:match("^eDP") or b:match("^LVDS")) and b:match("\n  Enabled: yes") then
+				block = b
+				break
+			end
+		end
+		local mw = tonumber(block:match("(%d+)x%d+ px[^\n]*current") or "")
+		local scale = tonumber(block:match("Scale: ([%d.]+)") or "") or 1
 		if mw then
 			W = math.floor(mw / scale / 4) - edge - 2 * margin - 4
 		end
