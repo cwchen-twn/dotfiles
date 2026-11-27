@@ -88,6 +88,7 @@
 .config/labwc
 .config/kanshi
 .local/bin/screenshot
+.local/share/applications/screenshot.desktop
 .local/bin/sendkey
 {{ end }}
 

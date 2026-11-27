@@ -44,6 +44,8 @@ wrangler = "latest"      # Cloudflare (npm): Workers, R2, DNS; token from CLOUDF
 # Desktop system monitor (~/.config/conky, autostarted): upstream's AppImage, which draws fully on Wayland; Debian 13's
 # conky 1.22 drew no background, no bars and broken columns there. The AppImage needs libfuse2 (desktop role).
 "github:brndnmtthws/conky" = { version = "latest", asset_pattern = "conky-x86_64-v*.AppImage", bin = "conky" }
+# Screenshot annotator for ~/.local/bin/screenshot (not packaged in Debian); GTK 4 and libadwaita from apt (labwc role).
+"github:gabm/Satty" = { version = "latest", asset_pattern = "satty-x86_64-unknown-linux-gnu.tar.gz", bin = "satty" }
 {{- end }}
 {{- if and (eq .chezmoi.os "linux") (has "supersonic" .desktop) }}
 # Navidrome/Subsonic music player (Go + libmpv from apt, desktop role); menu entry in ~/.local/share/applications

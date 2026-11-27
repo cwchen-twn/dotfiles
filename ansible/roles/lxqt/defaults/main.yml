@@ -23,6 +23,7 @@ lxqt_favorites:
   - { app: obsidian, files: ["{{ home }}/.local/share/applications/obsidian.desktop"] }
   - { app: dbeaver, files: [/usr/share/applications/dbeaver-ce.desktop] }
   - { app: supersonic, files: ["{{ home }}/.local/share/applications/supersonic.desktop"] }
+  - { app: "", files: ["{{ home }}/.local/share/applications/screenshot.desktop"] }
 
 # Panel widgets, left to right: Debian's default minus `mount` (removable media), `volume` (it controls one fixed
 # device, so it showed the speakers while sound played on Bluetooth headphones: pasystray in the tray instead, desktop

@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
-# screenshot [region]: save the whole screen (or a region picked with the mouse) to ~/Pictures/Screenshots and copy
-# it to the clipboard (grim, slurp, wl-copy); bound to Print / Shift+Print in ~/.config/labwc/rc.xml.
+# screenshot [region|edit]: save the whole screen, or a region picked with the mouse, to ~/Pictures/Screenshots and
+# copy it to the clipboard (grim, slurp, wl-copy). `edit` opens the region in satty to annotate first; satty saves and
+# copies it on Enter/Ctrl+S. Bound to Super+Shift+3/4/5 and Print in ~/.config/labwc/rc.xml; `edit` is also the panel's
+# Screenshot button (~/.local/share/applications/screenshot.desktop).
 set -eu
+PATH=$HOME/.local/share/mise/shims:$PATH # satty comes from mise; labwc and the panel don't put its shims on PATH
 dir=${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots
 mkdir -p "$dir"
 file=$dir/$(date +%Y-%m-%d_%H-%M-%S).png
-if [ "${1:-}" = region ]; then
-    geom=$(slurp) || exit 0 # Esc cancels
-    grim -g "$geom" "$file"
-else
-    grim "$file"
-fi
+case ${1:-} in
+    region | edit)
+        geom=$(slurp) || exit 0 # Esc cancels
+        if [ "$1" = edit ]; then
+            grim -g "$geom" - | satty --filename - --output-filename "$file" --copy-command wl-copy --early-exit
+            exit
+        fi
+        grim -g "$geom" "$file"
+        ;;
+    *) grim "$file" ;;
+esac
 wl-copy --type image/png <"$file"
 notify-send -i "$file" "Screenshot" "${file/#$HOME/\~}" 2>/dev/null || true

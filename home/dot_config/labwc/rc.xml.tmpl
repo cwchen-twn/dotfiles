@@ -78,9 +78,14 @@
     <keybind key="W-Down"><action name="SnapToEdge" direction="down" combine="yes" /></keybind>
 {{- end }}
 
-    <!-- Screenshots to ~/Pictures/Screenshots and the clipboard: whole screen, or a region. -->
+    <!-- Screenshots to ~/Pictures/Screenshots and the clipboard: whole screen, a region, or a region annotated in
+    satty. Super+Shift+3/4/5 as on macOS (the MacBook has no Print key); Print keys for an external keyboard. -->
+    <keybind key="W-S-3"><action name="Execute" command="~/.local/bin/screenshot" /></keybind>
+    <keybind key="W-S-4"><action name="Execute" command="~/.local/bin/screenshot region" /></keybind>
+    <keybind key="W-S-5"><action name="Execute" command="~/.local/bin/screenshot edit" /></keybind>
     <keybind key="Print"><action name="Execute" command="~/.local/bin/screenshot" /></keybind>
     <keybind key="S-Print"><action name="Execute" command="~/.local/bin/screenshot region" /></keybind>
+    <keybind key="C-Print"><action name="Execute" command="~/.local/bin/screenshot edit" /></keybind>
 
     <!-- Screen brightness: 5% steps, never below 1% (fully dark looks like a dead screen). -->
     <keybind key="XF86_MonBrightnessUp">

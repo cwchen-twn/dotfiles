@@ -29,10 +29,16 @@
       - grim                   # screenshots
       - slurp                  # screenshot region picker
       - wl-clipboard           # wl-copy / wl-paste
+      - libgtk-4-1             # satty (screenshot annotator, mise)
+      - libadwaita-1-0         # satty
       - wtype                  # key presses for touchpad gestures
       - xdg-desktop-portal-wlr # screen sharing and screenshots for browsers
       - xdg-desktop-portal-gtk # file chooser portal
       - weston                 # the SDDM greeter's compositor (kiosk shell)
+
+# Shutter can't pick a region on Wayland (only the portal's whole-monitor capture); grim + slurp + satty replace it.
+- name: No Shutter
+  ansible.builtin.apt: { name: shutter, state: absent, purge: true }
 
 - name: Weston installed?
   ansible.builtin.stat: { path: /usr/bin/weston }

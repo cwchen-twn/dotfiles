@@ -1,6 +1,6 @@
 # Managed by chezmoi. Copy an image file to the clipboard as an image, to paste with Ctrl+V into apps that take
 # pictures (Claude Code, chats). The Wayland session's alacritty can't take a file by drag-and-drop (winit), and
-# Print / Shift+Print already copy screenshots this way (~/.local/bin/screenshot).
+# screenshots are already copied this way (~/.local/bin/screenshot).
 function clip-img --description "Copy an image file to the clipboard: clip-img FILE"
     set -l file $argv[1]
     if not test -f "$file"

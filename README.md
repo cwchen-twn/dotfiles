@@ -141,9 +141,10 @@ is the chezmoi one-liner above, and log in again with "LXQt (labwc)".
   its own scale, so a 1080p external screen is sharp at 1x next to the 2x panel: kanshi profiles in
   `~/.config/kanshi/config`, reapplied on plug/unplug. labwc's config is
   `~/.config/labwc/` (`rc.xml`: workspaces, touchpad, brightness/backlight/media/volume keys; `autostart`: fcitx5,
-  kanshi, and swayidle for the keyboard backlight, the lock and screens off; `environment`). Print / Shift+Print:
-  screenshot (`~/.local/bin/screenshot`). Gestures press keys through `~/.local/bin/sendkey` (wtype). Title bars in
-  Catppuccin (`themerc-override`).
+  kanshi, and swayidle for the keyboard backlight, the lock and screens off; `environment`). Screenshots
+  (`~/.local/bin/screenshot`: grim, slurp, satty): Super+Shift+3 whole screen, +4 a region, +5 a region annotated in
+  satty (also the panel's Screenshot button); Print / Shift+Print / Ctrl+Print on an external keyboard. Gestures
+  press keys through `~/.local/bin/sendkey` (wtype). Title bars in Catppuccin (`themerc-override`).
   alacritty takes no drag-and-drop on Wayland: `clip-img FILE` copies an image to the clipboard for Ctrl+V.
 - fcitx5 (desktop app): US keyboard + Chewing (`~/.config/fcitx5/profile`, chezmoi; stop fcitx5 before editing it by
   hand, it saves its profile on exit). Ctrl+Space toggles, Shift_L switches temporarily. CJK font: `fonts-noto-cjk`.
