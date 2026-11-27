@@ -9,11 +9,16 @@ function battery --description 'Battery at a glance: `battery` status, health an
     set -l bat $bats[1]
     set -l cap /sys/devices/platform/applesmc.768/charge_limit
     set -l setcap /usr/local/sbin/battery-charge-limit # sbin isn't on a normal user's PATH
+    # Set up for a cap (the script exists) but no file: this kernel runs the in-tree applesmc.
+    set -l nodriver "the cap's driver isn't loaded: sudo /usr/src/applesmc-bclm-*/install.sh, then reboot"
 
     switch "$argv[1]"
         case full limit
-            if not test -e $cap; or not test -x $setcap
+            if not test -x $setcap
                 echo "battery: no charge cap on this machine (applesmc-bclm, ansible macbook role)" >&2
+                return 1
+            else if not test -e $cap
+                echo "battery: $nodriver" >&2
                 return 1
             end
             if test $argv[1] = full
@@ -40,6 +45,8 @@ function battery --description 'Battery at a glance: `battery` status, health an
             set -l line "$(cat $bat/capacity)%  $status_"
             if test -r $cap
                 set line "$line, charging stops at $(cat $cap)%"
+            else if test -x $setcap
+                set line "$line ($nodriver)"
             end
             echo $line
 
